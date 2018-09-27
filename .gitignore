@@ -1,6 +1,5 @@
 .idea
 *.iml
-vendor/
 tests/
 .DS_Store
 bin/

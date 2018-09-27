@@ -16,6 +16,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -74,19 +75,18 @@ func getHashCode(param string) int {
 }
 
 func main() {
-	fmt.Print("hello")
 	workerQueues := make([]chan *HttpRequest, 10)
-	ServeListenHttp(1, 9090, workerQueues)
+	ServeListenHttp(1, 8080, workerQueues)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	for {
-		select {
-		case s := <-signalChan:
-			fmt.Println(fmt.Sprintf("Captured %v. Exiting...", s))
-			os.Exit(0)
-		}
+
+	select {
+	case s := <-signalChan:
+		fmt.Println(fmt.Sprintf("Captured %v. Exiting...", s))
+		os.Exit(0)
 	}
+
 }
 
 func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) error {
@@ -95,6 +95,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 
 	events.Serving = func(srv Server) (action Action) {
 		//logger.Info("http server started on port %d (loops: %d)", port, srv.NumLoops)
+		fmt.Printf("http server started on port %d (loops: %d) \n", port, srv.NumLoops)
 		return
 	}
 
@@ -110,7 +111,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 		}
 
 		opts.ReuseInputBuffer = true
-		//logger.Info("http opened: laddr: %v: raddr: %v", c.LocalAddr(), c.RemoteAddr())
+		fmt.Printf("http opened: laddr: %v: raddr: %v \n", c.LocalAddr(), c.RemoteAddr())
 		return
 	}
 
@@ -119,7 +120,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 		if c.GetConnType() != config.ConnTypeHttp {
 			//return GlobalRemoteAgentManager.events.Closed(c, err)
 		}
-		//logger.Info("http closed: %s: %s", c.LocalAddr().String(), c.RemoteAddr().String())
+		fmt.Printf("http closed: %s: %s \n", c.LocalAddr().String(), c.RemoteAddr().String())
 		return
 	}
 
@@ -127,13 +128,18 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 		if c.GetConnType() != config.ConnTypeHttp {
 			//return GlobalRemoteAgentManager.events.Data(c, in)
 		}
-		//logger.Info("Data: laddr: %v: raddr: %v, data", c.LocalAddr(), c.RemoteAddr(), string(in))
+		//fmt.Printf("Data: laddr: %v: raddr: %v, data \n", c.LocalAddr(), c.RemoteAddr(), string(in))
 		if in == nil {
 			return
 		}
 		httpContext := c.Context().(*HttpContext)
 
 		data := httpContext.is.Begin(in)
+		if bytes.Contains(data, []byte("\r\n\r\n")) {
+			// for testing minimal single packet request -> response.
+			out = AppendResp(nil, "200 OK", "", "Hello Strike!\r\n")
+			return
+		}
 		// process the pipeline
 		for {
 			if len(data) > 0 {
@@ -180,7 +186,8 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 	}
 
 	// We at least want the single http address.
-	addrs := []string{fmt.Sprintf("tcp://:%d?reuseport=true", port)}
+	//addrs := []string{fmt.Sprintf("tcp://:%d?reuseport=true", port)}
+	addrs := []string{fmt.Sprintf("tcp://:%d", port)}
 	// Start serving!
 	_, err := ServeAndReturn(config.ConnTypeHttp, events, addrs...)
 	//GlobalRemoteAgentManager.server = ser

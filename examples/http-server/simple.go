@@ -115,6 +115,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 		return
 	}
 
+	// 被动监听的 close 不用管
 	events.Closed = func(c Conn, err error) (action Action) {
 		if c.GetConnType() != config.ConnTypeHttp {
 			//return GlobalRemoteAgentManager.events.Closed(c, err)

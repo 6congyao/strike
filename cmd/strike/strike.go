@@ -100,15 +100,8 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 	}
 
 	events.Opened = func(c Conn) (out []byte, opts Options, action Action) {
-		if c.GetConnType() == config.ConnTypeHttp {
-			c.SetContext(&HttpContext{})
-		} else {
-			lastCtx := c.Context()
-			if lastCtx == nil {
-				//c.SetContext(&AgentContext{})
-			}
-			//logger.Info("agent opened: laddr: %v: raddr: %v", c.LocalAddr(), c.RemoteAddr())
-		}
+
+		c.SetContext(&HttpContext{})
 
 		opts.ReuseInputBuffer = true
 		fmt.Printf("http opened: laddr: %v: raddr: %v \n", c.LocalAddr(), c.RemoteAddr())
@@ -116,17 +109,12 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 	}
 
 	events.Closed = func(c Conn, err error) (action Action) {
-		if c.GetConnType() != config.ConnTypeHttp {
-			//return GlobalRemoteAgentManager.events.Closed(c, err)
-		}
+
 		fmt.Printf("http closed: %s: %s \n", c.LocalAddr().String(), c.RemoteAddr().String())
 		return
 	}
 
 	events.Data = func(c Conn, in []byte) (out []byte, action Action) {
-		if c.GetConnType() != config.ConnTypeHttp {
-			//return GlobalRemoteAgentManager.events.Data(c, in)
-		}
 		//fmt.Printf("Data: laddr: %v: raddr: %v, data \n", c.LocalAddr(), c.RemoteAddr(), string(in))
 		if in == nil {
 			return
@@ -188,7 +176,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 	//addrs := []string{fmt.Sprintf("tcp://:%d?reuseport=true", port)}
 	addrs := []string{fmt.Sprintf("tcp://:%d", port)}
 	// Start serving!
-	_, err := ServeAndReturn(config.ConnTypeHttp, events, addrs...)
+	_, err := ServeAndReturn(events, addrs...)
 	//GlobalRemoteAgentManager.server = ser
 	return err
 }

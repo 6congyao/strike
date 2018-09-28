@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strike/pkg/config"
 	. "strike/pkg/evio"
@@ -100,15 +101,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 	}
 
 	events.Opened = func(c Conn) (out []byte, opts Options, action Action) {
-		if c.GetConnType() == config.ConnTypeHttp {
-			c.SetContext(&HttpContext{})
-		} else {
-			lastCtx := c.Context()
-			if lastCtx == nil {
-				//c.SetContext(&AgentContext{})
-			}
-			//logger.Info("agent opened: laddr: %v: raddr: %v", c.LocalAddr(), c.RemoteAddr())
-		}
+		c.SetContext(&HttpContext{})
 
 		opts.ReuseInputBuffer = true
 		fmt.Printf("http opened: laddr: %v: raddr: %v \n", c.LocalAddr(), c.RemoteAddr())
@@ -117,27 +110,27 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 
 	// 被动监听的 close 不用管
 	events.Closed = func(c Conn, err error) (action Action) {
-		if c.GetConnType() != config.ConnTypeHttp {
-			//return GlobalRemoteAgentManager.events.Closed(c, err)
-		}
-		fmt.Printf("http closed: %s: %s \n", c.LocalAddr().String(), c.RemoteAddr().String())
+		fmt.Printf("http closed: laddr: %v: raddr: %v \n", c.LocalAddr(), c.RemoteAddr())
 		return
 	}
 
 	events.Data = func(c Conn, in []byte) (out []byte, action Action) {
-		if c.GetConnType() != config.ConnTypeHttp {
-			//return GlobalRemoteAgentManager.events.Data(c, in)
-		}
 		//fmt.Printf("Data: laddr: %v: raddr: %v, data \n", c.LocalAddr(), c.RemoteAddr(), string(in))
+		//gid := simpleGID()
+		//fmt.Println("GID is : ", gid)
+
 		if in == nil {
 			return
 		}
 		httpContext := c.Context().(*HttpContext)
 
 		data := httpContext.is.Begin(in)
-		if bytes.Contains(data, []byte("\r\n\r\n")) {
+		//httpContext.is.End(data)
+		//if bytes.Contains(data, []byte("\r\n\r\n")) {
+		if true {
 			// for testing minimal single packet request -> response.
-			out = AppendResp(nil, "200 OK", "", "Hello Strike!\r\n")
+			out = AppendResp(nil, "200 OK", "", string(data))
+			//httpContext.is.End(data)
 			return
 		}
 		// process the pipeline
@@ -189,7 +182,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 	//addrs := []string{fmt.Sprintf("tcp://:%d?reuseport=true", port)}
 	addrs := []string{fmt.Sprintf("tcp://:%d", port)}
 	// Start serving!
-	_, err := ServeAndReturn(config.ConnTypeHttp, events, addrs...)
+	_, err := ServeAndReturn(events, addrs...)
 	//GlobalRemoteAgentManager.server = ser
 	return err
 }
@@ -324,4 +317,13 @@ func AppendResp(b []byte, status, head, body string) []byte {
 		b = append(b, body...)
 	}
 	return b
+}
+
+func simpleGID() uint64 {
+	b := make([]byte, 64)
+	b = b[:runtime.Stack(b, false)]
+	b = bytes.TrimPrefix(b, []byte("goroutine "))
+	b = b[:bytes.IndexByte(b, ' ')]
+	n, _ := strconv.ParseUint(string(b), 10, 64)
+	return n
 }

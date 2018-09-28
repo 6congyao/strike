@@ -38,7 +38,6 @@ var errClosing = errors.New("closing")
 var errCloseConns = errors.New("close conns")
 
 type conn struct {
-	connType   int
 	fd         int               // file descriptor
 	lnidx      int               // listener index in the server lns list
 	loopidx    int               // owner loop
@@ -55,8 +54,6 @@ type conn struct {
 	remoteAddr net.Addr
 }
 
-func (c *conn) SetConnType(t int)          { c.connType = t }
-func (c *conn) GetConnType() int           { return c.connType }
 func (c *conn) Context() interface{}       { return c.ctx }
 func (c *conn) SetContext(ctx interface{}) { c.ctx = ctx }
 func (c *conn) AddrIndex() int             { return c.addrIndex }
@@ -104,16 +101,15 @@ func (c *conn) Send(data []byte) error {
 }
 
 type server struct {
-	connectFlag    bool               // if true, do not accept
-	events         Events             // user events
-	loops          []*loop            // all the loops
-	lns            []*listener        // all the listeners
-	wg             sync.WaitGroup     // loop close waitgroup
-	cond           *sync.Cond         // shutdown signaler
-	balance        LoadBalance        // load balancing method
-	accepted       uintptr            // accept counter
-	tch            chan time.Duration // ticker channel
-	acceptConnType int
+	connectFlag bool               // if true, do not accept
+	events      Events             // user events
+	loops       []*loop            // all the loops
+	lns         []*listener        // all the listeners
+	wg          sync.WaitGroup     // loop close waitgroup
+	cond        *sync.Cond         // shutdown signaler
+	balance     LoadBalance        // load balancing method
+	accepted    uintptr            // accept counter
+	tch         chan time.Duration // ticker channel
 
 	//ticktm   time.Time      // next tick time
 }
@@ -329,7 +325,7 @@ func loopTicker(s *server, l *loop) {
 	}
 }
 
-func outConnect(s *server, addr string, port int, connType int, ctx interface{}) (Conn, error) {
+func outConnect(s *server, addr string, port int, ctx interface{}) (Conn, error) {
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
 	if err != nil {
 		//logger.Error("evio outConnect", err)
@@ -396,10 +392,8 @@ func outConnect(s *server, addr string, port int, connType int, ctx interface{})
 		loop:    l,
 		loopidx: l.idx,
 	}
-	c.SetConnType(connType)
 	c.SetContext(ctx)
 	l.poll.AddRead(fd)
-
 	l.poll.Trigger(c)
 
 	return c, err
@@ -451,12 +445,11 @@ func loopAccept(s *server, l *loop, fd int) error {
 			}
 
 			c := &conn{
-				fd:       nfd,
-				sa:       sa,
-				lnidx:    i,
-				loop:     l,
-				loopidx:  l.idx,
-				connType: s.acceptConnType, // 设置connType
+				fd:      nfd,
+				sa:      sa,
+				lnidx:   i,
+				loop:    l,
+				loopidx: l.idx,
 			}
 			l.fdconns[c.fd] = c
 			l.poll.AddReadWrite(c.fd)
@@ -495,9 +488,9 @@ func loopUDPRead(s *server, l *loop, lnidx, fd int) error {
 		in := append([]byte{}, l.packet[:n]...)
 		out, action := s.events.Data(c, in)
 		if len(out) > 0 {
-			if s.events.PreWrite != nil {
-				s.events.PreWrite()
-			}
+			//if s.events.PreWrite != nil {
+			//	s.events.PreWrite()
+			//}
 			syscall.Sendto(fd, out, 0, sa)
 		}
 		switch action {
@@ -536,9 +529,9 @@ func loopOpened(s *server, l *loop, c *conn) error {
 }
 
 func loopWrite(s *server, l *loop, c *conn) (sendFlag bool, err error) {
-	if s.events.PreWrite != nil {
-		s.events.PreWrite()
-	}
+	//if s.events.PreWrite != nil {
+	//	s.events.PreWrite()
+	//}
 	n, err := syscall.Write(c.fd, c.out)
 	if err != nil {
 		if err == syscall.EAGAIN {

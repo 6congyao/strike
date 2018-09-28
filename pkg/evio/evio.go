@@ -65,10 +65,6 @@ type Conn interface {
 	Context() interface{}
 	// SetContext sets a user-defined context.
 	SetContext(interface{})
-	// set conn type
-	SetConnType(int)
-	// get conn type
-	GetConnType() int
 	// AddrIndex is the index of server address that was passed to the Serve call.
 	AddrIndex() int
 	// LocalAddr is the connection's local socket address.
@@ -128,8 +124,6 @@ type Events struct {
 	// underlying socket connection. It can be freely used in goroutines
 	// and should be closed when it's no longer needed.
 	Detached func(c Conn, rwc io.ReadWriteCloser) (action Action)
-	// PreWrite fires just before any data is written to any client socket.
-	PreWrite func()
 	// Data fires when a connection sends the server data.
 	// The in parameter is the incoming data.
 	// Use the out return value to write data to the connection.
@@ -154,7 +148,7 @@ type Events struct {
 //
 
 // The "tcp" network scheme is assumed when one is not specified.
-func ServeAndReturn(acceptConnType int, events Events, addr ...string) (ser *server, err error) {
+func ServeAndReturn(events Events, addr ...string) (ser *server, err error) {
 	var lns []*listener
 
 	var stdlib bool
@@ -198,7 +192,6 @@ func ServeAndReturn(acceptConnType int, events Events, addr ...string) (ser *ser
 		lns = append(lns, &ln)
 	}
 	ser = &server{}
-	ser.acceptConnType = acceptConnType
 	go serve(events, lns, ser)
 	return ser, nil
 }

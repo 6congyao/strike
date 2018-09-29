@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strike/pkg/config"
 	. "strike/pkg/evio"
+	"strike/pkg/protocol/http/v1"
 	"strings"
 	"syscall"
 	"time"
@@ -34,13 +35,14 @@ type HttpRequest struct {
 	conn                 Conn
 	proto, method        string
 	path, query          string
-	head, body           string
+	body                 string
 	remoteAddr           string
 	bodyLen              int
 	interf               string
 	callMethod           string
 	parameterTypesString string
 	parameter            string
+	header               v1.RequestHeader
 
 	//profileGetHttpTime   time.Time
 	//profileSendAgentTime time.Time
@@ -77,7 +79,7 @@ func getHashCode(param string) int {
 
 func main() {
 	workerQueues := make([]chan *HttpRequest, 10)
-	ServeListenHttp(1, 8080, workerQueues)
+	ServeListenHttp(1, 9090, workerQueues)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
@@ -128,7 +130,12 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 		//httpContext.is.End(data)
 		//if bytes.Contains(data, []byte("\r\n\r\n")) {
 		if true {
+			if httpContext.req == nil {
+				httpContext.req = &HttpRequest{}
+				httpContext.req.conn = c
+			}
 			// for testing minimal single packet request -> response.
+			parseHeader(data, httpContext.req)
 			out = AppendResp(nil, "200 OK", "", string(data))
 			//httpContext.is.End(data)
 			return
@@ -216,6 +223,7 @@ func getContentLength(header string) (bool, int) {
 // waits for the entire payload to be buffered before returning a
 // valid request.
 func parseReq(data []byte, req *HttpRequest) (leftover []byte, err error, ready bool) {
+	parseHeader(data, req)
 	sdata := string(data)
 
 	if req.bodyLen > 0 {
@@ -227,7 +235,7 @@ func parseReq(data []byte, req *HttpRequest) (leftover []byte, err error, ready 
 		return data[req.bodyLen:], nil, true
 	}
 	var i, s int
-	var top string
+	//var top string
 	var clen int
 	var q = -1
 	// method, path, proto line
@@ -260,7 +268,7 @@ func parseReq(data []byte, req *HttpRequest) (leftover []byte, err error, ready 
 	if req.proto == "" {
 		return data, nil, false
 	}
-	top = sdata[:s]
+	//top = sdata[:s]
 	for ; i < len(sdata); i++ {
 		if i > 1 && sdata[i] == '\n' && sdata[i-1] == '\r' {
 			line := sdata[s : i-1]
@@ -268,7 +276,7 @@ func parseReq(data []byte, req *HttpRequest) (leftover []byte, err error, ready 
 			s = i + 1
 			if line == "" {
 				req.bodyLen = clen
-				req.head = sdata[len(top) : i+1]
+				//req.head = sdata[len(top) : i+1]
 				i++
 				if clen > 0 {
 					if len(sdata[i:]) < clen {
@@ -289,6 +297,14 @@ func parseReq(data []byte, req *HttpRequest) (leftover []byte, err error, ready 
 	return data, nil, false
 }
 
+func parseHeader(data []byte, req *HttpRequest) error {
+	_, err := req.header.Parse(data)
+	if err != nil {
+		fmt.Println(err)
+	}
+	//fmt.Printf("header len is : %v, body len is : %v \n" , n, len(data) - n)
+	return err
+}
 // AppendResp will append a valid http response to the provide bytes.
 // The status param should be the code plus text such as "200 OK".
 // The head parameter should be a series of lines ending with "\r\n" or empty.

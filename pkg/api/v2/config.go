@@ -15,10 +15,22 @@
 
 package v2
 
+type HealthCheckConfig struct {
+	Protocol             string         `json:"protocol"`
+	TimeoutConfig        DurationConfig `json:"timeout"`
+	IntervalConfig       DurationConfig `json:"interval"`
+	IntervalJitterConfig DurationConfig `json:"interval_jitter"`
+	HealthyThreshold     uint32         `json:"healthy_threshold"`
+	UnhealthyThreshold   uint32         `json:"unhealthy_threshold"`
+	CheckPath            string         `json:"check_path,omitempty"`
+	ServiceName          string         `json:"service_name,omitempty"`
+}
+
 type HostConfig struct {
 	Address        string         `json:"address,omitempty"`
 	Hostname       string         `json:"hostname,omitempty"`
 	Weight         uint32         `json:"weight,omitempty"`
+	MetaDataConfig MetadataConfig `json:"metadata,omitempty"`
 	TLSDisable     bool           `json:"tls_disable,omitempty"`
 }
 
@@ -29,5 +41,55 @@ type ListenerConfig struct {
 	HandOffRestoredDestinationConnections bool          `json:"handoff_restoreddestination"`
 	LogPath                               string        `json:"log_path,omitempty"`
 	LogLevelConfig                        string        `json:"log_level,omitempty"`
+	AccessLogs                            []AccessLog   `json:"access_logs,omitempty"`
+	FilterChains                          []FilterChain `json:"filter_chains"` // only one filterchains at this time
+	StreamFilters                         []Filter      `json:"stream_filters,omitempty"`
 	Inspector                             bool          `json:"inspector,omitempty"`
+}
+
+type TCPRouteConfig struct {
+	Cluster string   `json:"cluster,omitempty"`
+	Sources []string `json:"source_addrs,omitempty"`
+	Dests   []string `json:"destination_addrs,omitempty"`
+}
+
+type HealthCheckFilterConfig struct {
+	PassThrough                 bool               `json:"passthrough"`
+	CacheTimeConfig             DurationConfig     `json:"cache_time"`
+	Endpoint                    string             `json:"endpoint"`
+	ClusterMinHealthyPercentage map[string]float32 `json:"cluster_min_healthy_percentages"`
+}
+
+type FaultInjectConfig struct {
+	DelayPercent        uint32         `json:"delay_percent"`
+	DelayDurationConfig DurationConfig `json:"delay_duration"`
+}
+
+type RouterConfig struct {
+	Match          RouterMatch    `json:"match"`
+	Route          RouteAction    `json:"route"`
+	Redirect       RedirectAction `json:"redirect"`
+	MetadataConfig MetadataConfig `json:"metadata"`
+	Decorator      Decorator      `json:"decorator"`
+}
+
+type RouterActionConfig struct {
+	ClusterName      string            `json:"cluster_name"`
+	ClusterHeader    string            `json:"cluster_header"`
+	WeightedClusters []WeightedCluster `json:"weighted_clusters"`
+	MetadataConfig   MetadataConfig    `json:"metadata_match"`
+	TimeoutConfig    DurationConfig    `json:"timeout"`
+	RetryPolicy      *RetryPolicy      `json:"retry_policy"`
+}
+
+type ClusterWeightConfig struct {
+	Name           string         `json:"name"`
+	Weight         uint32         `json:"weight"`
+	MetadataConfig MetadataConfig `json:"metadata_match"`
+}
+
+type RetryPolicyConfig struct {
+	RetryOn            bool           `json:"retry_on"`
+	RetryTimeoutConfig DurationConfig `json:"retry_timeout"`
+	NumRetries         uint32         `json:"num_retries"`
 }

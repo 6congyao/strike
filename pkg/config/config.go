@@ -15,38 +15,76 @@
 
 package config
 
-import "flag"
+import (
+	"encoding/json"
+	"strike/pkg/api/v2"
 
-var Nodelay = flag.Int("no-delay", 1, "")
-var TCPRecvBuffer = flag.Int("tcp-read-buffer", 1024*1024, "")
-var TCPSendBuffer = flag.Int("tcp-send-buffer", 1024*1024, "")
+	"io/ioutil"
+	"log"
+	"path/filepath"
+)
 
-var LocalPort = flag.Int("local-port", 20000, "local loop count")
-var Mode = flag.String("mode", "consumer", "mode")
-var ProviderPort = flag.Int("provider-port", 30000, "provide agent listen port")
-var DefaultAgentCount = flag.Int("agent-count", 1, "default agent connection count")
-var ProfileDir = flag.String("profile-dir", "./", "profile dir, set to /root/logs/")
+type CfgMode uint8
 
-// loop 设置
-var ConsumerHttpLoops = flag.Int("consumer-http-loop", 1, "")
-var ProviderAgentLoops = flag.Int("provider-agent-loop", 1, "")
+const (
+	File CfgMode = iota
+	Xds
+	Mix
+)
 
-//var MaxProcs = flag.Int("max-procs", 8, "")
+var (
+	configPath string
+	config     StrikeConfig
+)
 
-// processor 设置
-var ConsumerHttpProcessors = flag.Int("consumer-http-processor", 1, "")
-var ConsumerAgentProcessors = flag.Int("consumer-agent-processor", 1, "")
-var ProviderAgentProcessors = flag.Int("provider-agent-processor", 1, "")
-var ProviderDubboProcessors = flag.Int("provider-dubbo-processor", 1, "")
+// ServerConfig for making up server for Strike
+type ServerConfig struct {
+	//default logger
+	ServerName      string `json:"server_name"`
+	DefaultLogPath  string `json:"default_log_path,omitempty"`
+	DefaultLogLevel string `json:"default_log_level,omitempty"`
 
-var DubboMergeCountMax = flag.Int("dubbo-merge-max", 10, "")
-var AgentMergeCountMax = flag.Int("agent-merge-max", 10, "")
-var HttpMergeCountMax = flag.Int("http-merge-max", 10, "")
+	UseNetpollMode bool `json:"use_netpoll_mode,omitempty"`
+	//graceful shutdown config
+	GracefulTimeout v2.DurationConfig `json:"graceful_timeout"`
 
-var ProviderWeight = flag.Int("provider-weight", 0, "")
+	//go processor number
+	Processor int `json:"processor"`
 
-var DebugFlag = flag.Bool("debug-flag", false, "")
+	Listeners []v2.Listener `json:"listeners,omitempty"`
+}
 
-var ConnTypeDubbo = 1
-var ConnTypeHttp = 2
-var ConnTypeAgent = 3
+// ClusterManagerConfig for making up cluster manager
+// Cluster is the global cluster of Strike
+type ClusterManagerConfig struct {
+	// Note: consider to use standard configure
+	AutoDiscovery bool `json:"auto_discovery"`
+	// Note: this is a hack method to realize cluster's  health check which push by registry
+	RegistryUseHealthCheck bool         `json:"registry_use_health_check"`
+	Clusters               []v2.Cluster `json:"clusters,omitempty"`
+}
+
+type StrikeConfig struct {
+	Servers        []ServerConfig       `json:"servers,omitempty"`         //server config
+	ClusterManager ClusterManagerConfig `json:"cluster_manager,omitempty"` //cluster config
+}
+
+func (c *StrikeConfig) Mode() CfgMode {
+	return File
+}
+
+// Load json file and parse
+func LoadJsonFile(path string) *StrikeConfig {
+	log.Println("load config from : ", path)
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatalln("load config failed, ", err)
+	}
+	configPath, _ = filepath.Abs(path)
+	// translate to lower case
+	err = json.Unmarshal(content, &config)
+	if err != nil {
+		log.Fatalln("json unmarshal config failed, ", err)
+	}
+	return &config
+}

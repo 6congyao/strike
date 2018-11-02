@@ -77,11 +77,19 @@ func getHashCode(param string) int {
 }
 
 func main() {
-	workerQueues := make([]chan *HttpRequest, 10)
+	cfg := config.LoadJsonFile("config.json")
+	fmt.Println("cfg is %v", cfg)
+	workerQueues := make(chan *HttpRequest, 1000)
 	ServeListenHttp(1, 9090, workerQueues)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		for req := range workerQueues {
+			fmt.Println("length is: ", req.header.ContentLength())
+		}
+	}()
 
 	select {
 	case s := <-signalChan:
@@ -91,7 +99,7 @@ func main() {
 
 }
 
-func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) error {
+func ServeListenHttp(loops int, port int, workerQueues chan *HttpRequest) error {
 	var events Events
 	events.NumLoops = loops
 
@@ -142,11 +150,13 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 				return
 			}
 
-			body := "0"
-			if len(httpContext.req.body) > 0 {
-				body = string(httpContext.req.body)
-			}
-			out = AppendResp(nil, "200 OK", "", body)
+			//body := "0"
+			//if len(httpContext.req.body) > 0 {
+			//	body = string(httpContext.req.body)
+			//}
+			workerQueues <- httpContext.req
+			httpContext.req = nil
+			//out = AppendResp(nil, "200 OK", "", body)
 			//httpContext.is.End(data)
 			return
 		}
@@ -177,8 +187,8 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 				break
 			}
 
-			index := getHashCode(httpContext.req.parameter) % *config.ConsumerHttpProcessors
-			workerQueues[index] <- httpContext.req
+			//index := getHashCode(httpContext.req.parameter) % *config.ConsumerHttpProcessors
+			workerQueues <- httpContext.req
 			httpContext.req = nil
 			//data = leftover
 			// handle the request

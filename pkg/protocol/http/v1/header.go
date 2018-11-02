@@ -250,7 +250,7 @@ func (h *ResponseHeader) mustSkipContentLength() bool {
 // It may be negative:
 // -1 means Transfer-Encoding: chunked.
 func (h *RequestHeader) ContentLength() int {
-	if h.noBody() {
+	if h.NoBody() {
 		return 0
 	}
 	h.parseRawHeaders()
@@ -630,10 +630,10 @@ func (h *ResponseHeader) DisableNormalizing() {
 // Reset clears response header.
 func (h *ResponseHeader) Reset() {
 	h.disableNormalizing = false
-	h.resetSkipNormalize()
+	h.ResetSkipNormalize()
 }
 
-func (h *ResponseHeader) resetSkipNormalize() {
+func (h *ResponseHeader) ResetSkipNormalize() {
 	h.noHTTP11 = false
 	h.connectionClose = false
 
@@ -651,10 +651,10 @@ func (h *ResponseHeader) resetSkipNormalize() {
 // Reset clears request header.
 func (h *RequestHeader) Reset() {
 	h.disableNormalizing = false
-	h.resetSkipNormalize()
+	h.ResetSkipNormalize()
 }
 
-func (h *RequestHeader) resetSkipNormalize() {
+func (h *RequestHeader) ResetSkipNormalize() {
 	h.noHTTP11 = false
 	h.connectionClose = false
 	h.isGet = false
@@ -1257,7 +1257,7 @@ func (h *ResponseHeader) Read(r *bufio.Reader) error {
 			return nil
 		}
 		if err != errNeedMore {
-			h.resetSkipNormalize()
+			h.ResetSkipNormalize()
 			return err
 		}
 		n = r.Buffered() + 1
@@ -1265,7 +1265,7 @@ func (h *ResponseHeader) Read(r *bufio.Reader) error {
 }
 
 func (h *ResponseHeader) tryRead(r *bufio.Reader, n int) error {
-	h.resetSkipNormalize()
+	h.ResetSkipNormalize()
 	b, err := r.Peek(n)
 	if len(b) == 0 {
 		// treat all errors on the first byte read as EOF
@@ -1328,7 +1328,7 @@ func (h *RequestHeader) Read(r *bufio.Reader) error {
 			return nil
 		}
 		if err != errNeedMore {
-			h.resetSkipNormalize()
+			h.ResetSkipNormalize()
 			return err
 		}
 		n = r.Buffered() + 1
@@ -1336,7 +1336,7 @@ func (h *RequestHeader) Read(r *bufio.Reader) error {
 }
 
 func (h *RequestHeader) tryRead(r *bufio.Reader, n int) error {
-	h.resetSkipNormalize()
+	h.ResetSkipNormalize()
 	b, err := r.Peek(n)
 	if len(b) == 0 {
 		// treat all errors on the first byte read as EOF
@@ -1533,7 +1533,7 @@ func (h *RequestHeader) AppendBytes(dst []byte) []byte {
 	}
 
 	contentType := h.ContentType()
-	if !h.noBody() {
+	if !h.NoBody() {
 		if len(contentType) == 0 {
 			contentType = strPostArgsContentType
 		}
@@ -1587,7 +1587,7 @@ func (h *ResponseHeader) parse(buf []byte) (int, error) {
 	return m + n, nil
 }
 
-func (h *RequestHeader) noBody() bool {
+func (h *RequestHeader) NoBody() bool {
 	return h.IsGet() || h.IsHead()
 }
 
@@ -1598,7 +1598,7 @@ func (h *RequestHeader) Parse(buf []byte) (int, error) {
 	}
 
 	var n int
-	if !h.noBody() || h.noHTTP11 {
+	if !h.NoBody() || h.noHTTP11 {
 		n, err = h.parseHeaders(buf[m:])
 		if err != nil {
 			return 0, err
@@ -1848,7 +1848,7 @@ func (h *RequestHeader) parseHeaders(buf []byte) (int, error) {
 	if h.contentLength < 0 {
 		h.contentLengthBytes = h.contentLengthBytes[:0]
 	}
-	if h.noBody() {
+	if h.NoBody() {
 		h.contentLength = 0
 		h.contentLengthBytes = h.contentLengthBytes[:0]
 	}

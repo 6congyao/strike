@@ -20,6 +20,7 @@ package evio
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"os"
@@ -300,7 +301,6 @@ func loopRun(s *server, l *loop) {
 			return loopOpened(s, l, c)
 		case event&internal.PollEvent_Write != 0:
 			sendFlag, err := loopWrite(s, l, c)
-			// 如果没有发送，尝试读取，这时候会关闭连接
 			if !sendFlag {
 				return loopRead(s, l, c)
 			} else {
@@ -616,7 +616,17 @@ func (c *detachedConn) Close() error {
 }
 
 func (c *detachedConn) Read(p []byte) (n int, err error) {
-	return syscall.Read(c.fd, p)
+	n, err = syscall.Read(c.fd, p)
+	if err != nil {
+		return n, err
+	}
+	if n == 0 {
+		if len(p) == 0 {
+			return 0, nil
+		}
+		return 0, io.EOF
+	}
+	return n, nil
 }
 
 func (c *detachedConn) Write(p []byte) (n int, err error) {

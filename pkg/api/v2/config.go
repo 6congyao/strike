@@ -80,6 +80,12 @@ type RouterActionConfig struct {
 	MetadataConfig   MetadataConfig    `json:"metadata_match"`
 	TimeoutConfig    DurationConfig    `json:"timeout"`
 	RetryPolicy      *RetryPolicy      `json:"retry_policy"`
+	PrefixRewrite           string               `json:"prefix_rewrite"`
+	HostRewrite             string               `json:"host_rewrite"`
+	AutoHostRewrite         bool                 `json:"auto_host_rewrite"`
+	RequestHeadersToAdd     []*HeaderValueOption `json:"request_headers_to_add"`
+	ResponseHeadersToAdd    []*HeaderValueOption `json:"response_headers_to_add"`
+	ResponseHeadersToRemove []string             `json:"response_headers_to_remove"`
 }
 
 type ClusterWeightConfig struct {

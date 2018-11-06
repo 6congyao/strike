@@ -33,6 +33,7 @@ const (
 	FAULT_INJECT_NETWORK_FILTER = "fault_inject"
 	RPC_PROXY                   = "rpc_proxy"
 	X_PROXY                     = "x_proxy"
+	MIXER                       = "mixer"
 )
 
 // ClusterType
@@ -112,9 +113,18 @@ type Listener struct {
 
 // TCPRoute
 type TCPRoute struct {
-	TCPRouteConfig
-	SourceAddrs      []net.Addr `json:"-"`
-	DestinationAddrs []net.Addr `json:"-"`
+	Cluster          string
+	SourceAddrs      []CidrRange
+	DestinationAddrs []CidrRange
+	SourcePort       string
+	DestinationPort  string
+}
+
+// CidrRange
+type CidrRange struct {
+	Address string
+	Length  uint32
+	IpNet   *net.IPNet
 }
 
 // HealthCheckFilter
@@ -222,6 +232,7 @@ type TLSConfig struct {
 	MaxVersion   string                 `json:"max_version,omitempty"`
 	ALPN         string                 `json:"alpn,omitempty"`
 	Ticket       string                 `json:"ticket,omitempty"`
+	Fallback     bool                   `json:"fall_back, omitempty"`
 	ExtendVerify map[string]interface{} `json:"extend_verify,omitempty"`
 }
 
@@ -249,7 +260,18 @@ type Filter struct {
 
 // TCPProxy
 type TCPProxy struct {
-	Routes []*TCPRoute `json:"routes,omitempty"`
+	StatPrefix         string         `json:"stat_prefix,omitempty"`
+	Cluster            string         `json:"cluster,omitempty"`
+	IdleTimeout        *time.Duration `json:"idle_timeout,omitempty"`
+	MaxConnectAttempts uint32         `json:"max_connect_attempts,omitempty"`
+	Routes             []*TCPRoute    `json:"routes,omitempty"`
+}
+
+// WebSocketProxy
+type WebSocketProxy struct {
+	StatPrefix         string
+	IdleTimeout        *time.Duration
+	MaxConnectAttempts uint32
 }
 
 // Proxy
@@ -262,20 +284,38 @@ type Proxy struct {
 	ExtendConfig       map[string]interface{} `json:"extend_config"`
 }
 
+// HeaderValueOption is header name/value pair plus option to control append behavior.
+type HeaderValueOption struct {
+	Header *HeaderValue `json:"header"`
+	Append *bool        `json:"append"`
+}
+
+// HeaderValue is header name/value pair.
+type HeaderValue struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 // RouterConfiguration is a filter for routers
 // Filter type is:  "CONNECTION_MANAGER"
 type RouterConfiguration struct {
-	RouterConfigName string         `json:"router_config_name"`
-	VirtualHosts     []*VirtualHost `json:"virtual_hosts"`
+	RouterConfigName        string               `json:"router_config_name"`
+	VirtualHosts            []*VirtualHost       `json:"virtual_hosts"`
+	RequestHeadersToAdd     []*HeaderValueOption `json:"request_headers_to_add"`
+	ResponseHeadersToAdd    []*HeaderValueOption `json:"response_headers_to_add"`
+	ResponseHeadersToRemove []string             `json:"response_headers_to_remove"`
 }
 
 // VirtualHost is used to make up the route table
 type VirtualHost struct {
-	Name            string           `json:"name"`
-	Domains         []string         `json:"domains"`
-	VirtualClusters []VirtualCluster `json:"virtual_clusters"`
-	Routers         []Router         `json:"routers"`
-	RequireTLS      string           `json:"require_tls"` // not used yet
+	Name                    string               `json:"name"`
+	Domains                 []string             `json:"domains"`
+	VirtualClusters         []VirtualCluster     `json:"virtual_clusters"`
+	Routers                 []Router             `json:"routers"`
+	RequireTLS              string               `json:"require_tls"` // not used yet
+	RequestHeadersToAdd     []*HeaderValueOption `json:"request_headers_to_add"`
+	ResponseHeadersToAdd    []*HeaderValueOption `json:"response_headers_to_add"`
+	ResponseHeadersToRemove []string             `json:"response_headers_to_remove"`
 }
 
 // VirtualCluster is a way of specifying a regex matching rule against certain important endpoints

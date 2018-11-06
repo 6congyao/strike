@@ -78,7 +78,7 @@ func getHashCode(param string) int {
 
 func main() {
 	cfg := config.LoadJsonFile("config.json")
-	fmt.Println("cfg is %v", cfg)
+	fmt.Println("cfg is ", cfg)
 	workerQueues := make(chan *HttpRequest, 1000)
 	ServeListenHttp(1, 9090, workerQueues)
 

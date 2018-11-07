@@ -17,6 +17,8 @@ package config
 
 import "flag"
 
+var ConfigFile = flag.String("c", "config.json", "Load configuration from `FILE`")
+
 var Nodelay = flag.Int("no-delay", 1, "")
 var TCPRecvBuffer = flag.Int("tcp-read-buffer", 1024*1024, "")
 var TCPSendBuffer = flag.Int("tcp-send-buffer", 1024*1024, "")

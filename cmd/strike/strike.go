@@ -18,10 +18,12 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
+	"strike/pkg/bootstrap"
 	"strike/pkg/config"
 	. "strike/pkg/evio"
 	"strings"
@@ -75,8 +77,9 @@ func getHashCode(param string) int {
 }
 
 func main() {
-	workerQueues := make([]chan *HttpRequest, 10)
-	ServeListenHttp(1, 8080, workerQueues)
+	flag.Parse()
+	cfg := config.LoadJsonFile(*config.ConfigFile)
+	bootstrap.Start(cfg)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)

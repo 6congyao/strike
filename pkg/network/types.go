@@ -87,8 +87,7 @@ type ConnectionHandler interface {
 	// AddOrUpdateListener
 	// adds a listener into the ConnectionHandler or
 	// update a listener
-	//AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []NetworkFilterChainFactory,
-	//	streamFiltersFactories []StreamFilterChainFactory) (ListenerEventListener, error)
+	AddOrUpdateListener(lc *v2.Listener) (ListenerEventListener, error)
 
 	// StartListener starts a listener by the specified listener tag
 	StartListener(lctx context.Context, listenerTag uint64)
@@ -328,3 +327,8 @@ const (
 	Continue FilterStatus = "Continue"
 	Stop     FilterStatus = "Stop"
 )
+
+type TLSContextManager interface {
+	Conn(net.Conn) net.Conn
+	Enabled() bool
+}

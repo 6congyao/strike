@@ -15,6 +15,15 @@
 
 package protocol
 
+type Protocol string
+
+// Protocol type definition
+const (
+	HTTP1     Protocol = "Http1"
+	HTTP2     Protocol = "Http2"
+	Xprotocol Protocol = "X"
+)
+
 // HeaderMap is a interface to provide operation facade with user-value headers
 type HeaderMap interface {
 	// Get value of key

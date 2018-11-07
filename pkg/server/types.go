@@ -17,6 +17,7 @@ package server
 
 import (
 	"os"
+	"strike/pkg/api/v2"
 	"strike/pkg/log"
 	"strike/pkg/network"
 	"time"
@@ -39,13 +40,11 @@ type Config struct {
 	LogLevel        log.Level
 	GracefulTimeout time.Duration
 	Processor       int
-	UseNetpollMode  bool
+	UseEdgeMode     bool
 }
 
 type Server interface {
-	//todo: addlistener
-	//AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
-	//	streamFiltersFactories []types.StreamFilterChainFactory) (types.ListenerEventListener, error)
+	AddListener(lc *v2.Listener) (network.ListenerEventListener, error)
 
 	Start()
 

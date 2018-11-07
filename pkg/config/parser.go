@@ -16,6 +16,10 @@
 package config
 
 import (
+	"strike/pkg/protocol"
+	stdlog "log"
+	"net"
+	"strike/pkg/api/v2"
 	"strike/pkg/log"
 	"strike/pkg/server"
 )
@@ -28,7 +32,7 @@ func ParseServerConfig(c *ServerConfig) *server.Config {
 		LogLevel:        parseLogLevel(c.DefaultLogLevel),
 		GracefulTimeout: c.GracefulTimeout.Duration,
 		Processor:       c.Processor,
-		UseNetpollMode:  c.UseNetpollMode,
+		UseEdgeMode:     c.UseEdgeMode,
 	}
 
 	return sc
@@ -48,4 +52,34 @@ var logLevelMap = map[string]log.Level{
 	"ERROR": log.ERROR,
 	"WARN":  log.WARN,
 	"INFO":  log.INFO,
+}
+
+// ParseListenerConfig
+func ParseListenerConfig(lc *v2.Listener) *v2.Listener {
+	if lc.AddrConfig == "" {
+		stdlog.Fatalln("[Address] is required in listener config")
+	}
+	addr, err := net.ResolveTCPAddr("tcp", lc.AddrConfig)
+	if err != nil {
+		stdlog.Fatalln("[Address] not valid:", lc.AddrConfig)
+	}
+
+	lc.Addr = addr
+	lc.PerConnBufferLimitBytes = 1 << 15
+	lc.LogLevel = uint8(parseLogLevel(lc.LogLevelConfig))
+	return lc
+}
+
+// GetListenerDisableIO used to check downstream protocol and return ListenerDisableIO
+func GetListenerDisableIO(c *v2.FilterChain) bool {
+	for _, f := range c.Filters {
+		if f.Type == v2.DEFAULT_NETWORK_FILTER {
+			if downstream, ok := f.Config["downstream_protocol"]; ok {
+				if downstream == string(protocol.HTTP2) || downstream == string(protocol.HTTP1) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

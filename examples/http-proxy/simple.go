@@ -23,7 +23,6 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
-	"strike/pkg/config"
 	. "strike/pkg/evio"
 	"strike/pkg/protocol/http/v1"
 	"syscall"
@@ -77,8 +76,6 @@ func getHashCode(param string) int {
 }
 
 func main() {
-	cfg := config.LoadJsonFile("config.json")
-	fmt.Println("cfg is ", cfg)
 	workerQueues := make(chan *HttpRequest, 1000)
 	ServeListenHttp(1, 9090, workerQueues)
 

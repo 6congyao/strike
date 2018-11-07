@@ -43,6 +43,16 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 
 		if mode == config.File {
 			srv = server.NewServer(c)
+
+			for _, listenerConfig := range srvConfig.Listeners {
+				lc := config.ParseListenerConfig(&listenerConfig)
+				lc.DisableConnIo = config.GetListenerDisableIO(&lc.FilterChains[0])
+
+				_, err := srv.AddListener(lc)
+				if err != nil {
+					log.Fatalf("AddListener error:%s \n", err.Error())
+				}
+			}
 		}
 		sk.servers = append(sk.servers, srv)
 	}

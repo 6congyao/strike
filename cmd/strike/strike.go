@@ -89,7 +89,6 @@ func main() {
 		fmt.Println(fmt.Sprintf("Captured %v. Exiting...", s))
 		os.Exit(0)
 	}
-
 }
 
 func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) error {

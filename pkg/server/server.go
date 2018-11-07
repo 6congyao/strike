@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strike/pkg/api/v2"
 	"strike/pkg/network"
 )
 
@@ -51,8 +52,8 @@ func NewServer(config *Config) Server {
 		}
 
 		//network.UseNetpollMode = config.UseNetpollMode
-		if config.UseNetpollMode {
-			log.Println("Netpoll mode enabled.")
+		if config.UseEdgeMode {
+			log.Println("Edge mode enabled.")
 		}
 	}
 
@@ -68,6 +69,11 @@ func NewServer(config *Config) Server {
 	servers = append(servers, server)
 
 	return server
+}
+
+func (srv *server) AddListener(lc *v2.Listener) (network.ListenerEventListener, error) {
+
+	return srv.handler.AddOrUpdateListener(lc)
 }
 
 func (srv *server) Start() {

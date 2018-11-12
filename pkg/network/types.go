@@ -319,6 +319,11 @@ type WriteFilter interface {
 	OnWrite(buffer []buffer.IoBuffer) FilterStatus
 }
 
+type TLSContextManager interface {
+	Conn(net.Conn) net.Conn
+	Enabled() bool
+}
+
 // FilterStatus type
 type FilterStatus string
 
@@ -328,7 +333,29 @@ const (
 	Stop     FilterStatus = "Stop"
 )
 
-type TLSContextManager interface {
-	Conn(net.Conn) net.Conn
-	Enabled() bool
+type ListenerFilter interface {
+	// OnAccept is called when a raw connection is accepted, but before a Connection is created.
+	OnAccept(cb ListenerFilterCallbacks) FilterStatus
+}
+
+// ListenerFilterCallbacks is a callback handler called by listener filter to talk to listener
+type ListenerFilterCallbacks interface {
+	// Conn returns the Connection reference used in callback handler
+	Conn() net.Conn
+
+	ContinueFilterChain(ctx context.Context, success bool)
+
+	// SetOriginalAddr sets the original ip and port
+	SetOriginalAddr(ip string, port int)
+}
+
+// NetworkFilterChainFactory adds filter into NetWorkFilterChainFactoryCallbacks
+type NetworkFilterChainFactory interface {
+	CreateFilterChain(context context.Context, callbacks NetWorkFilterChainFactoryCallbacks)
+}
+
+// NetWorkFilterChainFactoryCallbacks is a wrapper of FilterManager that called in NetworkFilterChainFactory
+type NetWorkFilterChainFactoryCallbacks interface {
+	AddReadFilter(rf ReadFilter)
+	AddWriteFilter(wf WriteFilter)
 }

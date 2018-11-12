@@ -67,6 +67,7 @@ func Start(sc *config.StrikeConfig) {
 }
 
 // Start strike servers
+// async
 func (sk *Strike) Start() {
 	for _, srv := range sk.servers {
 		go srv.Start()

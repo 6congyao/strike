@@ -19,6 +19,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"runtime/debug"
 	"strike/pkg/api/v2"
 	"time"
 )
@@ -37,7 +38,6 @@ type listener struct {
 }
 
 func NewListener(lc *v2.Listener) Listener {
-
 	l := &listener{
 		name:                                  lc.Name,
 		localAddress:                          lc.Addr,
@@ -45,7 +45,7 @@ func NewListener(lc *v2.Listener) Listener {
 		listenerTag:                           lc.ListenerTag,
 		perConnBufferLimitBytes:               lc.PerConnBufferLimitBytes,
 		handOffRestoredDestinationConnections: lc.HandOffRestoredDestinationConnections,
-		config: lc,
+		config:                                lc,
 	}
 
 	if lc.InheritListener != nil {
@@ -71,8 +71,38 @@ func (l *listener) Addr() net.Addr {
 	return l.localAddress
 }
 
+//todo
 func (l *listener) Start(lctx context.Context) {
-	return
+	if l.bindToPort {
+		if l.rawl == nil {
+			if err := l.listen(lctx); err != nil {
+				log.Fatalf(l.name, " listen failed, ", err)
+				return
+			}
+		}
+	}
+
+	for {
+		if err := l.accept(lctx); err != nil {
+			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+				log.Println("listener stop accepting connections by deadline: ", l.name)
+				return
+			} else if ope, ok := err.(*net.OpError); ok {
+				if !(ope.Timeout() && ope.Temporary()) {
+					// non-recoverable
+					if ope.Op == "accept" {
+						log.Println("listener closed: ", l.name, l.Addr())
+					} else {
+						log.Println("listener occurs non-recoverable error, stop listening and accepting: ", l.name, err.Error())
+					}
+					return
+				}
+			} else {
+				log.Println("listener occurs unknown error while accepting: ", l.name, err.Error())
+			}
+		}
+	}
+
 }
 
 func (l *listener) Stop() error {
@@ -124,4 +154,41 @@ func (l *listener) HandOffRestoredDestinationConnections() bool {
 func (l *listener) Close(lctx context.Context) error {
 	l.cb.OnClose()
 	return l.rawl.Close()
+}
+
+func (l *listener) listen(lctx context.Context) error {
+	var err error
+
+	var rawl *net.TCPListener
+	if rawl, err = net.ListenTCP("tcp", l.localAddress.(*net.TCPAddr)); err != nil {
+		return err
+	}
+
+	l.rawl = rawl
+
+	return nil
+}
+
+func (l *listener) accept(lctx context.Context) error {
+	rawc, err := l.rawl.Accept()
+
+	if err != nil {
+		return err
+	}
+
+	// async
+	// TODO: use thread pool
+	go func() {
+		defer func() {
+			if p := recover(); p != nil {
+				log.Println("panic: ", p)
+
+				debug.PrintStack()
+			}
+		}()
+
+		l.cb.OnAccept(rawc, l.handOffRestoredDestinationConnections, nil, nil, nil)
+	}()
+
+	return nil
 }

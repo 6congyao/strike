@@ -22,10 +22,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"reflect"
 	"strconv"
 	"strike/pkg/api/v2"
 	"strike/pkg/network"
+	"strike/pkg/types"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,9 +62,7 @@ func (ch *connHandler) GenerateListenerID() string {
 }
 
 // ConnectionHandler
-// todo
 func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener) (network.ListenerEventListener, error) {
-
 	var listenerName string
 	if lc.Name == "" {
 		listenerName = ch.GenerateListenerID()
@@ -114,16 +114,25 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener) (network.ListenerEve
 	return al, nil
 }
 
+// todo
 func (ch *connHandler) NumConnections() uint64 {
 	return uint64(atomic.LoadInt64(&ch.numConnections))
 }
 
+// async
 func (ch *connHandler) StartListener(lctx context.Context, listenerTag uint64) {
-	return
+	for _, l := range ch.listeners {
+		if l.listener.ListenerTag() == listenerTag {
+			go l.listener.Start(nil)
+		}
+	}
 }
 
+// async
 func (ch *connHandler) StartListeners(lctx context.Context) {
-	return
+	for _, l := range ch.listeners {
+		go l.listener.Start(nil)
+	}
 }
 
 func (ch *connHandler) FindListenerByAddress(addr net.Addr) network.Listener {
@@ -182,12 +191,12 @@ type activeListener struct {
 
 func newActiveListener(listener network.Listener, lc *v2.Listener, handler *connHandler, stopChan chan struct{}) (*activeListener, error) {
 	al := &activeListener{
-		disableConnIo:           lc.DisableConnIo,
-		listener:                listener,
-		conns:                   list.New(),
-		handler:                 handler,
-		stopChan:                stopChan,
-		updatedLabel:            false,
+		disableConnIo: lc.DisableConnIo,
+		listener:      listener,
+		conns:         list.New(),
+		handler:       handler,
+		stopChan:      stopChan,
+		updatedLabel:  false,
 	}
 
 	listenPort := 0
@@ -206,7 +215,25 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, handler *conn
 }
 
 func (al *activeListener) OnAccept(rawc net.Conn, handOffRestoredDestinationConnections bool, oriRemoteAddr net.Addr, ch chan network.Connection, buf []byte) {
+	var rawf *os.File
 
+	arc := newActiveRawConn(rawc, al)
+
+	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
+	ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
+
+	if rawf != nil {
+		ctx = context.WithValue(ctx, types.ContextKeyConnectionFd, rawf)
+	}
+	if ch != nil {
+		ctx = context.WithValue(ctx, types.ContextKeyAcceptChan, ch)
+		ctx = context.WithValue(ctx, types.ContextKeyAcceptBuffer, buf)
+	}
+	if oriRemoteAddr != nil {
+		ctx = context.WithValue(ctx, types.ContextOriRemoteAddr, oriRemoteAddr)
+	}
+
+	arc.ContinueFilterChain(ctx, true)
 }
 
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {
@@ -215,4 +242,61 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 
 func (al *activeListener) OnClose() {
 
+}
+
+// todo
+func (al *activeListener) newConnection(ctx context.Context, rawc net.Conn) {
+
+
+}
+
+type activeRawConn struct {
+	rawc                                  net.Conn
+	rawf                                  *os.File
+	originalDstIP                         string
+	originalDstPort                       int
+	oriRemoteAddr                         net.Addr
+	handOffRestoredDestinationConnections bool
+	rawcElement                           *list.Element
+	activeListener                        *activeListener
+	acceptedFilters                       []network.ListenerFilter
+	acceptedFilterIndex                   int
+}
+
+func newActiveRawConn(rawc net.Conn, activeListener *activeListener) *activeRawConn {
+	return &activeRawConn{
+		rawc:           rawc,
+		activeListener: activeListener,
+	}
+}
+
+func (arc *activeRawConn) ContinueFilterChain(ctx context.Context, success bool) {
+	if !success {
+		return
+	}
+
+	for ; arc.acceptedFilterIndex < len(arc.acceptedFilters); arc.acceptedFilterIndex++ {
+		filterStatus := arc.acceptedFilters[arc.acceptedFilterIndex].OnAccept(arc)
+		if filterStatus == network.Stop {
+			return
+		}
+	}
+
+	// TODO: handle hand_off_restored_destination_connections logic
+	if arc.handOffRestoredDestinationConnections {
+		//arc.HandOffRestoredDestinationConnectionsHandler(ctx)
+	} else {
+		arc.activeListener.newConnection(ctx, arc.rawc)
+	}
+}
+
+func (arc *activeRawConn) Conn() net.Conn {
+	return arc.rawc
+}
+
+func (arc *activeRawConn) SetOriginalAddr(ip string, port int) {
+	arc.originalDstIP = ip
+	arc.originalDstPort = port
+	arc.oriRemoteAddr, _ = net.ResolveTCPAddr("", ip+":"+strconv.Itoa(port))
+	log.Println("conn set origin addr: ", ip, port)
 }

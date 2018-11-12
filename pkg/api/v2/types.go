@@ -34,6 +34,7 @@ const (
 	RPC_PROXY                   = "rpc_proxy"
 	X_PROXY                     = "x_proxy"
 	MIXER                       = "mixer"
+	DELEGATION                  = "delegation"
 )
 
 // ClusterType

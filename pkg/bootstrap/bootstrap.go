@@ -18,7 +18,6 @@ package bootstrap
 import (
 	"log"
 	"strike/pkg/config"
-	"strike/pkg/network"
 	"strike/pkg/server"
 )
 

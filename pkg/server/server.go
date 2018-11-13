@@ -71,9 +71,9 @@ func NewServer(config *Config) Server {
 	return server
 }
 
-func (srv *server) AddListener(lc *v2.Listener) (network.ListenerEventListener, error) {
+func (srv *server) AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory) (network.ListenerEventListener, error) {
 
-	return srv.handler.AddOrUpdateListener(lc)
+	return srv.handler.AddOrUpdateListener(lc, networkFiltersFactories)
 }
 
 func (srv *server) Start() {

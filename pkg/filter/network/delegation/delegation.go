@@ -18,26 +18,27 @@ package delegation
 import (
 	"context"
 	"strike/pkg/api/v2"
-	"strike/pkg/config"
-	"strike/pkg/filter"
+	"strike/pkg/buffer"
 	"strike/pkg/network"
 )
 
-func init() {
-	filter.RegisterNetwork(v2.DELEGATION, CreateDelegationFactory)
+type delegate struct {
+	contentType string
 }
 
-type delegationFilterConfigFactory struct {
-	Delegation *v2.Delegation
+func NewDelegate(ctx context.Context, config *v2.Delegation) network.ReadFilter {
+	return &delegate{
+		contentType: config.ContentType,
+	}
 }
 
-func (dfcf *delegationFilterConfigFactory) CreateFilterChain(context context.Context, callbacks network.NetWorkFilterChainFactoryCallbacks) {
-	rf := NewDelegate(context, dfcf.Delegation)
-	callbacks.AddReadFilter(rf)
+func (d *delegate) OnNewConnection() network.FilterStatus {
+	return network.Continue
 }
 
-func CreateDelegationFactory(conf map[string]interface{}) (network.NetworkFilterChainFactory, error) {
-	return &delegationFilterConfigFactory{
-		Delegation: config.ParseDelegationFilter(conf),
-	}, nil
+func (d *delegate) OnData(buffer buffer.IoBuffer) network.FilterStatus {
+	return network.Continue
+}
+
+func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 }

@@ -15,9 +15,7 @@
               {
                 "type": "delegation",
                 "config": {
-                  "downstream_protocol": "Http1",
-                  "upstream_protocol": "Http2",
-                  "router_config_name":"client_router"
+                  "content_type": "conn"
                 }
               }
             ]

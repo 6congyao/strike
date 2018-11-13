@@ -44,7 +44,7 @@ type Config struct {
 }
 
 type Server interface {
-	AddListener(lc *v2.Listener) (network.ListenerEventListener, error)
+	AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory) (network.ListenerEventListener, error)
 
 	Start()
 

@@ -29,11 +29,6 @@ type Metadata map[string]string
 const (
 	CONNECTION_MANAGER          = "connection_manager"
 	DEFAULT_NETWORK_FILTER      = "proxy"
-	TCP_PROXY                   = "tcp_proxy"
-	FAULT_INJECT_NETWORK_FILTER = "fault_inject"
-	RPC_PROXY                   = "rpc_proxy"
-	X_PROXY                     = "x_proxy"
-	MIXER                       = "mixer"
 	DELEGATION                  = "delegation"
 )
 
@@ -391,4 +386,8 @@ type PublishInfo struct {
 type PublishContent struct {
 	ServiceName string `json:"service_name,omitempty"`
 	PubData     string `json:"pub_data,omitempty"`
+}
+
+type Delegation struct {
+	ContentType string `json:"content_type,omitempty"`
 }

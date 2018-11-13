@@ -18,6 +18,7 @@ package bootstrap
 import (
 	"log"
 	"strike/pkg/config"
+	"strike/pkg/network"
 	"strike/pkg/server"
 )
 
@@ -48,7 +49,11 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 				lc := config.ParseListenerConfig(&listenerConfig)
 				lc.DisableConnIo = config.GetListenerDisableIO(&lc.FilterChains[0])
 
-				_, err := srv.AddListener(lc)
+				// NetworkFilterChainFactory
+				nfcf := config.GetNetworkFilters(&lc.FilterChains[0])
+
+				// Listener
+				_, err := srv.AddListener(lc, nfcf)
 				if err != nil {
 					log.Fatalf("AddListener error:%s \n", err.Error())
 				}
@@ -71,5 +76,11 @@ func Start(sc *config.StrikeConfig) {
 func (sk *Strike) Start() {
 	for _, srv := range sk.servers {
 		go srv.Start()
+	}
+}
+
+func (sk *Strike) Stop() {
+	for _, srv := range sk.servers {
+		srv.Close()
 	}
 }

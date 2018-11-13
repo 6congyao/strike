@@ -62,7 +62,7 @@ func (ch *connHandler) GenerateListenerID() string {
 }
 
 // ConnectionHandler
-func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener) (network.ListenerEventListener, error) {
+func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory) (network.ListenerEventListener, error) {
 	var listenerName string
 	if lc.Name == "" {
 		listenerName = ch.GenerateListenerID()
@@ -82,9 +82,10 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener) (network.ListenerEve
 		}
 
 		equalConfig := reflect.DeepEqual(al.listener.Config(), lc)
+		equalNetworkFilter := reflect.DeepEqual(al.networkFiltersFactories, networkFiltersFactories)
 		// duplicate config does nothing
-		if equalConfig {
-			log.Printf("duplicate listener:%s found. no add/update \n", listenerName)
+		if equalConfig && equalNetworkFilter {
+			log.Println("duplicate listener found. no add/update: ", listenerName)
 			return nil, nil
 		}
 
@@ -96,7 +97,13 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener) (network.ListenerEve
 			al.listener.SetPerConnBufferLimitBytes(lc.PerConnBufferLimitBytes)
 			al.listener.SetListenerTag(lc.ListenerTag)
 			al.listener.SetHandOffRestoredDestinationConnections(lc.HandOffRestoredDestinationConnections)
-			log.Printf("AddOrUpdateListener: use new listen config = %+v \n", lc)
+			log.Println("AddOrUpdateListener: use new listen config: ", lc)
+		}
+
+		// update network filter
+		if !equalNetworkFilter {
+			al.networkFiltersFactories = networkFiltersFactories
+			log.Println("AddOrUpdateListener: use new networkFiltersFactories: ", networkFiltersFactories)
 		}
 	} else {
 		// listener doesn't exist, add the listener
@@ -179,6 +186,7 @@ func (ch *connHandler) findActiveListenerByName(name string) *activeListener {
 type activeListener struct {
 	disableConnIo bool
 	listener      network.Listener
+	networkFiltersFactories []network.NetworkFilterChainFactory
 	listenIP      string
 	listenPort    int
 	conns         *list.List
@@ -246,7 +254,6 @@ func (al *activeListener) OnClose() {
 
 // todo
 func (al *activeListener) newConnection(ctx context.Context, rawc net.Conn) {
-
 
 }
 

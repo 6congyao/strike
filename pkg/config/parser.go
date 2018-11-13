@@ -16,11 +16,14 @@
 package config
 
 import (
-	"strike/pkg/protocol"
+	"encoding/json"
 	stdlog "log"
 	"net"
 	"strike/pkg/api/v2"
+	"strike/pkg/filter"
 	"strike/pkg/log"
+	"strike/pkg/network"
+	"strike/pkg/protocol"
 	"strike/pkg/server"
 )
 
@@ -82,4 +85,33 @@ func GetListenerDisableIO(c *v2.FilterChain) bool {
 		}
 	}
 	return false
+}
+
+// ParseProxyFilter
+func ParseDelegationFilter(cfg map[string]interface{}) *v2.Delegation {
+	delegationConfig := &v2.Delegation{}
+	if data, err := json.Marshal(cfg); err == nil {
+		json.Unmarshal(data, delegationConfig)
+	} else {
+		stdlog.Fatalln("Parsing Delegation network filter error")
+	}
+
+	if delegationConfig.ContentType == "" {
+		stdlog.Println("ContentType in String Needed in Delegation Network Filter")
+	}
+
+	return delegationConfig
+}
+
+func GetNetworkFilters(c *v2.FilterChain) []network.NetworkFilterChainFactory {
+	var factories []network.NetworkFilterChainFactory
+	for _, f := range c.Filters {
+		factory, err := filter.CreateNetworkFilterChainFactory(f.Type, f.Config)
+		if err != nil {
+			stdlog.Println("network filter create failed: ", err)
+			continue
+		}
+		factories = append(factories, factory)
+	}
+	return factories
 }

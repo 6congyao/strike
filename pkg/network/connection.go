@@ -17,22 +17,26 @@ package network
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strike/pkg/buffer"
 	"sync/atomic"
 )
 
-var idCounter uint64 = 1
+var SessionClosedError = errors.New("Session Closed")
+
+var globalSessionId uint64 = 1
 
 type simpleConn struct {
 	id            uint64
 	rawConnection net.Conn
 	filterManager FilterManager
 	stopChan      chan struct{}
+	closeFlag     int32
 }
 
 func NewServerSimpleConn(ctx context.Context, rawc net.Conn, stopChan chan struct{}) Connection {
-	id := atomic.AddUint64(&idCounter, 1)
+	id := atomic.AddUint64(&globalSessionId, 1)
 
 	sc := &simpleConn{
 		id:            id,
@@ -40,11 +44,12 @@ func NewServerSimpleConn(ctx context.Context, rawc net.Conn, stopChan chan struc
 		stopChan:      stopChan,
 	}
 
+	sc.filterManager = newFilterManager(sc)
 	return sc
 }
 
 func (sc *simpleConn) ID() uint64 {
-	return 0
+	return sc.id
 }
 
 func (sc *simpleConn) Start(lctx context.Context) {
@@ -56,6 +61,9 @@ func (sc *simpleConn) Write(buf ...buffer.IoBuffer) error {
 }
 
 func (sc *simpleConn) Close(ccType ConnectionCloseType, eventType ConnectionEvent) error {
+	if atomic.CompareAndSwapInt32(&sc.closeFlag, 0, 1) {
+		close(sc.stopChan)
+	}
 	return nil
 }
 

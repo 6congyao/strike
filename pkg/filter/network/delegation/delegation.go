@@ -17,17 +17,33 @@ package delegation
 
 import (
 	"context"
+	"log"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 )
 
+type Agent func(content interface{}) error
+
+var agents map[string]Agent
+
+func init() {
+	agents = make(map[string]Agent)
+}
+
+func RegisterAgent(name string, handler Agent) {
+	agents[name] = handler
+}
+
 type delegate struct {
-	contentType string
+	agentName     string
+	contentType   string
+	readCallbacks network.ReadFilterCallbacks
 }
 
 func NewDelegate(ctx context.Context, config *v2.Delegation) network.ReadFilter {
 	return &delegate{
+		agentName:   config.AgentName,
 		contentType: config.ContentType,
 	}
 }
@@ -41,4 +57,16 @@ func (d *delegate) OnData(buffer buffer.IoBuffer) network.FilterStatus {
 }
 
 func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
+	d.readCallbacks = cb
+
+	if ag := agents[d.agentName]; ag != nil {
+		switch d.contentType {
+		case "conn":
+			fallthrough
+		default:
+			if err := ag(d.readCallbacks.Connection().RawConn()); err != nil {
+				log.Println("delegation got error:", err)
+			}
+		}
+	}
 }

@@ -20,12 +20,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
 	"strike/pkg/bootstrap"
 	"strike/pkg/config"
 	. "strike/pkg/evio"
+	"strike/pkg/filter/network/delegation"
 	"strings"
 	"syscall"
 	"time"
@@ -79,6 +81,7 @@ func getHashCode(param string) int {
 func main() {
 	flag.Parse()
 	cfg := config.LoadJsonFile(*config.ConfigFile)
+	registerDelegationHandler()
 	bootstrap.Start(cfg)
 
 	signalChan := make(chan os.Signal, 1)
@@ -89,6 +92,19 @@ func main() {
 		fmt.Println(fmt.Sprintf("Captured %v. Exiting...", s))
 		os.Exit(0)
 	}
+}
+
+func registerDelegationHandler() {
+	delegation.RegisterAgent("apigateway", delegationHandler)
+}
+
+func delegationHandler(content interface{}) error {
+	if c, ok := content.(net.Addr); ok {
+		fmt.Println("got conn:", c)
+	} else {
+		return errors.New("type error")
+	}
+	return nil
 }
 
 func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) error {

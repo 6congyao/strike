@@ -52,7 +52,7 @@ func (ch *connHandler) GenerateListenerID() string {
 	uuid := make([]byte, 16)
 	_, err := rand.Read(uuid)
 	if err != nil {
-		log.Fatalf("generate an uuid failed, error: %v \n", err)
+		log.Fatalln("generate an uuid failed, error:", err)
 	}
 	// see section 4.1.1
 	uuid[8] = uuid[8]&^0xc0 | 0x80
@@ -111,7 +111,7 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactor
 
 		l := network.NewListener(lc)
 
-		al, err := newActiveListener(l, lc, ch, listenerStopChan)
+		al, err := newActiveListener(l, lc, networkFiltersFactories, ch, listenerStopChan)
 		if err != nil {
 			return al, err
 		}
@@ -184,27 +184,28 @@ func (ch *connHandler) findActiveListenerByName(name string) *activeListener {
 
 // ListenerEventListener
 type activeListener struct {
-	disableConnIo bool
-	listener      network.Listener
+	disableConnIo           bool
+	listener                network.Listener
 	networkFiltersFactories []network.NetworkFilterChainFactory
-	listenIP      string
-	listenPort    int
-	conns         *list.List
-	connsMux      sync.RWMutex
-	handler       *connHandler
-	stopChan      chan struct{}
-	updatedLabel  bool
-	tlsMng        network.TLSContextManager
+	listenIP                string
+	listenPort              int
+	conns                   *list.List
+	connsMux                sync.RWMutex
+	handler                 *connHandler
+	stopChan                chan struct{}
+	updatedLabel            bool
+	tlsMng                  network.TLSContextManager
 }
 
-func newActiveListener(listener network.Listener, lc *v2.Listener, handler *connHandler, stopChan chan struct{}) (*activeListener, error) {
+func newActiveListener(listener network.Listener, lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory, handler *connHandler, stopChan chan struct{}) (*activeListener, error) {
 	al := &activeListener{
-		disableConnIo: lc.DisableConnIo,
-		listener:      listener,
-		conns:         list.New(),
-		handler:       handler,
-		stopChan:      stopChan,
-		updatedLabel:  false,
+		disableConnIo:           lc.DisableConnIo,
+		listener:                listener,
+		networkFiltersFactories: networkFiltersFactories,
+		conns:                   list.New(),
+		handler:                 handler,
+		stopChan:                stopChan,
+		updatedLabel:            false,
 	}
 
 	listenPort := 0
@@ -223,16 +224,11 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, handler *conn
 }
 
 func (al *activeListener) OnAccept(rawc net.Conn, handOffRestoredDestinationConnections bool, oriRemoteAddr net.Addr, ch chan network.Connection, buf []byte) {
-	var rawf *os.File
-
 	arc := newActiveRawConn(rawc, al)
 
 	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
 	ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
 
-	if rawf != nil {
-		ctx = context.WithValue(ctx, types.ContextKeyConnectionFd, rawf)
-	}
 	if ch != nil {
 		ctx = context.WithValue(ctx, types.ContextKeyAcceptChan, ch)
 		ctx = context.WithValue(ctx, types.ContextKeyAcceptBuffer, buf)
@@ -244,17 +240,24 @@ func (al *activeListener) OnAccept(rawc net.Conn, handOffRestoredDestinationConn
 	arc.ContinueFilterChain(ctx, true)
 }
 
+// todo
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {
-
+	filterManager := conn.FilterManager()
+	for _, nfcf := range al.networkFiltersFactories {
+		nfcf.CreateFilterChain(ctx, filterManager)
+	}
 }
 
 func (al *activeListener) OnClose() {
 
 }
 
-// todo
 func (al *activeListener) newConnection(ctx context.Context, rawc net.Conn) {
+	sc := network.NewServerSimpleConn(ctx, rawc, al.stopChan)
 
+	newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, sc.ID())
+
+	al.OnNewConnection(newCtx, sc)
 }
 
 type activeRawConn struct {

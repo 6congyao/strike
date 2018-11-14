@@ -76,7 +76,7 @@ func (l *listener) Start(lctx context.Context) {
 	if l.bindToPort {
 		if l.rawl == nil {
 			if err := l.listen(lctx); err != nil {
-				log.Fatalf(l.name, " listen failed, ", err)
+				log.Fatalln(l.name, "listen failed,", err)
 				return
 			}
 		}
@@ -120,7 +120,7 @@ func (l *listener) SetListenerTag(tag uint64) {
 func (l *listener) ListenerFD() (uintptr, error) {
 	file, err := l.rawl.File()
 	if err != nil {
-		log.Fatalf(" listener %s fd not found : %v \n", l.name, err)
+		log.Fatalln("listener fd not found:", l.name, err)
 		return 0, err
 	}
 	//defer file.Close()

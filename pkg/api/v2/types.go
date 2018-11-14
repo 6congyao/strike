@@ -27,9 +27,9 @@ type Metadata map[string]string
 
 // Network Filter's Type
 const (
-	CONNECTION_MANAGER          = "connection_manager"
-	DEFAULT_NETWORK_FILTER      = "proxy"
-	DELEGATION                  = "delegation"
+	CONNECTION_MANAGER     = "connection_manager"
+	DEFAULT_NETWORK_FILTER = "proxy"
+	DELEGATION             = "delegation"
 )
 
 // ClusterType
@@ -389,5 +389,6 @@ type PublishContent struct {
 }
 
 type Delegation struct {
+	AgentName   string `json:"agent_name,omitempty"`
 	ContentType string `json:"content_type,omitempty"`
 }

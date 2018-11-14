@@ -15,7 +15,8 @@
               {
                 "type": "delegation",
                 "config": {
-                  "content_type": "conn"
+                  "agent_name": "apigateway",
+                  "content_type": "connn"
                 }
               }
             ]

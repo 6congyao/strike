@@ -18,6 +18,7 @@ package bootstrap
 import (
 	"log"
 	"strike/pkg/config"
+	_ "strike/pkg/filter/network/delegation"
 	"strike/pkg/server"
 )
 
@@ -54,7 +55,7 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 				// Listener
 				_, err := srv.AddListener(lc, nfcf)
 				if err != nil {
-					log.Fatalf("AddListener error:%s \n", err.Error())
+					log.Fatalln("AddListener error:", err.Error())
 				}
 			}
 		}

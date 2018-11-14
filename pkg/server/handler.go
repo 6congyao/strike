@@ -242,6 +242,7 @@ func (al *activeListener) OnAccept(rawc net.Conn, handOffRestoredDestinationConn
 
 // todo
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {
+	atomic.AddInt64(&al.handler.numConnections, 1)
 	filterManager := conn.FilterManager()
 	for _, nfcf := range al.networkFiltersFactories {
 		nfcf.CreateFilterChain(ctx, filterManager)

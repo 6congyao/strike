@@ -37,14 +37,14 @@ func RegisterAgent(name string, handler Agent) {
 
 type delegate struct {
 	agentName     string
-	contentType   string
+	agentType     string
 	readCallbacks network.ReadFilterCallbacks
 }
 
 func NewDelegate(ctx context.Context, config *v2.Delegation) network.ReadFilter {
 	return &delegate{
-		agentName:   config.AgentName,
-		contentType: config.ContentType,
+		agentName: config.AgentName,
+		agentType: config.AgentType,
 	}
 }
 
@@ -60,7 +60,7 @@ func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks)
 	d.readCallbacks = cb
 
 	if ag := agents[d.agentName]; ag != nil {
-		switch d.contentType {
+		switch d.agentType {
 		case "conn":
 			fallthrough
 		default:

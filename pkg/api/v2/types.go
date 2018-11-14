@@ -390,5 +390,5 @@ type PublishContent struct {
 
 type Delegation struct {
 	AgentName   string `json:"agent_name,omitempty"`
-	ContentType string `json:"content_type,omitempty"`
+	AgentType string `json:"agent_type,omitempty"`
 }

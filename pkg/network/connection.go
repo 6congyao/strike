@@ -17,13 +17,10 @@ package network
 
 import (
 	"context"
-	"errors"
 	"net"
 	"strike/pkg/buffer"
 	"sync/atomic"
 )
-
-var SessionClosedError = errors.New("Session Closed")
 
 var globalSessionId uint64 = 1
 
@@ -36,10 +33,8 @@ type simpleConn struct {
 }
 
 func NewServerSimpleConn(ctx context.Context, rawc net.Conn, stopChan chan struct{}) Connection {
-	id := atomic.AddUint64(&globalSessionId, 1)
-
 	sc := &simpleConn{
-		id:            id,
+		id:            atomic.AddUint64(&globalSessionId, 1),
 		rawConnection: rawc,
 		stopChan:      stopChan,
 	}

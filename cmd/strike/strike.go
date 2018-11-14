@@ -99,7 +99,7 @@ func registerDelegationHandler() {
 }
 
 func delegationHandler(content interface{}) error {
-	if c, ok := content.(net.Addr); ok {
+	if c, ok := content.(net.Conn); ok {
 		fmt.Println("got conn:", c)
 	} else {
 		return errors.New("type error")

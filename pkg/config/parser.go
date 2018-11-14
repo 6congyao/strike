@@ -96,8 +96,11 @@ func ParseDelegationFilter(cfg map[string]interface{}) *v2.Delegation {
 		stdlog.Fatalln("Parsing Delegation network filter error")
 	}
 
-	if delegationConfig.ContentType == "" {
-		stdlog.Println("ContentType in String Needed in Delegation Network Filter")
+	if delegationConfig.AgentName == "" {
+		stdlog.Println("AgentName in String Needed in Delegation Network Filter")
+	}
+	if delegationConfig.AgentType == "" {
+		stdlog.Println("AgentType in String Needed in Delegation Network Filter")
 	}
 
 	return delegationConfig

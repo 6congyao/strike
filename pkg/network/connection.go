@@ -18,6 +18,7 @@ package network
 import (
 	"context"
 	"net"
+	"reflect"
 	"strike/pkg/buffer"
 	"sync/atomic"
 )
@@ -56,9 +57,15 @@ func (sc *simpleConn) Write(buf ...buffer.IoBuffer) error {
 }
 
 func (sc *simpleConn) Close(ccType ConnectionCloseType, eventType ConnectionEvent) error {
-	if atomic.CompareAndSwapInt32(&sc.closeFlag, 0, 1) {
-		close(sc.stopChan)
+	if !atomic.CompareAndSwapInt32(&sc.closeFlag, 0, 1) {
+		return nil
 	}
+
+	if reflect.ValueOf(sc.RawConn()).IsNil() {
+		return nil
+	}
+
+	sc.RawConn().Close()
 	return nil
 }
 

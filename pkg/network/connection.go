@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 )
 
-var globalSessionId uint64 = 1
+var globalSessionId uint64 = 0
 
 type simpleConn struct {
 	id            uint64

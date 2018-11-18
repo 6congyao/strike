@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/kavu/go_reuseport"
-	"strike/pkg/config"
+	"strike/pkg/evio/config"
 	"strike/pkg/evio/internal"
 )
 

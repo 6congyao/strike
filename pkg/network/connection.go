@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 )
 
-var globalSessionId uint64 = 0
+var globalConnId uint64 = 0
 
 type simpleConn struct {
 	id            uint64
@@ -35,7 +35,7 @@ type simpleConn struct {
 
 func NewServerSimpleConn(ctx context.Context, rawc net.Conn, stopChan chan struct{}) Connection {
 	sc := &simpleConn{
-		id:            atomic.AddUint64(&globalSessionId, 1),
+		id:            atomic.AddUint64(&globalConnId, 1),
 		rawConnection: rawc,
 		stopChan:      stopChan,
 	}

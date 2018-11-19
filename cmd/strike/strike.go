@@ -193,8 +193,8 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 			//httpContext.req.profileGetHttpTime = time.Now()
 			//counterRecvHttp.Incr(1)
 
-			index := getHashCode(httpContext.req.parameter) % *config.ConsumerHttpProcessors
-			workerQueues[index] <- httpContext.req
+			//index := getHashCode(httpContext.req.parameter) % *config.ConsumerHttpProcessors
+			//workerQueues[index] <- httpContext.req
 			httpContext.req = nil
 			data = leftover
 			// handle the request

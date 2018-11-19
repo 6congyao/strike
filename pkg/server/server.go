@@ -51,8 +51,9 @@ func NewServer(config *Config) Server {
 			procNum = config.Processor
 		}
 
-		//network.UseNetpollMode = config.UseNetpollMode
-		if config.UseEdgeMode {
+		network.UseEdgeMode = config.UseEdgeMode
+
+		if network.UseEdgeMode {
 			log.Println("Edge mode enabled.")
 		}
 	}

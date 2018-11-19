@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 )
 
+var globalSessionId uint64 = 0
+
 type Session struct {
 	id         uint64
 	remoteAddr net.Addr
@@ -40,7 +42,6 @@ func NewSession(radd net.Addr) *Session {
 	s := &Session{
 		id:         atomic.AddUint64(&globalSessionId, 1),
 		remoteAddr: radd,
-		pr:         &PipelineReader{},
 	}
 	return s
 }

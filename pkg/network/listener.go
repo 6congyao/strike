@@ -37,8 +37,6 @@ type listener struct {
 	localAddress                          net.Addr
 	bindToPort                            bool
 	listenerTag                           uint64
-	perConnBufferLimitBytes               uint32
-	handOffRestoredDestinationConnections bool
 	cb                                    ListenerEventListener
 	rawl                                  *net.TCPListener
 	config                                *v2.Listener
@@ -59,8 +57,6 @@ func NewListener(lc *v2.Listener) Listener {
 			localAddress:                          lc.Addr,
 			bindToPort:                            lc.BindToPort,
 			listenerTag:                           lc.ListenerTag,
-			perConnBufferLimitBytes:               lc.PerConnBufferLimitBytes,
-			handOffRestoredDestinationConnections: lc.HandOffRestoredDestinationConnections,
 			config:                                lc,
 		}
 
@@ -143,28 +139,12 @@ func (l *listener) ListenerFD() (uintptr, error) {
 	return file.Fd(), nil
 }
 
-func (l *listener) PerConnBufferLimitBytes() uint32 {
-	return l.perConnBufferLimitBytes
-}
-
-func (l *listener) SetPerConnBufferLimitBytes(limitBytes uint32) {
-	l.perConnBufferLimitBytes = limitBytes
-}
-
 func (l *listener) SetListenerCallbacks(cb ListenerEventListener) {
 	l.cb = cb
 }
 
 func (l *listener) GetListenerCallbacks() ListenerEventListener {
 	return l.cb
-}
-
-func (l *listener) SetHandOffRestoredDestinationConnections(restoredDestation bool) {
-	l.handOffRestoredDestinationConnections = restoredDestation
-}
-
-func (l *listener) HandOffRestoredDestinationConnections() bool {
-	return l.handOffRestoredDestinationConnections
 }
 
 func (l *listener) Close(lctx context.Context) error {
@@ -209,6 +189,7 @@ func (l *listener) accept(lctx context.Context) error {
 	return nil
 }
 
+// edge listener impl based on evio package
 type edgeListener struct {
 	name         string
 	localAddress net.Addr
@@ -390,22 +371,6 @@ func (el *edgeListener) SetListenerTag(tag uint64) {
 }
 
 func (el *edgeListener) ListenerFD() (uintptr, error) {
-	panic("implement me")
-}
-
-func (el *edgeListener) PerConnBufferLimitBytes() uint32 {
-	panic("implement me")
-}
-
-func (el *edgeListener) SetPerConnBufferLimitBytes(limitBytes uint32) {
-	panic("implement me")
-}
-
-func (el *edgeListener) SetHandOffRestoredDestinationConnections(restoredDestation bool) {
-	panic("implement me")
-}
-
-func (el *edgeListener) HandOffRestoredDestinationConnections() bool {
 	panic("implement me")
 }
 

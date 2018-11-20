@@ -52,18 +52,6 @@ type Listener interface {
 	// ListenerFD returns a copy a listener fd
 	ListenerFD() (uintptr, error)
 
-	// PerConnBufferLimitBytes returns the limit bytes per connection
-	PerConnBufferLimitBytes() uint32
-
-	// Set limit bytes per connection
-	SetPerConnBufferLimitBytes(limitBytes uint32)
-
-	// Set if listener should hand off restored destination connections
-	SetHandOffRestoredDestinationConnections(restoredDestation bool)
-
-	// Get if listener hand off restored destination connections
-	HandOffRestoredDestinationConnections() bool
-
 	// SetListenerCallbacks set a listener event listener
 	SetListenerCallbacks(cb ListenerEventListener)
 

@@ -95,9 +95,7 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactor
 		if !equalConfig {
 			al.disableConnIo = lc.DisableConnIo
 			al.listener.SetConfig(lc)
-			al.listener.SetPerConnBufferLimitBytes(lc.PerConnBufferLimitBytes)
 			al.listener.SetListenerTag(lc.ListenerTag)
-			al.listener.SetHandOffRestoredDestinationConnections(lc.HandOffRestoredDestinationConnections)
 			log.Println("AddOrUpdateListener: use new listen config: ", lc)
 		}
 
@@ -284,7 +282,6 @@ type activeRawConn struct {
 	originalDstIP                         string
 	originalDstPort                       int
 	oriRemoteAddr                         net.Addr
-	handOffRestoredDestinationConnections bool
 	rawcElement                           *list.Element
 	activeListener                        *activeListener
 	acceptedFilters                       []network.ListenerFilter
@@ -310,12 +307,7 @@ func (arc *activeRawConn) ContinueFilterChain(ctx context.Context, success bool)
 		}
 	}
 
-	// TODO: handle hand_off_restored_destination_connections logic
-	if arc.handOffRestoredDestinationConnections {
-		//arc.HandOffRestoredDestinationConnectionsHandler(ctx)
-	} else {
-		arc.activeListener.newSession(ctx, arc.rawc)
-	}
+	arc.activeListener.newSession(ctx, arc.rawc)
 }
 
 func (arc *activeRawConn) Conn() interface{} {

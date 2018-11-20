@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"reflect"
 	"strike/pkg/evio"
 	"strings"
 	"sync"
@@ -32,6 +33,7 @@ var globalSessionId uint64 = 0
 type Session struct {
 	id         uint64
 	remoteAddr net.Addr
+	closeFlag     int32
 
 	In            evio.InputStream
 	Out           []byte
@@ -57,8 +59,17 @@ func (s *Session) Start(lctx context.Context) {
 
 }
 
-//todo
 func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) error {
+	if !atomic.CompareAndSwapInt32(&s.closeFlag, 0, 1) {
+		return nil
+	}
+
+	if reflect.ValueOf(s.RawConn()).IsNil() {
+		return nil
+	}
+
+	s.RawConn().(net.Conn).Close()
+
 	return nil
 }
 

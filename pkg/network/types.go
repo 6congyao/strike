@@ -174,7 +174,7 @@ type Connection interface {
 
 	// Write writes data to the connection.
 	// Called by other-side stream connection's read loop. Will loop through stream filters with the buffer if any are installed.
-	Write(buf ...buffer.IoBuffer) error
+	Write(b []byte) (n int, err error)
 
 	// Close closes connection with connection type and event type.
 	// ConnectionCloseType - how to close to connection
@@ -191,13 +191,6 @@ type Connection interface {
 	//	- ConnectFailed
 	Close(ccType ConnectionCloseType, eventType ConnectionEvent) error
 
-	// LocalAddr returns the local address of the connection.
-	// For client connection, this is the origin address
-	// For server connection, this is the proxy's address
-	// TODO: support get local address in redirected request
-	// TODO: support transparent mode
-	LocalAddr() net.Addr
-
 	// RemoteAddr returns the remote address of the connection.
 	RemoteAddr() net.Addr
 
@@ -207,57 +200,11 @@ type Connection interface {
 	// AddConnectionEventListener add a listener method will be called when connection event occur.
 	AddConnectionEventListener(cb ConnectionEventListener)
 
-	// AddBytesReadListener add a method will be called everytime bytes read
-	AddBytesReadListener(cb func(bytesRead uint64))
-
-	// AddBytesSentListener add a method will be called everytime bytes write
-	AddBytesSentListener(cb func(bytesSent uint64))
-
-	// NextProtocol returns network level negotiation, such as ALPN. Returns empty string if not supported.
-	NextProtocol() string
-
-	// SetNoDelay enable/disable tcp no delay
-	SetNoDelay(enable bool)
-
-	// SetReadDisable enable/disable read on the connection.
-	// If reads are enabled after disable, connection continues to read and data will be dispatched to read filter chains.
-	SetReadDisable(disable bool)
-
-	// ReadEnabled returns whether reading is enabled on the connection.
-	ReadEnabled() bool
-
-	// TLS returns a related tls connection.
-	TLS() net.Conn
-
-	// SetBufferLimit set the buffer limit.
-	SetBufferLimit(limit uint32)
-
-	// BufferLimit returns the buffer limit.
-	BufferLimit() uint32
-
-	// SetLocalAddress sets a local address
-	SetLocalAddress(localAddress net.Addr, restored bool)
-
-	// SetStats injects a connection stats
-	SetStats(stats *ConnectionStats)
-
-	// LocalAddressRestored returns whether local address is restored
-	// TODO: unsupported now
-	LocalAddressRestored() bool
-
-	// GetWriteBuffer is used by network writer filter
-	GetWriteBuffer() []buffer.IoBuffer
-
-	// GetReadBuffer is used by network read filter
-	GetReadBuffer() buffer.IoBuffer
-
 	// FilterManager returns the FilterManager
 	FilterManager() FilterManager
 
 	// RawConn returns the original connections.
-	// Caution: raw conn only used in io-loop disable mode
-	// TODO: a better way to provide raw conn
-	RawConn() net.Conn
+	RawConn() interface{}
 }
 
 // ConnectionStats is a group of connection metrics

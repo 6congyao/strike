@@ -16,6 +16,7 @@
 package network
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -32,18 +33,33 @@ type Session struct {
 	id         uint64
 	remoteAddr net.Addr
 
-	In  evio.InputStream
-	Out []byte
-	pr  *PipelineReader
-	Mu  sync.Mutex
+	In            evio.InputStream
+	Out           []byte
+	pr            *PipelineReader
+	Mu            sync.Mutex
+	filterManager FilterManager
+	rawc          interface{}
 }
 
-func NewSession(radd net.Addr) *Session {
+func NewSession(rawc interface{}, radd net.Addr) *Session {
 	s := &Session{
 		id:         atomic.AddUint64(&globalSessionId, 1),
 		remoteAddr: radd,
+		rawc:       rawc,
 	}
+
+	s.filterManager = newFilterManager(s)
 	return s
+}
+
+//todo
+func (s *Session) Start(lctx context.Context) {
+
+}
+
+//todo
+func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) error {
+	return nil
 }
 
 func (s *Session) ID() uint64 {
@@ -61,6 +77,22 @@ func (s *Session) PipelineReader() *PipelineReader {
 func (s *Session) Write(b []byte) (n int, err error) {
 	s.Out = append(s.Out, b...)
 	return len(b), nil
+}
+
+func (s *Session) SetRemoteAddr(addr net.Addr) {
+	s.remoteAddr = addr
+}
+
+func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
+
+}
+
+func (s *Session) FilterManager() FilterManager {
+	return s.filterManager
+}
+
+func (s *Session) RawConn() interface{} {
+	return s.rawc
 }
 
 // PipelineReader ...

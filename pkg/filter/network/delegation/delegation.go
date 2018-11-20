@@ -18,6 +18,7 @@ package delegation
 import (
 	"context"
 	"log"
+	"net"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
@@ -61,11 +62,13 @@ func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks)
 
 	if ag := agents[d.agentName]; ag != nil {
 		switch d.agentType {
-		case "conn":
+		case "std":
 			fallthrough
 		default:
-			if err := ag(d.readCallbacks.Connection().RawConn()); err != nil {
-				log.Println("delegation got error:", err)
+			if conn, ok := d.readCallbacks.Connection().RawConn().(net.Conn); ok {
+				if err := ag(conn); err != nil {
+					log.Println("delegation got error:", err)
+				}
 			}
 		}
 	}

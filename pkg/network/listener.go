@@ -218,7 +218,6 @@ type edgeListener struct {
 	cb     ListenerEventListener
 	config *v2.Listener
 
-	connMap    sync.Map
 	readerPool sync.Pool
 }
 
@@ -243,17 +242,17 @@ func (el *edgeListener) serve(lctx context.Context) error {
 		// notify
 		el.cb.OnAccept(econn)
 
-		session := econn.Context().(*Session)
 		// add session to the map
-		fmt.Println("Connection opened:", session.RemoteAddr())
-		el.connMap.Store(session.ID(), session)
+		fmt.Println("Connection opened:", econn.RemoteAddr())
 		return
 	}
 
 	events.Closed = func(econn evio.Conn, err error) (action evio.Action) {
+		el.cb.OnClose()
 		session := econn.Context().(*Session)
 		el.readerPool.Put(session.pr)
-		el.connMap.Delete(session.ID())
+
+		//el.connMap.Delete(session.ID())
 
 		fmt.Println("Connection closed:", session.remoteAddr.String())
 		return

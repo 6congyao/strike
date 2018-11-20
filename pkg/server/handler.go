@@ -189,7 +189,7 @@ type activeListener struct {
 	networkFiltersFactories []network.NetworkFilterChainFactory
 	listenIP                string
 	listenPort              int
-	conns                   *list.List
+	sMap                    sync.Map
 	connsMux                sync.RWMutex
 	handler                 *connHandler
 	stopChan                chan struct{}
@@ -202,7 +202,6 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, networkFilter
 		disableConnIo:           lc.DisableConnIo,
 		listener:                listener,
 		networkFiltersFactories: networkFiltersFactories,
-		conns:                   list.New(),
 		handler:                 handler,
 		stopChan:                stopChan,
 		updatedLabel:            false,
@@ -247,7 +246,6 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 
 // todo
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {
-	atomic.AddInt64(&al.handler.numConnections, 1)
 	filterManager := conn.FilterManager()
 	for _, nfcf := range al.networkFiltersFactories {
 		nfcf.CreateFilterChain(ctx, filterManager)
@@ -259,17 +257,25 @@ func (al *activeListener) OnClose() {
 }
 
 func (al *activeListener) newSession(ctx context.Context, rawc interface{}) {
+	var session *network.Session
 	if conn, ok := rawc.(net.Conn); ok {
-		sc := network.NewServerSimpleConn(ctx, conn, al.stopChan)
-		newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, sc.ID())
-		al.OnNewConnection(newCtx, sc)
+		session = network.NewSession(conn, conn.RemoteAddr())
+
+		//sc := network.NewServerSimpleConn(ctx, conn, al.stopChan)
+		//newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, sc.ID())
+		//
 	} else if conn, ok := rawc.(evio.Conn); ok {
 		// create the session
-		session := network.NewSession(conn.RemoteAddr())
+		session = network.NewSession(conn, conn.RemoteAddr())
 
 		// keep track of the session
 		conn.SetContext(session)
 	}
+
+	al.sMap.Store(session.ID(), session)
+	atomic.AddInt64(&al.handler.numConnections, 1)
+	// notify
+	al.OnNewConnection(ctx, session)
 }
 
 type activeRawConn struct {

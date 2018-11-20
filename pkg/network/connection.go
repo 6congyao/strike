@@ -19,7 +19,6 @@ import (
 	"context"
 	"net"
 	"reflect"
-	"strike/pkg/buffer"
 	"sync/atomic"
 )
 
@@ -27,7 +26,7 @@ var globalConnId uint64 = 0
 
 type simpleConn struct {
 	id            uint64
-	rawConnection net.Conn
+	rawc          net.Conn
 	filterManager FilterManager
 	stopChan      chan struct{}
 	closeFlag     int32
@@ -35,9 +34,9 @@ type simpleConn struct {
 
 func NewServerSimpleConn(ctx context.Context, rawc net.Conn, stopChan chan struct{}) Connection {
 	sc := &simpleConn{
-		id:            atomic.AddUint64(&globalConnId, 1),
-		rawConnection: rawc,
-		stopChan:      stopChan,
+		id:       atomic.AddUint64(&globalConnId, 1),
+		rawc:     rawc,
+		stopChan: stopChan,
 	}
 
 	sc.filterManager = newFilterManager(sc)
@@ -52,8 +51,8 @@ func (sc *simpleConn) Start(lctx context.Context) {
 
 }
 
-func (sc *simpleConn) Write(buf ...buffer.IoBuffer) error {
-	return nil
+func (sc *simpleConn) Write(b []byte) (n int, err error) {
+	return 0, nil
 }
 
 func (sc *simpleConn) Close(ccType ConnectionCloseType, eventType ConnectionEvent) error {
@@ -65,11 +64,7 @@ func (sc *simpleConn) Close(ccType ConnectionCloseType, eventType ConnectionEven
 		return nil
 	}
 
-	sc.RawConn().Close()
-	return nil
-}
-
-func (sc *simpleConn) LocalAddr() net.Addr {
+	sc.RawConn().(net.Conn).Close()
 	return nil
 }
 
@@ -85,66 +80,10 @@ func (sc *simpleConn) AddConnectionEventListener(cb ConnectionEventListener) {
 
 }
 
-func (sc *simpleConn) AddBytesReadListener(cb func(bytesRead uint64)) {
-
-}
-
-func (sc *simpleConn) AddBytesSentListener(cb func(bytesSent uint64)) {
-
-}
-
-func (sc *simpleConn) NextProtocol() string {
-	return ""
-}
-
-func (sc *simpleConn) SetNoDelay(enable bool) {
-
-}
-
-func (sc *simpleConn) SetReadDisable(disable bool) {
-
-}
-
-func (sc *simpleConn) ReadEnabled() bool {
-	return false
-}
-
-func (sc *simpleConn) TLS() net.Conn {
-	return nil
-}
-
-func (sc *simpleConn) SetBufferLimit(limit uint32) {
-
-}
-
-func (sc *simpleConn) BufferLimit() uint32 {
-	return 0
-}
-
-func (sc *simpleConn) SetLocalAddress(localAddress net.Addr, restored bool) {
-
-}
-
-func (sc *simpleConn) SetStats(stats *ConnectionStats) {
-
-}
-
-func (sc *simpleConn) LocalAddressRestored() bool {
-	return false
-}
-
-func (sc *simpleConn) GetWriteBuffer() []buffer.IoBuffer {
-	return nil
-}
-
-func (sc *simpleConn) GetReadBuffer() buffer.IoBuffer {
-	return nil
-}
-
 func (sc *simpleConn) FilterManager() FilterManager {
 	return sc.filterManager
 }
 
-func (sc *simpleConn) RawConn() net.Conn {
-	return sc.rawConnection
+func (sc *simpleConn) RawConn() interface{} {
+	return sc.rawc
 }

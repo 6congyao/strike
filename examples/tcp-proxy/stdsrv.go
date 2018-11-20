@@ -49,7 +49,7 @@ func StdServe() error {
 				conn.Close()
 			}()
 
-			session := network.NewSession(conn.RemoteAddr())
+			session := network.NewSession(conn, conn.RemoteAddr())
 			fmt.Println("Session opened:", session.RemoteAddr())
 			connMap.Store(session.ID(), session)
 

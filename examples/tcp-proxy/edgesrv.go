@@ -48,7 +48,7 @@ func EdgeServe() error {
 
 	events.Opened = func(econn evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
 		// create the session
-		session := network.NewSession(econn.RemoteAddr())
+		session := network.NewSession(econn, econn.RemoteAddr())
 
 		// keep track of the session
 		econn.SetContext(session)

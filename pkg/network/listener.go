@@ -203,7 +203,7 @@ func (l *listener) accept(lctx context.Context) error {
 			}
 		}()
 
-		l.cb.OnAccept(rawc, l.handOffRestoredDestinationConnections, nil, nil, nil)
+		l.cb.OnAccept(rawc)
 	}()
 
 	return nil
@@ -240,30 +240,29 @@ func (el *edgeListener) serve(lctx context.Context) error {
 	}
 
 	events.Opened = func(econn evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
-		// create the client
-		session := NewSession(econn.RemoteAddr())
+		// notify
+		el.cb.OnAccept(econn)
 
-		// keep track of the client
-		econn.SetContext(session)
-
-		// add client to server map
-		fmt.Println("Session opened:", session.RemoteAddr())
+		session := econn.Context().(*Session)
+		// add session to the map
+		fmt.Println("Connection opened:", session.RemoteAddr())
 		el.connMap.Store(session.ID(), session)
 		return
 	}
 
 	events.Closed = func(econn evio.Conn, err error) (action evio.Action) {
 		session := econn.Context().(*Session)
-
+		el.readerPool.Put(session.pr)
 		el.connMap.Delete(session.ID())
 
-		log.Println("Closed connection: ", session.remoteAddr.String())
+		fmt.Println("Connection closed:", session.remoteAddr.String())
 		return
 	}
 
 	events.Data = func(econn evio.Conn, in []byte) (out []byte, action evio.Action) {
 		session := econn.Context().(*Session)
 		p := session.In.Begin(in)
+		// lazy acquire
 		session.pr = el.acquireReader(session)
 		pr := session.PipelineReader()
 		rbuf := bytes.NewBuffer(p)
@@ -276,7 +275,8 @@ func (el *edgeListener) serve(lctx context.Context) error {
 			return
 		} else {
 			fmt.Println("give resp, conn id is:", session.ID())
-			out = AppendResp(nil, "200 OK", "", string(p) + "\r\n")
+			out = AppendResp(nil, "200 OK", "", string(p)+"\r\n")
+			el.releaseReader(session)
 			return
 		}
 
@@ -337,6 +337,18 @@ func (el *edgeListener) acquireReader(session *Session) *PipelineReader {
 	}
 
 	return pr
+}
+
+func (el *edgeListener) releaseReader(session *Session) {
+	if session == nil || session.pr == nil {
+		return
+	}
+
+	session.pr.Buf = nil
+	session.pr.Rd = nil
+	session.pr.Wr = nil
+	el.readerPool.Put(session.pr)
+	session.pr = nil
 }
 
 func (el *edgeListener) Config() *v2.Listener {

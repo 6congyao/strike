@@ -47,13 +47,13 @@ func EdgeServe() error {
 	}
 
 	events.Opened = func(econn evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
-		// create the client
+		// create the session
 		session := network.NewSession(econn.RemoteAddr())
 
-		// keep track of the client
+		// keep track of the session
 		econn.SetContext(session)
 
-		// add client to server map
+		// add client to the map
 		fmt.Println("Session opened:", session.RemoteAddr())
 		connMapEdge.Store(session.ID(), session)
 		return

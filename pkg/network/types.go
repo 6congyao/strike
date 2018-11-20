@@ -125,13 +125,13 @@ type ConnectionHandler interface {
 
 // ListenerEventListener is a Callback invoked by a listener.
 type ListenerEventListener interface {
-	// OnAccept is called on new connection accepted
-	OnAccept(rawc net.Conn, handOffRestoredDestinationConnections bool, oriRemoteAddr net.Addr, c chan Connection, buf []byte)
+	// OnAccept is called on listener accepted new connection
+	OnAccept(rawc interface{})
 
 	// OnNewConnection is called on new connection created
 	OnNewConnection(ctx context.Context, conn Connection)
 
-	// OnClose is called on listener close
+	// OnClose is called on listener closed
 	OnClose()
 }
 
@@ -341,7 +341,7 @@ type ListenerFilter interface {
 // ListenerFilterCallbacks is a callback handler called by listener filter to talk to listener
 type ListenerFilterCallbacks interface {
 	// Conn returns the Connection reference used in callback handler
-	Conn() net.Conn
+	Conn() interface{}
 
 	ContinueFilterChain(ctx context.Context, success bool)
 

@@ -16,6 +16,7 @@
 package network
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -29,15 +30,16 @@ import (
 )
 
 var globalSessionId uint64 = 0
+var PipelineReaderPool sync.Pool
 
 type Session struct {
 	id         uint64
 	remoteAddr net.Addr
-	closeFlag     int32
+	closeFlag  int32
 
 	In            evio.InputStream
 	Out           []byte
-	pr            *PipelineReader
+	Pr            *PipelineReader
 	Mu            sync.Mutex
 	filterManager FilterManager
 	rawc          interface{}
@@ -54,9 +56,12 @@ func NewSession(rawc interface{}, radd net.Addr) *Session {
 	return s
 }
 
-//todo
-func (s *Session) Start(lctx context.Context) {
-
+// start read loop on std net conn
+// do nothing on edge conn
+func (s *Session) Start(ctx context.Context) {
+	if conn, ok := s.RawConn().(net.Conn); ok {
+		s.startReadLoop(ctx, conn)
+	}
 }
 
 func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) error {
@@ -68,7 +73,9 @@ func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) e
 		return nil
 	}
 
-	s.RawConn().(net.Conn).Close()
+	if conn, ok := s.RawConn().(net.Conn); ok {
+		conn.Close()
+	}
 
 	return nil
 }
@@ -79,10 +86,6 @@ func (s *Session) ID() uint64 {
 
 func (s *Session) RemoteAddr() net.Addr {
 	return s.remoteAddr
-}
-
-func (s *Session) PipelineReader() *PipelineReader {
-	return s.pr
 }
 
 func (s *Session) Write(b []byte) (n int, err error) {
@@ -104,6 +107,33 @@ func (s *Session) FilterManager() FilterManager {
 
 func (s *Session) RawConn() interface{} {
 	return s.rawc
+}
+
+func (s *Session) startReadLoop(ctx context.Context, conn net.Conn) {
+	buf := make([]byte, 0xFFFF)
+
+	for {
+		var close bool
+		n, err := conn.Read(buf)
+		if err != nil {
+			return
+		}
+		in := buf[:n]
+		p := s.In.Begin(in)
+		s.Pr = AcquirePipelineReader(s)
+		pr := s.Pr
+		rbuf := bytes.NewBuffer(p)
+		pr.Rd = rbuf
+		pr.Wr = s
+
+		// todo: ondata
+
+		p = p[len(p)-rbuf.Len():]
+		s.In.End(p)
+		if close {
+			break
+		}
+	}
 }
 
 // PipelineReader ...
@@ -226,4 +256,32 @@ func readNextCommand(packet []byte, argsIn [][]byte, msg *Message, wr io.Writer)
 		}
 	}
 	return false, argsIn[:0], KindHttp, packet, nil
+}
+
+func AcquirePipelineReader(s *Session) *PipelineReader {
+	if s.Pr != nil {
+		return s.Pr
+	}
+
+	v := PipelineReaderPool.Get()
+	var pr *PipelineReader
+	if v == nil {
+		pr = &PipelineReader{}
+	} else {
+		pr = v.(*PipelineReader)
+	}
+
+	return pr
+}
+
+func ReleasePipelineReader(s *Session) {
+	if s == nil || s.Pr == nil {
+		return
+	}
+
+	s.Pr.Buf = nil
+	s.Pr.Rd = nil
+	s.Pr.Wr = nil
+	PipelineReaderPool.Put(s.Pr)
+	s.Pr = nil
 }

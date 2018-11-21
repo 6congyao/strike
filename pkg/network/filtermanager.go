@@ -15,10 +15,6 @@
 
 package network
 
-import (
-	"strike/pkg/buffer"
-)
-
 type filterManager struct {
 	upstreamFilters   []*activeReadFilter
 	downstreamFilters []WriteFilter
@@ -55,7 +51,7 @@ func (fm *filterManager) OnRead() {
 	panic("implement me")
 }
 
-func (fm *filterManager) OnWrite(buffer []buffer.IoBuffer) FilterStatus {
+func (fm *filterManager) OnWrite(buffer []byte) FilterStatus {
 	panic("implement me")
 }
 

@@ -19,7 +19,6 @@ import (
 	"context"
 	"net"
 	"strike/pkg/api/v2"
-	"strike/pkg/buffer"
 )
 
 // Listener is a wrapper of tcp listener
@@ -158,7 +157,7 @@ type Connection interface {
 
 	// Start starts connection with context.
 	// See context.go to get available keys in context
-	Start(lctx context.Context)
+	Start(ctx context.Context)
 
 	// Write writes data to the connection.
 	// Called by other-side stream connection's read loop. Will loop through stream filters with the buffer if any are installed.
@@ -233,13 +232,13 @@ type FilterManager interface {
 	OnRead()
 
 	// OnWrite is called before data write
-	OnWrite(buffer []buffer.IoBuffer) FilterStatus
+	OnWrite(buffer []byte) FilterStatus
 }
 
 // ReadFilter is a connection binary read filter, registered by FilterManager.AddReadFilter
 type ReadFilter interface {
 	// OnData is called everytime bytes is read from the connection
-	OnData(buffer buffer.IoBuffer) FilterStatus
+	OnData(buffer []byte) FilterStatus
 
 	// OnNewConnection is called on new connection is created
 	OnNewConnection() FilterStatus
@@ -251,7 +250,7 @@ type ReadFilter interface {
 // WriteFilter is a connection binary write filter, only called by conn accept loop
 type WriteFilter interface {
 	// OnWrite is called before data write to raw connection
-	OnWrite(buffer []buffer.IoBuffer) FilterStatus
+	OnWrite(buffer []byte) FilterStatus
 }
 
 type TLSContextManager interface {

@@ -47,7 +47,7 @@ func (sc *simpleConn) ID() uint64 {
 	return sc.id
 }
 
-func (sc *simpleConn) Start(lctx context.Context) {
+func (sc *simpleConn) Start(ctx context.Context) {
 
 }
 

@@ -141,23 +141,64 @@ func (ch *connHandler) StartListeners(lctx context.Context) {
 }
 
 func (ch *connHandler) FindListenerByAddress(addr net.Addr) network.Listener {
-	return nil
+	l := ch.findActiveListenerByAddress(addr)
+
+	if l == nil {
+		return nil
+	}
+
+	return l.listener
 }
 
 func (ch *connHandler) FindListenerByName(name string) network.Listener {
-	return nil
+	l := ch.findActiveListenerByName(name)
+
+	if l == nil {
+		return nil
+	}
+
+	return l.listener
 }
 
 func (ch *connHandler) RemoveListeners(name string) {
-	return
+	for i, l := range ch.listeners {
+		if l.listener.Name() == name {
+			ch.listeners = append(ch.listeners[:i], ch.listeners[i+1:]...)
+		}
+	}
 }
 
 func (ch *connHandler) StopListener(lctx context.Context, name string, close bool) error {
+	for _, l := range ch.listeners {
+		if l.listener.Name() == name {
+			// stop goroutine
+			if close {
+				return l.listener.Close(lctx)
+			}
+
+			return l.listener.Stop()
+		}
+	}
+
 	return nil
 }
 
 func (ch *connHandler) StopListeners(lctx context.Context, close bool) error {
-	return nil
+	var errGlobal error
+	for _, l := range ch.listeners {
+		// stop goroutine
+		if close {
+			if err := l.listener.Close(lctx); err != nil {
+				errGlobal = err
+			}
+		} else {
+			if err := l.listener.Stop(); err != nil {
+				errGlobal = err
+			}
+		}
+	}
+
+	return errGlobal
 }
 
 func (ch *connHandler) ListListenersFD(lctx context.Context) []uintptr {
@@ -172,6 +213,19 @@ func (ch *connHandler) findActiveListenerByName(name string) *activeListener {
 	for _, l := range ch.listeners {
 		if l.listener != nil {
 			if l.listener.Name() == name {
+				return l
+			}
+		}
+	}
+
+	return nil
+}
+
+func (ch *connHandler) findActiveListenerByAddress(addr net.Addr) *activeListener {
+	for _, l := range ch.listeners {
+		if l.listener != nil {
+			if l.listener.Addr().Network() == addr.Network() &&
+				l.listener.Addr().String() == addr.String() {
 				return l
 			}
 		}
@@ -221,7 +275,6 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, networkFilter
 }
 
 func (al *activeListener) OnAccept(rawc interface{}) {
-	//if conn, ok := rawc.(net.Conn); ok {
 	arc := newActiveRawConn(rawc, al)
 
 	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
@@ -236,10 +289,6 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 	//}
 
 	arc.ContinueFilterChain(ctx, true)
-	//} else if conn, ok := rawc.(evio.Conn); ok {
-	//
-	//}
-
 }
 
 // todo
@@ -248,6 +297,9 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 	for _, nfcf := range al.networkFiltersFactories {
 		nfcf.CreateFilterChain(ctx, filterManager)
 	}
+
+	fmt.Println("in")
+	conn.Start(ctx)
 }
 
 func (al *activeListener) OnClose() {

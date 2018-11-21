@@ -128,7 +128,7 @@ func (ch *connHandler) NumConnections() uint64 {
 func (ch *connHandler) StartListener(lctx context.Context, listenerTag uint64) {
 	for _, l := range ch.listeners {
 		if l.listener.ListenerTag() == listenerTag {
-			go l.listener.Start(nil)
+			go l.listener.Start(lctx)
 		}
 	}
 }
@@ -136,7 +136,7 @@ func (ch *connHandler) StartListener(lctx context.Context, listenerTag uint64) {
 // async
 func (ch *connHandler) StartListeners(lctx context.Context) {
 	for _, l := range ch.listeners {
-		go l.listener.Start(nil)
+		go l.listener.Start(lctx)
 	}
 }
 

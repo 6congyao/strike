@@ -244,22 +244,23 @@ func (el *edgeListener) serve(lctx context.Context) error {
 		pr.Rd = rbuf
 		pr.Wr = session
 
-		msgs, err := pr.ReadMessages()
-		if err != nil {
-			action = evio.Close
-			return
-		} else {
-			fmt.Println("give resp, conn id is:", session.ID())
-			out = AppendResp(nil, "200 OK", "", string(p)+"\r\n")
-			ReleasePipelineReader(session)
-			return
-		}
-
-		for _, msg := range msgs {
-			if msg != nil && msg.Command() != "" {
-				fmt.Println("got msg:", msg)
-			}
-		}
+		// todo: ondata
+		//msgs, err := pr.ReadMessages()
+		//if err != nil {
+		//	action = evio.Close
+		//	return
+		//} else {
+		//	fmt.Println("give resp, conn id is:", session.ID())
+		//	out = AppendResp(nil, "200 OK", "", string(p)+"\r\n")
+		//	ReleasePipelineReader(session)
+		//	return
+		//}
+		//
+		//for _, msg := range msgs {
+		//	if msg != nil && msg.Command() != "" {
+		//		fmt.Println("got msg:", msg)
+		//	}
+		//}
 		p = p[len(p)-rbuf.Len():]
 		session.In.End(p)
 

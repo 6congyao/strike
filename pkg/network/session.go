@@ -101,6 +101,10 @@ func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
 
 }
 
+func (s *Session) GetReadBuffer() []byte {
+	return s.Pr.Buf
+}
+
 func (s *Session) FilterManager() FilterManager {
 	return s.filterManager
 }

@@ -13,7 +13,7 @@
             "tls_context":{},
             "filters": [
               {
-                "type": "!delegation",
+                "type": "delegation",
                 "config": {
                   "agent_name": "apigateway",
                   "agent_type": "std"

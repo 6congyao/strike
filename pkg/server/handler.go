@@ -298,7 +298,7 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 		nfcf.CreateFilterChain(ctx, filterManager)
 	}
 
-	fmt.Println("in")
+	filterManager.InitializeReadFilters()
 	conn.Start(ctx)
 }
 
@@ -306,7 +306,7 @@ func (al *activeListener) OnClose() {
 
 }
 
-func (al *activeListener) newSession(ctx context.Context, rawc interface{}) {
+func (al *activeListener) newConnection(ctx context.Context, rawc interface{}) {
 	var session *network.Session
 	if conn, ok := rawc.(net.Conn); ok {
 		session = network.NewSession(conn, conn.RemoteAddr())
@@ -359,7 +359,7 @@ func (arc *activeRawConn) ContinueFilterChain(ctx context.Context, success bool)
 		}
 	}
 
-	arc.activeListener.newSession(ctx, arc.rawc)
+	arc.activeListener.newConnection(ctx, arc.rawc)
 }
 
 func (arc *activeRawConn) Conn() interface{} {

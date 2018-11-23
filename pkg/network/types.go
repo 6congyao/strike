@@ -187,6 +187,9 @@ type Connection interface {
 	// AddConnectionEventListener add a listener method will be called when connection event occur.
 	AddConnectionEventListener(cb ConnectionEventListener)
 
+	// GetReadBuffer is used by network read filter
+	GetReadBuffer() []byte
+
 	// FilterManager returns the FilterManager
 	FilterManager() FilterManager
 

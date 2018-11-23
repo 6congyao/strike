@@ -80,6 +80,10 @@ func (sc *simpleConn) AddConnectionEventListener(cb ConnectionEventListener) {
 
 }
 
+func (sc *simpleConn) GetReadBuffer() []byte {
+	return nil
+}
+
 func (sc *simpleConn) FilterManager() FilterManager {
 	return sc.filterManager
 }

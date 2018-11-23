@@ -15,6 +15,8 @@
 
 package network
 
+import ()
+
 type filterManager struct {
 	upstreamFilters   []*activeReadFilter
 	downstreamFilters []WriteFilter
@@ -44,7 +46,46 @@ func (fm *filterManager) ListWriteFilters() []WriteFilter {
 }
 
 func (fm *filterManager) InitializeReadFilters() bool {
-	panic("implement me")
+	if len(fm.upstreamFilters) == 0 {
+		return false
+	}
+
+	fm.onContinueReading(nil)
+	return true
+}
+
+func (fm *filterManager) onContinueReading(filter *activeReadFilter) {
+	var index int
+	var uf *activeReadFilter
+
+	if filter != nil {
+		index = filter.index + 1
+	}
+
+	for ; index < len(fm.upstreamFilters); index++ {
+		uf = fm.upstreamFilters[index]
+		uf.index = index
+
+		if !uf.initialized {
+			uf.initialized = true
+
+			status := uf.filter.OnNewConnection()
+
+			if status == Stop {
+				return
+			}
+		}
+
+		buffer := fm.conn.GetReadBuffer()
+
+		if buffer != nil && len(buffer) > 0 {
+			status := uf.filter.OnData(buffer)
+
+			if status == Stop {
+				return
+			}
+		}
+	}
 }
 
 func (fm *filterManager) OnRead() {

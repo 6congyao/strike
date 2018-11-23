@@ -49,16 +49,6 @@ func NewDelegate(ctx context.Context, config *v2.Delegation) network.ReadFilter 
 }
 
 func (d *delegate) OnNewConnection() network.FilterStatus {
-	return network.Continue
-}
-
-func (d *delegate) OnData(buffer []byte) network.FilterStatus {
-	return network.Continue
-}
-
-func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
-	d.readCallbacks = cb
-
 	if ag := agents[d.agentName]; ag != nil {
 		switch d.agentType {
 		case "std":
@@ -71,4 +61,13 @@ func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks)
 			}
 		}
 	}
+	return network.Stop
+}
+
+func (d *delegate) OnData(buffer []byte) network.FilterStatus {
+	return network.Continue
+}
+
+func (d *delegate) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
+	d.readCallbacks = cb
 }

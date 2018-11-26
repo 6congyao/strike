@@ -18,7 +18,6 @@ package delegation
 import (
 	"context"
 	"log"
-	"net"
 	"strike/pkg/api/v2"
 	"strike/pkg/network"
 )
@@ -54,10 +53,13 @@ func (d *delegate) OnNewConnection() network.FilterStatus {
 		case "std":
 			fallthrough
 		default:
-			if conn, ok := d.readCallbacks.Connection().RawConn().(net.Conn); ok {
-				if err := ag(conn); err != nil {
-					log.Println("delegation got error:", err)
-				}
+			//if conn, ok := d.readCallbacks.Connection().RawConn().(net.Conn); ok {
+			//	if err := ag(conn); err != nil {
+			//		log.Println("delegation got error:", err)
+			//	}
+			//}
+			if err := ag(d.readCallbacks.Connection()); err != nil {
+				log.Println("delegation got error:", err)
 			}
 		}
 	}

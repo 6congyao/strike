@@ -178,6 +178,8 @@ type Connection interface {
 	//	- ConnectFailed
 	Close(ccType ConnectionCloseType, eventType ConnectionEvent) error
 
+	IsClosed() bool
+
 	// RemoteAddr returns the remote address of the connection.
 	RemoteAddr() net.Addr
 
@@ -295,4 +297,12 @@ type NetworkFilterChainFactory interface {
 type NetWorkFilterChainFactoryCallbacks interface {
 	AddReadFilter(rf ReadFilter)
 	AddWriteFilter(wf WriteFilter)
+}
+
+// ClientConnection is a wrapper of Connection
+type ClientConnection interface {
+	Connection
+
+	// connect to server in a async way
+	Connect(ioEnabled bool) error
 }

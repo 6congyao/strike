@@ -17,11 +17,9 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -29,6 +27,7 @@ import (
 	"strike/pkg/config"
 	. "strike/pkg/evio"
 	"strike/pkg/filter/network/delegation"
+	"strike/pkg/network"
 	"strings"
 	"syscall"
 	"time"
@@ -101,20 +100,9 @@ func registerDelegationHandler() {
 
 // delegation example
 func delegationHandler(content interface{}) error {
-	if c, ok := content.(net.Conn); ok {
-		fmt.Println("got conn:", c)
-		d := json.NewDecoder(c)
-		for {
-			var in map[string]interface{}
-			err := d.Decode(&in)
-
-			if err != nil {
-				fmt.Println("got err:", err)
-				c.Close()
-				break
-			}
-			fmt.Println("got result:", in)
-		}
+	if c, ok := content.(network.Connection); ok {
+		fmt.Println("got connection id:", c.ID())
+		c.Close("", "")
 	} else {
 		return errors.New("type error")
 	}

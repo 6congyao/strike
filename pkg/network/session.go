@@ -59,8 +59,10 @@ func NewSession(rawc interface{}, radd net.Addr) *Session {
 // start read loop on std net conn
 // do nothing on edge conn
 func (s *Session) Start(ctx context.Context) {
-	if conn, ok := s.RawConn().(net.Conn); ok {
-		s.startReadLoop(ctx, conn)
+	if !s.IsClosed() {
+		if conn, ok := s.RawConn().(net.Conn); ok {
+			s.startReadLoop(ctx, conn)
+		}
 	}
 }
 
@@ -80,6 +82,10 @@ func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) e
 	return nil
 }
 
+func (s *Session) IsClosed() bool {
+	return atomic.LoadInt32(&s.closeFlag) == 1
+}
+
 func (s *Session) ID() uint64 {
 	return s.id
 }
@@ -88,6 +94,7 @@ func (s *Session) RemoteAddr() net.Addr {
 	return s.remoteAddr
 }
 
+// todo:
 func (s *Session) Write(b []byte) (n int, err error) {
 	s.Out = append(s.Out, b...)
 	return len(b), nil
@@ -131,7 +138,6 @@ func (s *Session) startReadLoop(ctx context.Context, conn net.Conn) {
 		pr.Wr = s
 
 		// todo: ondata
-
 		p = p[len(p)-rbuf.Len():]
 		s.In.End(p)
 		if close {

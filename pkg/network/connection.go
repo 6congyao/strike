@@ -68,6 +68,10 @@ func (sc *simpleConn) Close(ccType ConnectionCloseType, eventType ConnectionEven
 	return nil
 }
 
+func (sc *simpleConn) IsClosed() bool {
+	return atomic.LoadInt32(&sc.closeFlag) == 1
+}
+
 func (sc *simpleConn) RemoteAddr() net.Addr {
 	return nil
 }

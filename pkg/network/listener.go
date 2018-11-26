@@ -245,6 +245,7 @@ func (el *edgeListener) serve(lctx context.Context) error {
 		pr.Wr = session
 
 		// todo: ondata
+		// todo: workpool
 		//msgs, err := pr.ReadMessages()
 		//if err != nil {
 		//	action = evio.Close

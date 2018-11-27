@@ -38,11 +38,17 @@ func (fm *filterManager) AddWriteFilter(wf WriteFilter) {
 }
 
 func (fm *filterManager) ListReadFilter() []ReadFilter {
-	panic("implement me")
+	var readFilters []ReadFilter
+
+	for _, uf := range fm.upstreamFilters {
+		readFilters = append(readFilters, uf.filter)
+	}
+
+	return readFilters
 }
 
 func (fm *filterManager) ListWriteFilters() []WriteFilter {
-	panic("implement me")
+	return fm.downstreamFilters
 }
 
 func (fm *filterManager) InitializeReadFilters() bool {
@@ -89,7 +95,7 @@ func (fm *filterManager) onContinueReading(filter *activeReadFilter) {
 }
 
 func (fm *filterManager) OnRead() {
-	panic("implement me")
+	fm.onContinueReading(nil)
 }
 
 func (fm *filterManager) OnWrite(buffer []byte) FilterStatus {

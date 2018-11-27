@@ -27,6 +27,12 @@ import (
 	"strike/pkg/server"
 )
 
+var protocolsSupported = map[string]bool{
+	string(protocol.HTTP2):     true,
+	string(protocol.HTTP1):     true,
+	string(protocol.Xprotocol): true,
+}
+
 // ParseServerConfig
 func ParseServerConfig(c *ServerConfig) *server.Config {
 	sc := &server.Config{
@@ -87,7 +93,7 @@ func GetListenerDisableIO(c *v2.FilterChain) bool {
 	return false
 }
 
-// ParseProxyFilter
+// ParseDelegationFilter
 func ParseDelegationFilter(cfg map[string]interface{}) *v2.Delegation {
 	delegationConfig := &v2.Delegation{}
 	if data, err := json.Marshal(cfg); err == nil {
@@ -117,4 +123,24 @@ func GetNetworkFilters(c *v2.FilterChain) []network.NetworkFilterChainFactory {
 		factories = append(factories, factory)
 	}
 	return factories
+}
+
+// ParseProxyFilter
+func ParseProxyFilter(cfg map[string]interface{}) *v2.Proxy {
+	proxyConfig := &v2.Proxy{}
+	if data, err := json.Marshal(cfg); err == nil {
+		json.Unmarshal(data, proxyConfig)
+	} else {
+		stdlog.Fatalln("Parsing Proxy Network Filter Error")
+	}
+
+	if proxyConfig.DownstreamProtocol == "" || proxyConfig.UpstreamProtocol == "" {
+		stdlog.Fatalln("Protocol in String Needed in Proxy Network Filter")
+	} else if _, ok := protocolsSupported[proxyConfig.DownstreamProtocol]; !ok {
+		stdlog.Fatalln("Invalid Downstream Protocol = ", proxyConfig.DownstreamProtocol)
+	} else if _, ok := protocolsSupported[proxyConfig.UpstreamProtocol]; !ok {
+		stdlog.Fatalln("Invalid Upstream Protocol = ", proxyConfig.UpstreamProtocol)
+	}
+
+	return proxyConfig
 }

@@ -120,6 +120,10 @@ func (s *Session) RawConn() interface{} {
 	return s.rawc
 }
 
+func (s *Session) onRead() {
+	s.filterManager.OnRead()
+}
+
 func (s *Session) startReadLoop(ctx context.Context, conn net.Conn) {
 	buf := make([]byte, 0xFFFF)
 

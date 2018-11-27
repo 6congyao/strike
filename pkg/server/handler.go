@@ -299,6 +299,14 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 	}
 
 	filterManager.InitializeReadFilters()
+
+	if len(filterManager.ListReadFilter()) == 0 &&
+		len(filterManager.ListWriteFilters()) == 0 {
+		// no filter found, close connection
+		conn.Close(network.NoFlush, network.LocalClose)
+		return
+	}
+
 	conn.Start(ctx)
 }
 

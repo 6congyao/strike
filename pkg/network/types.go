@@ -135,6 +135,14 @@ const (
 // ConnectionCloseType represent connection close type
 type ConnectionCloseType string
 
+//Connection close types
+const (
+	// FlushWrite means write buffer to underlying io then close connection
+	FlushWrite ConnectionCloseType = "FlushWrite"
+	// NoFlush means close connection without flushing buffer
+	NoFlush ConnectionCloseType = "NoFlush"
+)
+
 // ConnectionEvent type
 type ConnectionEvent string
 

@@ -18,19 +18,20 @@ package stream
 import (
 	"context"
 	"strike/pkg/network"
+	"strike/pkg/protocol"
 )
 
-var streamFactories map[Protocol]ProtocolStreamFactory
+var streamFactories map[protocol.Protocol]ProtocolStreamFactory
 
 func init() {
-	streamFactories = make(map[Protocol]ProtocolStreamFactory)
+	streamFactories = make(map[protocol.Protocol]ProtocolStreamFactory)
 }
 
-func Register(prot Protocol, factory ProtocolStreamFactory) {
+func Register(prot protocol.Protocol, factory ProtocolStreamFactory) {
 	streamFactories[prot] = factory
 }
 
-func CreateServerStreamConnection(context context.Context, prot Protocol, connection network.Connection,
+func CreateServerStreamConnection(context context.Context, prot protocol.Protocol, connection network.Connection,
 	callbacks ServerStreamConnectionEventListener) ServerStreamConnection {
 
 	if ssc, ok := streamFactories[prot]; ok {

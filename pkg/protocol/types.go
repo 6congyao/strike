@@ -19,6 +19,7 @@ type Protocol string
 
 // Protocol type definition
 const (
+	MQ        Protocol = "MQ"
 	HTTP1     Protocol = "Http1"
 	HTTP2     Protocol = "Http2"
 	Xprotocol Protocol = "X"

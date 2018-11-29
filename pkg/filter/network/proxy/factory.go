@@ -21,6 +21,7 @@ import (
 	"strike/pkg/config"
 	"strike/pkg/filter"
 	"strike/pkg/network"
+	"strike/pkg/proxy"
 )
 
 func init() {
@@ -32,8 +33,7 @@ type genericProxyFilterConfigFactory struct {
 }
 
 func (gfcf *genericProxyFilterConfigFactory) CreateFilterChain(context context.Context, callbacks network.NetWorkFilterChainFactoryCallbacks) {
-	//p := proxy.NewProxy(context, gfcf.Proxy, clusterManager)
-	var p network.ReadFilter
+	p := proxy.NewProxy(context, gfcf.Proxy)
 	callbacks.AddReadFilter(p)
 }
 

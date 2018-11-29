@@ -19,6 +19,7 @@ import (
 	"log"
 	"strike/pkg/config"
 	_ "strike/pkg/filter/network/delegation"
+	_ "strike/pkg/filter/network/proxy"
 	"strike/pkg/server"
 )
 

@@ -49,8 +49,8 @@
               {
                 "type": "proxy",
                 "config": {
-                  "downstream_protocol": "MQ",
-                  "upstream_protocol": "Http2",
+                  "downstream_protocol": "Http1",
+                  "upstream_protocol": "MQ",
                   "router_config_name":"client_router"
                 }
               },

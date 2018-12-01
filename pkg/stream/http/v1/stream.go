@@ -53,15 +53,13 @@ type serverStreamConnection struct {
 
 func newServerStreamConnection(context context.Context, connection network.Connection,
 	callbacks stream.ServerStreamConnectionEventListener) stream.ServerStreamConnection {
-	ssc := &serverStreamConnection{
+	return &serverStreamConnection{
 		streamConnection: streamConnection{
-			context:       context,
-			rawConnection: connection.RawConn(),
+			context:    context,
+			connection: connection,
 		},
 		serverStreamConnCallbacks: callbacks,
 	}
-
-	return ssc
 }
 
 // stream.StreamConnection
@@ -70,7 +68,7 @@ type streamConnection struct {
 	context context.Context
 
 	protocol      protocol.Protocol
-	rawConnection interface{}
+	connection    network.Connection
 	connCallbacks network.ConnectionEventListener
 }
 

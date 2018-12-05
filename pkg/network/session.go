@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"reflect"
+	"strike/pkg/buffer"
 	"strike/pkg/evio"
 	"strings"
 	"sync"
@@ -31,6 +33,8 @@ import (
 
 var globalSessionId uint64 = 0
 var PipelineReaderPool sync.Pool
+
+const DefaultBufferReadCapacity = 1 << 0
 
 type Session struct {
 	id         uint64
@@ -43,6 +47,7 @@ type Session struct {
 	Mu            sync.Mutex
 	filterManager FilterManager
 	rawc          interface{}
+	readBuffer    buffer.IoBuffer
 }
 
 func NewSession(rawc interface{}, radd net.Addr) *Session {
@@ -108,8 +113,8 @@ func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
 
 }
 
-func (s *Session) GetReadBuffer() []byte {
-	return s.Pr.Buf
+func (s *Session) GetReadBuffer() buffer.IoBuffer {
+	return s.readBuffer
 }
 
 func (s *Session) FilterManager() FilterManager {
@@ -120,7 +125,31 @@ func (s *Session) RawConn() interface{} {
 	return s.rawc
 }
 
-func (s *Session) onRead() {
+func (s *Session) doRead(b []byte) {
+	if s.readBuffer == nil {
+		s.readBuffer = buffer.GetIoBuffer(DefaultBufferReadCapacity)
+	}
+	n, _ := s.readBuffer.ReadFrom(bytes.NewBuffer(b))
+
+	//p := s.In.Begin(b)
+	//// lazy acquire
+	//s.Pr = AcquirePipelineReader(s)
+	//pr := s.Pr
+	//rbuf := bytes.NewBuffer(p)
+	//pr.Rd = rbuf
+	//pr.Wr = s
+
+	s.onRead(n)
+
+	//p = p[len(p)-rbuf.Len():]
+	//s.In.End(p)
+	return
+}
+
+func (s *Session) onRead(bytesRead int64) {
+	if bytesRead == 0 {
+		return
+	}
 	s.filterManager.OnRead()
 }
 
@@ -131,19 +160,12 @@ func (s *Session) startReadLoop(ctx context.Context, conn net.Conn) {
 		var close bool
 		n, err := conn.Read(buf)
 		if err != nil {
+			log.Println("conn read error: ", err)
 			return
 		}
 		in := buf[:n]
-		p := s.In.Begin(in)
-		s.Pr = AcquirePipelineReader(s)
-		pr := s.Pr
-		rbuf := bytes.NewBuffer(p)
-		pr.Rd = rbuf
-		pr.Wr = s
+		s.doRead(in)
 
-		// todo: ondata
-		p = p[len(p)-rbuf.Len():]
-		s.In.End(p)
 		if close {
 			break
 		}

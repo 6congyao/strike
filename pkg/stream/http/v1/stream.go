@@ -17,6 +17,7 @@ package v1
 
 import (
 	"context"
+	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
@@ -65,14 +66,14 @@ func newServerStreamConnection(context context.Context, connection network.Conne
 // stream.StreamConnection
 // stream.StreamConnectionEventListener
 type streamConnection struct {
-	context context.Context
-
+	context       context.Context
 	protocol      protocol.Protocol
+	protocols     protocol.Protocols
 	connection    network.Connection
 	connCallbacks network.ConnectionEventListener
 }
 
-func (sc *streamConnection) Dispatch(buffer []byte) {
+func (sc *streamConnection) Dispatch(buf buffer.IoBuffer) {
 	panic("implement me")
 }
 

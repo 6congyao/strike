@@ -17,6 +17,7 @@ package stream
 
 import (
 	"context"
+	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 )
@@ -41,7 +42,7 @@ type StreamConnection interface {
 	// Dispatch incoming data
 	// On data read scenario, it connects connection and stream by dispatching read buffer to stream,
 	// stream uses protocol decode data, and popup event to controller
-	Dispatch(buffer []byte)
+	Dispatch(buf buffer.IoBuffer)
 
 	// Protocol on the connection
 	Protocol() protocol.Protocol

@@ -261,7 +261,6 @@ func (is *InputStream) Begin(packet []byte) (data []byte) {
 	if len(is.b) > 0 {
 		is.b = append(is.b, data...)
 		data = is.b
-		return data
 	}
 	return data
 }

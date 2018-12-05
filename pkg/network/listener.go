@@ -16,7 +16,6 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -236,34 +235,9 @@ func (el *edgeListener) serve(lctx context.Context) error {
 
 	events.Data = func(econn evio.Conn, in []byte) (out []byte, action evio.Action) {
 		session := econn.Context().(*Session)
-		p := session.In.Begin(in)
-		// lazy acquire
-		session.Pr = AcquirePipelineReader(session)
-		pr := session.Pr
-		rbuf := bytes.NewBuffer(p)
-		pr.Rd = rbuf
-		pr.Wr = session
 
-		// todo: ondata
 		// todo: workpool
-		//msgs, err := pr.ReadMessages()
-		//if err != nil {
-		//	action = evio.Close
-		//	return
-		//} else {
-		//	fmt.Println("give resp, conn id is:", session.ID())
-		//	out = AppendResp(nil, "200 OK", "", string(p)+"\r\n")
-		//	ReleasePipelineReader(session)
-		//	return
-		//}
-		//
-		//for _, msg := range msgs {
-		//	if msg != nil && msg.Command() != "" {
-		//		fmt.Println("got msg:", msg)
-		//	}
-		//}
-		p = p[len(p)-rbuf.Len():]
-		session.In.End(p)
+		session.doRead(in)
 
 		out = session.Out
 		session.Out = nil

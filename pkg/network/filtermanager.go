@@ -82,10 +82,10 @@ func (fm *filterManager) onContinueReading(filter *activeReadFilter) {
 			}
 		}
 
-		buffer := fm.conn.GetReadBuffer()
+		buf := fm.conn.GetReadBuffer()
 
-		if buffer != nil && len(buffer) > 0 {
-			status := uf.filter.OnData(buffer)
+		if buf != nil && buf.Len() > 0 {
+			status := uf.filter.OnData(buf)
 
 			if status == Stop {
 				return

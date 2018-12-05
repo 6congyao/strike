@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"log"
 	"strike/pkg/api/v2"
+	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
@@ -28,8 +29,8 @@ import (
 	"sync"
 )
 
-// types.ReadFilter
-// types.ServerStreamConnectionEventListener
+// network.ReadFilter
+// stream.ServerStreamConnectionEventListener
 type proxy struct {
 	config *v2.Proxy
 	//clusterManager      types.ClusterManager
@@ -75,7 +76,7 @@ func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.serverCodec = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
 }
 
-func (p *proxy) OnData(buf []byte) network.FilterStatus {
+func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {
 	p.serverCodec.Dispatch(buf)
 
 	return network.Stop

@@ -19,6 +19,7 @@ import (
 	"context"
 	"net"
 	"strike/pkg/api/v2"
+	"strike/pkg/buffer"
 )
 
 // Listener is a wrapper of tcp listener
@@ -198,7 +199,7 @@ type Connection interface {
 	AddConnectionEventListener(cb ConnectionEventListener)
 
 	// GetReadBuffer is used by network read filter
-	GetReadBuffer() []byte
+	GetReadBuffer() buffer.IoBuffer
 
 	// FilterManager returns the FilterManager
 	FilterManager() FilterManager
@@ -251,7 +252,7 @@ type FilterManager interface {
 // ReadFilter is a connection binary read filter, registered by FilterManager.AddReadFilter
 type ReadFilter interface {
 	// OnData is called everytime bytes is read from the connection
-	OnData(buffer []byte) FilterStatus
+	OnData(buf buffer.IoBuffer) FilterStatus
 
 	// OnNewConnection is called on new connection is created
 	OnNewConnection() FilterStatus

@@ -19,6 +19,7 @@ import (
 	"context"
 	"log"
 	"strike/pkg/api/v2"
+	"strike/pkg/buffer"
 	"strike/pkg/network"
 )
 
@@ -66,7 +67,7 @@ func (d *delegate) OnNewConnection() network.FilterStatus {
 	return network.Stop
 }
 
-func (d *delegate) OnData(buffer []byte) network.FilterStatus {
+func (d *delegate) OnData(buf buffer.IoBuffer) network.FilterStatus {
 	return network.Continue
 }
 

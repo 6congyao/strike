@@ -73,10 +73,12 @@ func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.readCallbacks = cb
 
 	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamCallbacks)
-	p.serverCodec = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
 }
 
 func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {
+	if p.serverCodec == nil {
+		p.serverCodec = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
+	}
 	p.serverCodec.Dispatch(buf)
 
 	return network.Stop

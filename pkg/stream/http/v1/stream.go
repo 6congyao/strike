@@ -17,9 +17,12 @@ package v1
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
+	"strike/pkg/protocol/http/v1"
 	"strike/pkg/stream"
 )
 
@@ -58,23 +61,50 @@ func newServerStreamConnection(context context.Context, connection network.Conne
 		streamConnection: streamConnection{
 			context:    context,
 			connection: connection,
+			protocol:   protocol.HTTP1,
+			codec:      v1.NewCodec(),
 		},
 		serverStreamConnCallbacks: callbacks,
 	}
 }
 
+// protocol.DecodeFilter
 // stream.StreamConnection
 // stream.StreamConnectionEventListener
 type streamConnection struct {
 	context       context.Context
 	protocol      protocol.Protocol
-	protocols     protocol.Protocols
+	codec         protocol.Codec
 	connection    network.Connection
 	connCallbacks network.ConnectionEventListener
 }
 
+func (sc *streamConnection) OnDecodeHeader(streamID string, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
+	fmt.Println("got:", streamID, endStream)
+	if endStream {
+		return network.Stop
+	}
+	return network.Continue
+}
+
+func (sc *streamConnection) OnDecodeData(streamID string, data buffer.IoBuffer, endStream bool) network.FilterStatus {
+	fmt.Println("got:", streamID, endStream)
+	if endStream {
+		return network.Stop
+	}
+	return network.Continue
+}
+
+func (sc *streamConnection) OnDecodeTrailer(streamID string, trailers protocol.HeaderMap) network.FilterStatus {
+	return network.Stop
+}
+
+func (sc *streamConnection) OnDecodeError(err error, headers protocol.HeaderMap) {
+	log.Println("decode error:", err)
+}
+
 func (sc *streamConnection) Dispatch(buf buffer.IoBuffer) {
-	panic("implement me")
+	sc.codec.Decode(sc.context, buf, sc)
 }
 
 func (sc *streamConnection) Protocol() protocol.Protocol {
@@ -83,4 +113,12 @@ func (sc *streamConnection) Protocol() protocol.Protocol {
 
 func (sc *streamConnection) GoAway() {
 	panic("implement me")
+}
+
+// stream.Stream
+// stream.StreamSender
+type http1Stream struct {
+	context   context.Context
+	receiver  stream.StreamReceiver
+	streamCbs []stream.StreamEventListener
 }

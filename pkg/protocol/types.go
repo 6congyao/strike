@@ -51,7 +51,7 @@ type HeaderMap interface {
 }
 
 // Protocols is a protocols' facade used by Stream
-type Protocols interface {
+type Codec interface {
 	// Encoder is a encoder interface to extend various of protocols
 	Encoder
 	// Decode decodes data to headers-data-trailers by Stream

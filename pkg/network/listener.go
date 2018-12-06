@@ -218,6 +218,7 @@ func (el *edgeListener) serve(lctx context.Context) error {
 
 	events.Opened = func(econn evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
 		fmt.Println("Connection opened:", econn.RemoteAddr())
+		opts.ReuseInputBuffer = true
 		// notify
 		el.cb.OnAccept(econn)
 
@@ -236,7 +237,7 @@ func (el *edgeListener) serve(lctx context.Context) error {
 	events.Data = func(econn evio.Conn, in []byte) (out []byte, action evio.Action) {
 		session := econn.Context().(*Session)
 
-		// todo: workpool
+		// todo: workerpool
 		session.doRead(in)
 
 		out = session.Out

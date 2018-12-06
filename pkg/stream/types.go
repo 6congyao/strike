@@ -34,9 +34,6 @@ const (
 	StreamRemoteReset           StreamResetReason = "StreamRemoteReset"
 )
 
-// StreamHeadersFilterStatus type
-type StreamHeadersFilterStatus string
-
 // StreamConnection is a connection runs multiple streams
 type StreamConnection interface {
 	// Dispatch incoming data
@@ -154,4 +151,167 @@ type ProtocolStreamFactory interface {
 
 type StreamFilterBase interface {
 	OnDestroy()
+}
+
+// StreamHeadersFilterStatus type
+type StreamHeadersFilterStatus string
+
+// StreamHeadersFilterStatus types
+const (
+	// Continue filter chain iteration.
+	StreamHeadersFilterContinue StreamHeadersFilterStatus = "Continue"
+	// Do not iterate to next iterator. Filter calls continueDecoding to continue.
+	StreamHeadersFilterStop StreamHeadersFilterStatus = "Stop"
+)
+
+// StreamDataFilterStatus type
+type StreamDataFilterStatus string
+
+// StreamDataFilterStatus types
+const (
+	// Continue filter chain iteration
+	StreamDataFilterContinue StreamDataFilterStatus = "Continue"
+	// Do not iterate to next iterator, and buffer body data in controller for later use
+	StreamDataFilterStop StreamDataFilterStatus = "Stop"
+	// Do not iterate to next iterator, and buffer body data in controller for later use
+	StreamDataFilterStopAndBuffer StreamDataFilterStatus = "StopAndBuffer"
+)
+
+// StreamTrailersFilterStatus type
+type StreamTrailersFilterStatus string
+
+// StreamTrailersFilterStatus types
+const (
+	// Continue filter chain iteration
+	StreamTrailersFilterContinue StreamTrailersFilterStatus = "Continue"
+	// Do not iterate to next iterator. Filter calls continueDecoding to continue.
+	StreamTrailersFilterStop StreamTrailersFilterStatus = "Stop"
+)
+
+// StreamFilterChainFactory adds filter into callbacks
+type StreamFilterChainFactory interface {
+	CreateFilterChain(context context.Context, callbacks StreamFilterChainFactoryCallbacks)
+}
+
+// StreamFilterChainFactoryCallbacks is called in StreamFilterChainFactory
+type StreamFilterChainFactoryCallbacks interface {
+	AddStreamSenderFilter(filter StreamSenderFilter)
+
+	AddStreamReceiverFilter(filter StreamReceiverFilter)
+}
+
+// StreamSenderFilter is a stream sender filter
+type StreamSenderFilter interface {
+	StreamFilterBase
+
+	// AppendHeaders encodes headers
+	// endStream supplies whether this is a header only request/response
+	AppendHeaders(headers protocol.HeaderMap, endStream bool) StreamHeadersFilterStatus
+
+	// AppendData encodes data
+	// endStream supplies whether this is the last data
+	AppendData(buf buffer.IoBuffer, endStream bool) StreamDataFilterStatus
+
+	// AppendTrailers encodes trailers, implicitly ending the stream
+	AppendTrailers(trailers protocol.HeaderMap) StreamTrailersFilterStatus
+
+	// SetEncoderFilterCallbacks sets the StreamSenderFilterCallbacks
+	SetEncoderFilterCallbacks(cb StreamSenderFilterCallbacks)
+}
+
+// StreamReceiverFilter is a StreamFilterBase wrapper
+type StreamReceiverFilter interface {
+	StreamFilterBase
+
+	// OnDecodeHeaders is called with decoded headers
+	// endStream supplies whether this is a header only request/response
+	OnDecodeHeaders(headers protocol.HeaderMap, endStream bool) StreamHeadersFilterStatus
+
+	// OnDecodeData is called with a decoded data
+	// endStream supplies whether this is the last data
+	OnDecodeData(buf buffer.IoBuffer, endStream bool) StreamDataFilterStatus
+
+	// OnDecodeTrailers is called with decoded trailers, implicitly ending the stream
+	OnDecodeTrailers(trailers protocol.HeaderMap) StreamTrailersFilterStatus
+
+	// SetDecoderFilterCallbacks sets decoder filter callbacks
+	SetDecoderFilterCallbacks(cb StreamReceiverFilterCallbacks)
+}
+
+// StreamFilterCallbacks is called by stream filter to interact with underlying stream
+type StreamFilterCallbacks interface {
+	// Connection returns the originating connection
+	Connection() network.Connection
+
+	// ResetStream resets the underlying stream
+	ResetStream()
+
+	// Route returns a route for current stream
+	//Route() Route
+
+	// StreamID returns stream id
+	StreamID() string
+
+	// RequestInfo returns request info related to the stream
+	//RequestInfo() RequestInfo
+}
+
+// StreamSenderFilterCallbacks is a StreamFilterCallbacks wrapper
+type StreamSenderFilterCallbacks interface {
+	StreamFilterCallbacks
+
+	// ContinueEncoding continue iterating through the filter chain with buffered headers and body data
+	ContinueEncoding()
+
+	// EncodingBuffer returns data buffered by this filter or previous ones in the filter chain
+	EncodingBuffer() buffer.IoBuffer
+
+	// AddEncodedData adds buffered body data
+	AddEncodedData(buf buffer.IoBuffer, streamingFilter bool)
+
+	// SetEncoderBufferLimit sets the buffer limit
+	SetEncoderBufferLimit(limit uint32)
+
+	// EncoderBufferLimit returns buffer limit
+	EncoderBufferLimit() uint32
+}
+
+// StreamReceiverFilterCallbacks add additional callbacks that allow a decoding filter to restart
+// decoding if they decide to hold data
+type StreamReceiverFilterCallbacks interface {
+	StreamFilterCallbacks
+
+	// ContinueDecoding continue iterating through the filter chain with buffered headers and body data
+	// It can only be called if decode process has been stopped by current filter, using StopIteration from decodeHeaders() or StopIterationAndBuffer or StopIterationNoBuffer from decodeData()
+	// The controller will dispatch headers and any buffered body data to the next filter in the chain.
+	ContinueDecoding()
+
+	// DecodingBuffer returns data buffered by this filter or previous ones in the filter chain,
+	// if nothing has been buffered, returns nil
+	DecodingBuffer() buffer.IoBuffer
+
+	// AddDecodedData add s buffered body data
+	AddDecodedData(buf buffer.IoBuffer, streamingFilter bool)
+
+	// AppendHeaders is called with headers to be encoded, optionally indicating end of stream
+	// Filter uses this function to send out request/response headers of the stream
+	// endStream supplies whether this is a header only request/response
+	AppendHeaders(headers protocol.HeaderMap, endStream bool)
+
+	// AppendData is called with data to be encoded, optionally indicating end of stream.
+	// Filter uses this function to send out request/response data of the stream
+	// endStream supplies whether this is the last data
+	AppendData(buf buffer.IoBuffer, endStream bool)
+
+	// AppendTrailers is called with trailers to be encoded, implicitly ends the stream.
+	// Filter uses this function to send out request/response trailers of the stream
+	AppendTrailers(trailers protocol.HeaderMap)
+
+	// SetDecoderBufferLimit sets the buffer limit for decoder filters
+	SetDecoderBufferLimit(limit uint32)
+
+	// DecoderBufferLimit returns the decoder buffer limit
+	DecoderBufferLimit() uint32
+	// SendHijackReply is called when the filter will response directly
+	SendHijackReply(code int, headers protocol.HeaderMap)
 }

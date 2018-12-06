@@ -40,7 +40,7 @@ func (f *streamConnFactory) CreateClientStream(context context.Context, connecti
 
 func (f *streamConnFactory) CreateServerStream(context context.Context, connection network.Connection,
 	callbacks stream.ServerStreamConnectionEventListener) stream.ServerStreamConnection {
-	return newServerStreamConnection(context, connection, callbacks)
+	return newStreamConnection(context, connection, nil, callbacks)
 }
 
 func (f *streamConnFactory) CreateBiDirectStream(context context.Context, connection network.ClientConnection,
@@ -49,38 +49,36 @@ func (f *streamConnFactory) CreateBiDirectStream(context context.Context, connec
 	return nil
 }
 
-// stream.ServerStreamConnection
-type serverStreamConnection struct {
-	streamConnection
-	serverStreamConnCallbacks stream.ServerStreamConnectionEventListener
-}
-
-func newServerStreamConnection(context context.Context, connection network.Connection,
-	callbacks stream.ServerStreamConnectionEventListener) stream.ServerStreamConnection {
-	return &serverStreamConnection{
-		streamConnection: streamConnection{
-			context:    context,
-			connection: connection,
-			protocol:   protocol.HTTP1,
-			codec:      v1.NewCodec(),
-		},
-		serverStreamConnCallbacks: callbacks,
+func newStreamConnection(context context.Context, connection network.Connection, clientCallbacks stream.StreamConnectionEventListener,
+	serverCallbacks stream.ServerStreamConnectionEventListener) stream.ServerStreamConnection {
+	return &streamConnection{
+		context:      context,
+		connection:   connection,
+		protocol:     protocol.HTTP1,
+		codec:        v1.NewCodec(),
+		cscCallbacks: clientCallbacks,
+		sscCallbacks: serverCallbacks,
 	}
 }
 
 // protocol.DecodeFilter
+// stream.ServerStreamConnection
 // stream.StreamConnection
-// stream.StreamConnectionEventListener
 type streamConnection struct {
 	context       context.Context
 	protocol      protocol.Protocol
 	codec         protocol.Codec
 	connection    network.Connection
 	connCallbacks network.ConnectionEventListener
+	// Client Stream Conn Callbacks
+	cscCallbacks stream.StreamConnectionEventListener
+	// Server Stream Conn Callbacks
+	sscCallbacks stream.ServerStreamConnectionEventListener
 }
 
 func (sc *streamConnection) OnDecodeHeader(streamID string, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
 	fmt.Println("got:", streamID, endStream)
+	sc.sscCallbacks.NewStream(sc.context, streamID, nil)
 	if endStream {
 		return network.Stop
 	}

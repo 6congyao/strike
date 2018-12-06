@@ -32,6 +32,13 @@ const (
 	DELEGATION             = "delegation"
 )
 
+// Stream Filter's Type
+const (
+	COMMON                     = "common"
+	MIXER                      = "mixer"
+	FAULT_INJECT_STREAM_FILTER = "fault_inject"
+)
+
 // ClusterType
 type ClusterType string
 
@@ -389,6 +396,6 @@ type PublishContent struct {
 }
 
 type Delegation struct {
-	AgentName   string `json:"agent_name,omitempty"`
+	AgentName string `json:"agent_name,omitempty"`
 	AgentType string `json:"agent_type,omitempty"`
 }

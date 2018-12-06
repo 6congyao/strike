@@ -53,6 +53,7 @@ func (c *codec) EncodeTrailers(ctx context.Context, trailers protocol.HeaderMap)
 }
 
 func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protocol.DecodeFilter) {
+	// todo: loop then data.Drain()
 	if data.Len() > 0 {
 		err := readLimitBody(data.Bytes(), c.req, 40000, filter)
 		if err != nil {

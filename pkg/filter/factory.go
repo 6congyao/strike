@@ -18,12 +18,15 @@ package filter
 import (
 	"fmt"
 	"strike/pkg/network"
+	"strike/pkg/stream"
 )
 
 var creatorNetworkFactory map[string]NetworkFilterFactoryCreator
+var creatorStreamFactory map[string]StreamFilterFactoryCreator
 
 func init() {
 	creatorNetworkFactory = make(map[string]NetworkFilterFactoryCreator)
+	creatorStreamFactory = make(map[string]StreamFilterFactoryCreator)
 }
 
 // RegisterNetwork registers the filterType as  NetworkFilterFactoryCreator
@@ -41,4 +44,21 @@ func CreateNetworkFilterChainFactory(filterType string, config map[string]interf
 		return nfcf, nil
 	}
 	return nil, fmt.Errorf("unsupported network filter type: %v", filterType)
+}
+
+// RegisterStream registers the filterType as StreamFilterFactoryCreator
+func RegisterStream(filterType string, creator StreamFilterFactoryCreator) {
+	creatorStreamFactory[filterType] = creator
+}
+
+// CreateStreamFilterChainFactory creates a StreamFilterChainFactory according to filterType
+func CreateStreamFilterChainFactory(filterType string, config map[string]interface{}) (stream.StreamFilterChainFactory, error) {
+	if cf, ok := creatorStreamFactory[filterType]; ok {
+		sfcf, err := cf(config)
+		if err != nil {
+			return nil, fmt.Errorf("create stream filter chain factory failed: %v", err)
+		}
+		return sfcf, nil
+	}
+	return nil, fmt.Errorf("unsupported stream filter type: %v", filterType)
 }

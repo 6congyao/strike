@@ -19,24 +19,18 @@ import (
 	"context"
 	"errors"
 	"strike/pkg/buffer"
-	"strike/pkg/network"
 	"strike/pkg/protocol"
 )
 
 var ErrBodyTooLarge = errors.New("body size exceeds the given limit")
 
-type HttpRequest struct {
-	body                 []byte
-	header               RequestHeader
-}
-
 type codec struct {
-	req *HttpRequest
+	req *SimpleRequest
 }
 
 func NewCodec() protocol.Codec {
 	return &codec{
-		req: &HttpRequest{},
+		req: &SimpleRequest{},
 	}
 }
 
@@ -55,39 +49,28 @@ func (c *codec) EncodeTrailers(ctx context.Context, trailers protocol.HeaderMap)
 func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protocol.DecodeFilter) {
 	// todo: loop then data.Drain()
 	if data.Len() > 0 {
-		err := readLimitBody(data.Bytes(), c.req, 40000, filter)
+		err := readLimitBody(data.Bytes(), c.req, 40000)
 		if err != nil {
 			filter.OnDecodeError(err, nil)
 			return
 		}
+		streamID := protocol.GenerateIDString()
+		// notify
+		filter.OnDecodeDone(streamID, c.req)
 	}
 }
 
-func readLimitBody(data []byte, req *HttpRequest, maxRequestBodySize int, filter protocol.DecodeFilter) error {
-	streamID := protocol.GenerateIDString()
+func readLimitBody(data []byte, req *SimpleRequest, maxRequestBodySize int) error {
 	n, err := parseHeader(data, &req.header)
 	if err != nil {
 		return err
 	}
 
-	// notify if we had header decoded
-	status := filter.OnDecodeHeader(streamID, nil, req.header.NoBody())
-	if status == network.Stop {
+	if req.header.NoBody() {
 		return nil
 	}
 
-	err = continueReadBody(data, n, req, maxRequestBodySize)
-
-	if err != nil {
-		return err
-	}
-	// notify if we had body decoded
-	status = filter.OnDecodeData(streamID, nil, true)
-	if status == network.Stop {
-		return nil
-	}
-
-	return err
+	return continueReadBody(data, n, req, maxRequestBodySize)
 }
 
 func parseHeader(data []byte, header *RequestHeader) (int, error) {
@@ -96,7 +79,7 @@ func parseHeader(data []byte, header *RequestHeader) (int, error) {
 	return header.Parse(data)
 }
 
-func continueReadBody(data []byte, offset int, req *HttpRequest, maxRequestBodySize int) error {
+func continueReadBody(data []byte, offset int, req *SimpleRequest, maxRequestBodySize int) error {
 	data = data[offset:]
 	contentLength := req.header.ContentLength()
 	if contentLength > 0 {

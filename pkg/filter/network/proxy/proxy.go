@@ -20,14 +20,30 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"runtime"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	strikesync "strike/pkg/sync"
 	"strike/pkg/types"
 	"sync"
 )
+
+var (
+	workerPool strikesync.ShardWorkerPool
+)
+
+func init() {
+	// default shardsNum is equal to the cpu num
+	shardsNum := runtime.NumCPU()
+	// use 4096 as chan buffer length
+	poolSize := shardsNum * 4096
+
+	workerPool, _ = strikesync.NewShardWorkerPool(poolSize, shardsNum, eventDispatch)
+	workerPool.Init()
+}
 
 // network.ReadFilter
 // stream.ServerStreamConnectionEventListener
@@ -87,19 +103,21 @@ func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {
 func (p *proxy) OnGoAway() {}
 
 func (p *proxy) NewStream(context context.Context, streamID string, responseSender stream.StreamSender) stream.StreamReceiver {
-	//stream := newActiveStream(context, streamID, p, responseSender)
+	s := newActiveStream(context, streamID, p, responseSender)
 
 	//todo: stream filter
 	if ff := p.context.Value(types.ContextKeyStreamFilterChainFactories); ff != nil {
-		//ffs := ff.([]stream.StreamFilterChainFactory)
-
-		//for _, f := range ffs {
-		//	f.CreateFilterChain(p.context, stream)
-		//}
+		ffs := ff.([]stream.StreamFilterChainFactory)
+		for _, f := range ffs {
+			f.CreateFilterChain(p.context, s)
+		}
 	}
 
+	p.asMux.Lock()
+	s.element = p.activeSteams.PushBack(s)
+	p.asMux.Unlock()
 
-	return nil
+	return s
 }
 
 //rpc realize upstream on event
@@ -117,6 +135,14 @@ func (p *proxy) ReadDisableUpstream(disable bool) {
 
 func (p *proxy) ReadDisableDownstream(disable bool) {
 	// TODO
+}
+
+func (p *proxy) deleteActiveStream(s *downStream) {
+	if s.element != nil {
+		p.asMux.Lock()
+		p.activeSteams.Remove(s.element)
+		p.asMux.Unlock()
+	}
 }
 
 // ConnectionEventListener

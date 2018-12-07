@@ -34,6 +34,28 @@ const (
 	StreamRemoteReset           StreamResetReason = "StreamRemoteReset"
 )
 
+// Stream is a generic protocol stream, it is the core model in stream layer
+type Stream interface {
+	// AddEventListener adds stream event listener
+	AddEventListener(streamEventListener StreamEventListener)
+
+	// RemoveEventListener removes stream event listener
+	RemoveEventListener(streamEventListener StreamEventListener)
+
+	// ResetStream rests stream
+	// Any registered StreamEventListener.OnResetStream should be called.
+	ResetStream(reason StreamResetReason)
+
+	// ReadDisable enable/disable further stream data
+	ReadDisable(disable bool)
+}
+
+// StreamEventListener is a stream event listener
+type StreamEventListener interface {
+	// OnResetStream is called on a stream is been reset
+	OnResetStream(reason StreamResetReason)
+}
+
 // StreamConnection is a connection runs multiple streams
 type StreamConnection interface {
 	// Dispatch incoming data
@@ -63,7 +85,7 @@ type StreamReceiver interface {
 
 	// OnReceiveData is called with a decoded data
 	// endStream supplies whether this is the last data
-	OnReceiveData(ctx context.Context, data []byte, endOfStream bool)
+	OnReceiveData(ctx context.Context, data buffer.IoBuffer, endOfStream bool)
 
 	// OnReceiveTrailers is called with a decoded trailers frame, implicitly ends the stream.
 	OnReceiveTrailers(ctx context.Context, trailers protocol.HeaderMap)
@@ -82,35 +104,13 @@ type StreamSender interface {
 
 	// Append data
 	// endStream supplies whether this is the last data frame
-	AppendData(ctx context.Context, data []byte, endStream bool) error
+	AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error
 
 	// Append trailers, implicitly ends the stream.
 	AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) error
 
 	// Get related stream
 	GetStream() Stream
-}
-
-// Stream is a generic protocol stream, it is the core model in stream layer
-type Stream interface {
-	// AddEventListener adds stream event listener
-	AddEventListener(streamEventListener StreamEventListener)
-
-	// RemoveEventListener removes stream event listener
-	RemoveEventListener(streamEventListener StreamEventListener)
-
-	// ResetStream rests stream
-	// Any registered StreamEventListener.OnResetStream should be called.
-	ResetStream(reason StreamResetReason)
-
-	// ReadDisable enable/disable further stream data
-	ReadDisable(disable bool)
-}
-
-// StreamEventListener is a stream event listener
-type StreamEventListener interface {
-	// OnResetStream is called on a stream is been reset
-	OnResetStream(reason StreamResetReason)
 }
 
 // ClientStreamConnection is a client side stream connection.
@@ -314,4 +314,33 @@ type StreamReceiverFilterCallbacks interface {
 	DecoderBufferLimit() uint32
 	// SendHijackReply is called when the filter will response directly
 	SendHijackReply(code int, headers protocol.HeaderMap)
+}
+
+// PoolFailureReason type
+type PoolFailureReason string
+
+// PoolFailureReason types
+const (
+	Overflow          PoolFailureReason = "Overflow"
+	ConnectionFailure PoolFailureReason = "ConnectionFailure"
+)
+
+//  ConnectionPool is a connection pool interface to extend various of protocols
+type ConnectionPool interface {
+	Protocol() protocol.Protocol
+
+	NewStream(ctx context.Context, streamID string, responseDecoder StreamReceiver, cb PoolEventListener) Cancellable
+
+	Close()
+}
+
+//todo
+type PoolEventListener interface {
+	OnFailure(streamID string, reason PoolFailureReason, host interface{})
+
+	OnReady(streamID string, requestEncoder StreamSender, host interface{})
+}
+
+type Cancellable interface {
+	Cancel()
 }

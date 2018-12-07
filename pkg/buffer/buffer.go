@@ -28,9 +28,7 @@ const maxPoolSize = 1
 // Register the bufferpool's name
 const (
 	Protocol = iota
-	SofaProtocol
 	Stream
-	SofaStream
 	Proxy
 	Bytes
 	End

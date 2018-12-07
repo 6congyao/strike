@@ -17,13 +17,14 @@ package v1
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/protocol/http/v1"
 	"strike/pkg/stream"
+	"strike/pkg/types"
+	"sync/atomic"
 )
 
 func init() {
@@ -77,24 +78,38 @@ type streamConnection struct {
 }
 
 func (sc *streamConnection) OnDecodeHeader(streamID string, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
-	fmt.Println("got:", streamID, endStream)
-	sc.sscCallbacks.NewStream(sc.context, streamID, nil)
-	if endStream {
-		return network.Stop
-	}
 	return network.Continue
 }
 
 func (sc *streamConnection) OnDecodeData(streamID string, data buffer.IoBuffer, endStream bool) network.FilterStatus {
-	fmt.Println("got:", streamID, endStream)
-	if endStream {
-		return network.Stop
-	}
 	return network.Continue
 }
 
 func (sc *streamConnection) OnDecodeTrailer(streamID string, trailers protocol.HeaderMap) network.FilterStatus {
-	return network.Stop
+	return network.Continue
+}
+
+// http v1 decode filter use this cb to handle the request
+func (sc *streamConnection) OnDecodeDone(streamID string, result interface{}) network.FilterStatus {
+	if req, ok := result.(*v1.SimpleRequest); ok {
+		srvStream := &serverStream{
+			streamBase: streamBase{
+				context: context.WithValue(sc.context, types.ContextKeyStreamID, streamID),
+			},
+			req:              req,
+			connection:       sc,
+			responseDoneChan: make(chan struct{}),
+		}
+		srvStream.receiver = sc.sscCallbacks.NewStream(sc.context, streamID, srvStream)
+
+		if atomic.LoadInt32(&srvStream.readDisableCount) <= 0 {
+			srvStream.handleRequest()
+		}
+
+		<-srvStream.responseDoneChan
+	}
+
+	return network.Continue
 }
 
 func (sc *streamConnection) OnDecodeError(err error, headers protocol.HeaderMap) {
@@ -115,8 +130,87 @@ func (sc *streamConnection) GoAway() {
 
 // stream.Stream
 // stream.StreamSender
-type http1Stream struct {
-	context   context.Context
-	receiver  stream.StreamReceiver
-	streamCbs []stream.StreamEventListener
+type streamBase struct {
+	context          context.Context
+	readDisableCount int32
+	receiver         stream.StreamReceiver
+	streamCbs        []stream.StreamEventListener
+}
+
+// stream.Stream
+func (s *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
+	s.streamCbs = append(s.streamCbs, streamCb)
+}
+
+func (s *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
+	cbIdx := -1
+
+	for i, streamCb := range s.streamCbs {
+		if streamCb == streamCb {
+			cbIdx = i
+			break
+		}
+	}
+
+	if cbIdx > -1 {
+		s.streamCbs = append(s.streamCbs[:cbIdx], s.streamCbs[cbIdx+1:]...)
+	}
+}
+
+func (s *streamBase) ResetStream(reason stream.StreamResetReason) {
+	for _, cb := range s.streamCbs {
+		cb.OnResetStream(reason)
+	}
+}
+
+// stream.StreamSender
+// stream.Stream
+type serverStream struct {
+	streamBase
+	req              *v1.SimpleRequest
+	connection       stream.StreamConnection
+	responseDoneChan chan struct{}
+}
+
+// stream.StreamSender
+func (s *serverStream) AppendHeaders(context context.Context, headerIn protocol.HeaderMap, endStream bool) error {
+
+	return nil
+}
+
+func (s *serverStream) AppendData(context context.Context, data buffer.IoBuffer, endStream bool) error {
+
+	return nil
+}
+
+func (s *serverStream) AppendTrailers(context context.Context, trailers protocol.HeaderMap) error {
+	s.endStream()
+	return nil
+}
+
+func (s *serverStream) GetStream() stream.Stream {
+	return s
+}
+
+func (s *serverStream) ReadDisable(disable bool) {
+	if disable {
+		atomic.AddInt32(&s.readDisableCount, 1)
+	} else {
+		newCount := atomic.AddInt32(&s.readDisableCount, -1)
+
+		if newCount <= 0 {
+			s.handleRequest()
+		}
+	}
+}
+
+func (s *serverStream) handleRequest() {
+}
+
+func (s *serverStream) endStream() {
+	s.doSend()
+	close(s.responseDoneChan)
+}
+
+func (s *serverStream) doSend() {
 }

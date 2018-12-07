@@ -31,6 +31,45 @@ const (
 	Xprotocol Protocol = "X"
 )
 
+// CommonHeader wrapper for map[string]string
+type CommonHeader map[string]string
+
+// Get value of key
+func (h CommonHeader) Get(key string) (value string, ok bool) {
+	value, ok = h[key]
+	return
+}
+
+// Set key-value pair in header map, the previous pair will be replaced if exists
+func (h CommonHeader) Set(key string, value string) {
+	h[key] = value
+}
+
+// Del delete pair of specified key
+func (h CommonHeader) Del(key string) {
+	delete(h, key)
+}
+
+// Range calls f sequentially for each key and value present in the map.
+// If f returns false, range stops the iteration.
+func (h CommonHeader) Range(f func(key, value string) bool) {
+	for k, v := range h {
+		// stop if f return false
+		if !f(k, v) {
+			break
+		}
+	}
+}
+
+func (h CommonHeader) ByteSize() uint64 {
+	var size uint64
+
+	for k, v := range h {
+		size += uint64(len(k) + len(v))
+	}
+	return size
+}
+
 // HeaderMap is a interface to provide operation facade with user-value headers
 type HeaderMap interface {
 	// Get value of key
@@ -50,7 +89,7 @@ type HeaderMap interface {
 	ByteSize() uint64
 }
 
-// Protocols is a protocols' facade used by Stream
+// Codec is a protocols' facade used by Stream
 type Codec interface {
 	// Encoder is a encoder interface to extend various of protocols
 	Encoder
@@ -73,6 +112,9 @@ type DecodeFilter interface {
 	// OnDecodeError is called when error occurs
 	// When error occurring, filter status = stop
 	OnDecodeError(err error, headers HeaderMap)
+
+	// OnDecodeDone is called on header+body+trailer decoded
+	OnDecodeDone(streamID string, result interface{}) network.FilterStatus
 }
 
 // Encoder is a encoder interface to extend various of protocols

@@ -40,7 +40,7 @@ type downStream struct {
 	// flow control
 	bufferLimit uint32
 
-	// ~~~ control args
+	// control args
 	timeout         *Timeout
 	responseSender  stream.StreamSender
 	upstreamRequest *upstreamRequest

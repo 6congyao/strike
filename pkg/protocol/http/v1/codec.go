@@ -61,12 +61,12 @@ func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protoco
 }
 
 func readLimitBody(data []byte, req *SimpleRequest, maxRequestBodySize int) error {
-	n, err := parseHeader(data, &req.header)
+	n, err := parseHeader(data, &req.Header)
 	if err != nil {
 		return err
 	}
 
-	if req.header.NoBody() {
+	if req.Header.NoBody() {
 		return nil
 	}
 
@@ -81,7 +81,7 @@ func parseHeader(data []byte, header *RequestHeader) (int, error) {
 
 func continueReadBody(data []byte, offset int, req *SimpleRequest, maxRequestBodySize int) error {
 	data = data[offset:]
-	contentLength := req.header.ContentLength()
+	contentLength := req.Header.ContentLength()
 	if contentLength > 0 {
 		if maxRequestBodySize > 0 && contentLength > maxRequestBodySize {
 			return ErrBodyTooLarge
@@ -93,12 +93,12 @@ func continueReadBody(data []byte, offset int, req *SimpleRequest, maxRequestBod
 		// the end of body is determined by connection close.
 		// So just ignore request body for requests without
 		// 'Content-Length' and 'Transfer-Encoding' headers.
-		req.header.SetContentLength(0)
+		req.Header.SetContentLength(0)
 		return nil
 	}
 
 	var err error
-	req.body, err = readBody(data, contentLength, req.body)
+	req.Body, err = readBody(data, contentLength, req.Body)
 	return err
 }
 

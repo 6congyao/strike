@@ -16,6 +16,6 @@
 package v1
 
 type SimpleRequest struct {
-	body                 []byte
-	header               RequestHeader
+	Body                 []byte
+	Header               RequestHeader
 }

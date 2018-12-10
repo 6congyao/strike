@@ -205,6 +205,31 @@ func (s *serverStream) ReadDisable(disable bool) {
 }
 
 func (s *serverStream) handleRequest() {
+	if s.req == nil {
+		return
+	}
+	header := decodeReqHeader(s.req.Header)
+	header[protocol.StrikeHeaderHostKey] = string(s.req.Header.Host())
+	header[protocol.IstioHeaderHostKey] = string(s.req.Header.Host())
+	header[protocol.StrikeHeaderMethod] = string(s.req.Header.Method())
+
+	s.receiver.OnReceiveHeaders(s.context, protocol.CommonHeader(header), false)
+
+	if !s.req.Header.NoBody() {
+		buf := buffer.NewIoBufferBytes(s.req.Body)
+		s.receiver.OnReceiveData(s.context, buf, true)
+	}
+
+}
+
+func decodeReqHeader(in v1.RequestHeader) (out map[string]string) {
+	out = make(map[string]string, in.Len())
+
+	in.VisitAll(func(key, value []byte) {
+		out[string(key)] = string(value)
+	})
+
+	return
 }
 
 func (s *serverStream) endStream() {

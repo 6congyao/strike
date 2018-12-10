@@ -31,6 +31,17 @@ const (
 	Xprotocol Protocol = "X"
 )
 
+// Host key for routing in Header
+const (
+	StrikeHeaderHostKey         = "x-strike-host"
+	StrikeHeaderPathKey         = "x-strike-path"
+	StrikeHeaderQueryStringKey  = "x-strike-querystring"
+	StrikeHeaderMethod          = "x-strike-method"
+	StrikeOriginalHeaderPathKey = "x-strike-original-path"
+	StrikeResponseStatusCode    = "x-strike-response-code"
+	IstioHeaderHostKey          = "authority"
+)
+
 // CommonHeader wrapper for map[string]string
 type CommonHeader map[string]string
 

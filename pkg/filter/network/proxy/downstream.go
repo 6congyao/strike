@@ -33,9 +33,9 @@ import (
 // stream.StreamFilterChainFactoryCallbacks
 // Downstream stream, as a controller to handle downstream and upstream proxy flow
 type downStream struct {
-	streamID string
-	proxy    *proxy
-	element  *list.Element
+	ID      uint32
+	proxy   *proxy
+	element *list.Element
 
 	// flow control
 	bufferLimit uint32
@@ -84,12 +84,12 @@ type downStream struct {
 }
 
 func newActiveStream(ctx context.Context, streamID string, proxy *proxy, responseSender stream.StreamSender) *downStream {
-	newCtx := buffer.NewBufferPoolContext(ctx, true)
+	newCtx := buffer.NewBufferPoolContext(ctx)
 
 	proxyBuffers := proxyBuffersByContext(newCtx)
 
 	s := &proxyBuffers.stream
-	s.streamID = streamID
+	s.ID = atomic.AddUint32(&currProxyID, 1)
 	s.proxy = proxy
 
 	s.responseSender = responseSender
@@ -108,7 +108,7 @@ func (s *downStream) OnReceiveHeaders(context context.Context, headers protocol.
 	workerPool.Offer(&receiveHeadersEvent{
 		streamEvent: streamEvent{
 			direction: Downstream,
-			streamID:  s.streamID,
+			streamID:  s.ID,
 			stream:    s,
 		},
 		headers:   headers,
@@ -124,7 +124,7 @@ func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer
 	workerPool.Offer(&receiveDataEvent{
 		streamEvent: streamEvent{
 			direction: Downstream,
-			streamID:  s.streamID,
+			streamID:  s.ID,
 			stream:    s,
 		},
 		data:      s.downstreamReqDataBuf,
@@ -136,7 +136,7 @@ func (s *downStream) OnReceiveTrailers(context context.Context, trailers protoco
 	workerPool.Offer(&receiveTrailerEvent{
 		streamEvent: streamEvent{
 			direction: Downstream,
-			streamID:  s.streamID,
+			streamID:  s.ID,
 			stream:    s,
 		},
 		trailers: trailers,
@@ -324,7 +324,7 @@ func (s *downStream) OnResetStream(reason stream.StreamResetReason) {
 	workerPool.Offer(&resetEvent{
 		streamEvent: streamEvent{
 			direction: Downstream,
-			streamID:  s.streamID,
+			streamID:  s.ID,
 			stream:    s,
 		},
 		reason: reason,
@@ -416,7 +416,7 @@ func (s *downStream) OnDecodeError(context context.Context, err error, headers p
 
 func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap) {
 	if headers == nil {
-		log.Println("hijack with no headers, stream id:", s.streamID)
+		log.Println("hijack with no headers, stream id:", s.ID)
 		raw := make(map[string]string, 5)
 		headers = protocol.CommonHeader(raw)
 	}
@@ -431,7 +431,7 @@ func (s *downStream) startEventProcess() {
 	workerPool.Offer(&startEvent{
 		streamEvent: streamEvent{
 			direction: Downstream,
-			streamID:  s.streamID,
+			streamID:  s.ID,
 			stream:    s,
 		},
 	})
@@ -441,7 +441,7 @@ func (s *downStream) stopEventProcess() {
 	workerPool.Offer(&stopEvent{
 		streamEvent: streamEvent{
 			direction: Downstream,
-			streamID:  s.streamID,
+			streamID:  s.ID,
 			stream:    s,
 		},
 	})

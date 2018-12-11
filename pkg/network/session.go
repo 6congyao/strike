@@ -110,7 +110,6 @@ func (s *Session) SetRemoteAddr(addr net.Addr) {
 }
 
 func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
-
 }
 
 func (s *Session) GetReadBuffer() buffer.IoBuffer {

@@ -64,7 +64,7 @@ func StdServe() error {
 				in := packet[:n]
 
 				p := session.In.Begin(in)
-				pr := session.PipelineReader()
+				pr := session.Pr
 				rbuf := bytes.NewBuffer(p)
 				pr.Rd = rbuf
 				pr.Wr = session

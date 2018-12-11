@@ -15,8 +15,6 @@
 
 package network
 
-import ()
-
 type filterManager struct {
 	upstreamFilters   []*activeReadFilter
 	downstreamFilters []WriteFilter
@@ -115,7 +113,7 @@ func (arf *activeReadFilter) Connection() Connection {
 }
 
 func (arf *activeReadFilter) ContinueReading() {
-
+	arf.filterManager.onContinueReading(arf)
 }
 
 func newFilterManager(conn Connection) FilterManager {

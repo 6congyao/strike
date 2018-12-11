@@ -204,6 +204,12 @@ type Connection interface {
 	// FilterManager returns the FilterManager
 	FilterManager() FilterManager
 
+	// SetBufferLimit set the buffer limit.
+	SetBufferLimit(limit uint32)
+
+	// BufferLimit returns the buffer limit.
+	BufferLimit() uint32
+
 	// RawConn returns the original connections.
 	RawConn() interface{}
 }

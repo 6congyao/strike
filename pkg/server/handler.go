@@ -28,6 +28,7 @@ import (
 	"strike/pkg/api/v2"
 	"strike/pkg/evio"
 	"strike/pkg/network"
+	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strings"
 	"sync"
@@ -239,6 +240,7 @@ type activeListener struct {
 	disableConnIo           bool
 	listener                network.Listener
 	networkFiltersFactories []network.NetworkFilterChainFactory
+	streamFiltersFactories  []stream.StreamFilterChainFactory
 	listenIP                string
 	listenPort              int
 	sMap                    sync.Map
@@ -279,19 +281,11 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 
 	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
 	ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
-
-	//if ch != nil {
-	//	ctx = context.WithValue(ctx, types.ContextKeyAcceptChan, ch)
-	//	ctx = context.WithValue(ctx, types.ContextKeyAcceptBuffer, buf)
-	//}
-	//if oriRemoteAddr != nil {
-	//	ctx = context.WithValue(ctx, types.ContextOriRemoteAddr, oriRemoteAddr)
-	//}
+	ctx = context.WithValue(ctx, types.ContextKeyStreamFilterChainFactories, al.streamFiltersFactories)
 
 	arc.ContinueFilterChain(ctx, true)
 }
 
-// todo
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {
 	filterManager := conn.FilterManager()
 	for _, nfcf := range al.networkFiltersFactories {
@@ -306,6 +300,8 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 		conn.Close(network.NoFlush, network.LocalClose)
 		return
 	}
+
+	atomic.AddInt64(&al.handler.numConnections, 1)
 
 	conn.Start(ctx)
 }
@@ -329,23 +325,23 @@ func (al *activeListener) newConnection(ctx context.Context, rawc interface{}) {
 		// keep track of the session
 		conn.SetContext(session)
 	}
-
+	newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, session.ID())
 	al.sMap.Store(session.ID(), session)
-	atomic.AddInt64(&al.handler.numConnections, 1)
+
 	// notify
-	al.OnNewConnection(ctx, session)
+	al.OnNewConnection(newCtx, session)
 }
 
 type activeRawConn struct {
-	rawc                                  interface{}
-	rawf                                  *os.File
-	originalDstIP                         string
-	originalDstPort                       int
-	oriRemoteAddr                         net.Addr
-	rawcElement                           *list.Element
-	activeListener                        *activeListener
-	acceptedFilters                       []network.ListenerFilter
-	acceptedFilterIndex                   int
+	rawc                interface{}
+	rawf                *os.File
+	originalDstIP       string
+	originalDstPort     int
+	oriRemoteAddr       net.Addr
+	rawcElement         *list.Element
+	activeListener      *activeListener
+	acceptedFilters     []network.ListenerFilter
+	acceptedFilterIndex int
 }
 
 func newActiveRawConn(rawc interface{}, activeListener *activeListener) *activeRawConn {

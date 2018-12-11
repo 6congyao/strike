@@ -24,6 +24,8 @@ import (
 	"log"
 	"net"
 	"reflect"
+	"runtime"
+	"runtime/debug"
 	"strike/pkg/buffer"
 	"strike/pkg/evio"
 	"strings"
@@ -48,6 +50,14 @@ type Session struct {
 	filterManager FilterManager
 	rawc          interface{}
 	readBuffer    buffer.IoBuffer
+	bufferLimit   uint32
+	stopChan      chan struct{}
+
+	// readLoop/writeLoop goroutine fields:
+	internalLoopStarted bool
+	internalStopChan    chan struct{}
+
+	startOnce sync.Once
 }
 
 func NewSession(rawc interface{}, radd net.Addr) *Session {
@@ -62,11 +72,13 @@ func NewSession(rawc interface{}, radd net.Addr) *Session {
 }
 
 // start read loop on std net conn
-// do nothing on edge conn
+// do nothing if edge conn
 func (s *Session) Start(ctx context.Context) {
 	if !s.IsClosed() {
-		if conn, ok := s.RawConn().(net.Conn); ok {
-			s.startReadLoop(ctx, conn)
+		if _, ok := s.RawConn().(net.Conn); ok {
+			s.startOnce.Do(func() {
+				s.startRWLoop(ctx)
+			})
 		}
 	}
 }
@@ -109,8 +121,17 @@ func (s *Session) SetRemoteAddr(addr net.Addr) {
 	s.remoteAddr = addr
 }
 
-func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
+func (s *Session) SetBufferLimit(limit uint32) {
+	if limit > 0 {
+		s.bufferLimit = limit
+	}
+}
 
+func (s *Session) BufferLimit() uint32 {
+	return s.bufferLimit
+}
+
+func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
 }
 
 func (s *Session) GetReadBuffer() buffer.IoBuffer {
@@ -123,6 +144,30 @@ func (s *Session) FilterManager() FilterManager {
 
 func (s *Session) RawConn() interface{} {
 	return s.rawc
+}
+
+func (s *Session) doReadConn() (err error) {
+	if conn, ok := s.rawc.(net.Conn); ok {
+		if s.readBuffer == nil {
+			s.readBuffer = buffer.GetIoBuffer(DefaultBufferReadCapacity)
+		}
+
+		var bytesRead int64
+		bytesRead, err = s.readBuffer.ReadOnce(conn)
+
+		if err != nil {
+			if te, ok := err.(net.Error); ok && te.Timeout() {
+				if bytesRead == 0 {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+
+		s.onRead(bytesRead)
+	}
+	return
 }
 
 func (s *Session) doRead(b []byte) {
@@ -153,21 +198,127 @@ func (s *Session) onRead(bytesRead int64) {
 	s.filterManager.OnRead()
 }
 
-func (s *Session) startReadLoop(ctx context.Context, conn net.Conn) {
-	buf := make([]byte, 0xFFFF)
+// async
+func (s *Session) startRWLoop(ctx context.Context) {
+	s.internalLoopStarted = true
 
+	go func() {
+		defer func() {
+			if p := recover(); p != nil {
+				log.Println("panic:", p)
+
+				debug.PrintStack()
+
+				s.startReadLoop()
+			}
+		}()
+
+		s.startReadLoop()
+	}()
+
+	go func() {
+		defer func() {
+			if p := recover(); p != nil {
+				log.Println("panic:", p)
+
+				debug.PrintStack()
+
+				s.startWriteLoop()
+			}
+		}()
+
+		s.startWriteLoop()
+	}()
+}
+
+func (s *Session) startReadLoop() {
 	for {
-		var close bool
-		n, err := conn.Read(buf)
-		if err != nil {
-			log.Println("conn read error: ", err)
+		select {
+		case <-s.internalStopChan:
 			return
-		}
-		in := buf[:n]
-		s.doRead(in)
+		default:
+			err := s.doReadConn()
+			if err != nil {
+				if te, ok := err.(net.Error); ok && te.Timeout() {
+					if s.readBuffer != nil && s.readBuffer.Len() == 0 {
+						s.readBuffer.Free()
+						s.readBuffer.Alloc(DefaultBufferReadCapacity)
+					}
+					continue
+				}
+				if err == io.EOF {
+					s.Close(NoFlush, RemoteClose)
+				} else {
+					s.Close(NoFlush, OnReadErrClose)
+				}
 
-		if close {
-			break
+				log.Println("Error on read:", s.id, err)
+				return
+			}
+			runtime.Gosched()
+		}
+	}
+	//buf := make([]byte, 0xFFFF)
+	//
+	//for {
+	//	var close bool
+	//	n, err := conn.Read(buf)
+	//	if err != nil {
+	//		log.Println("conn read error: ", err)
+	//		return
+	//	}
+	//	in := buf[:n]
+	//	s.doRead(in)
+	//
+	//	if close {
+	//		break
+	//	}
+	//}
+}
+
+func (s *Session) startWriteLoop() {
+	var err error
+	for {
+		// exit loop asap. one receive & one default block will be optimized by go compiler
+		select {
+		case <-s.internalStopChan:
+			return
+		default:
+		}
+
+		select {
+		case <-s.internalStopChan:
+			return
+
+			//case buf := <-s.writeBufferChan:
+			//	s.appendBuffer(buf)
+
+			//	for i := 0; i < 10; i++ {
+			//		select {
+			//		case buf := <-s.writeBufferChan:
+			//			c.appendBuffer(buf)
+			//		default:
+			//		}
+			//	}
+			//	_, err = s.doWrite()
+		}
+
+		if err != nil {
+			if te, ok := err.(net.Error); ok && te.Timeout() {
+				continue
+			}
+
+			if err == io.EOF {
+				// remote conn closed
+				s.Close(NoFlush, RemoteClose)
+			} else {
+				// on non-timeout error
+				s.Close(NoFlush, OnWriteErrClose)
+			}
+
+			log.Println("Error on write:", s.id, err)
+
+			return
 		}
 	}
 }

@@ -62,7 +62,7 @@ func EdgeServe() error {
 	events.Data = func(econn evio.Conn, in []byte) (out []byte, action evio.Action) {
 		session := econn.Context().(*network.Session)
 		p := session.In.Begin(in)
-		pr := session.PipelineReader()
+		pr := session.Pr
 		rbuf := bytes.NewBuffer(p)
 		pr.Rd = rbuf
 		pr.Wr = session

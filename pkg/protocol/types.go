@@ -31,6 +31,12 @@ const (
 	Xprotocol Protocol = "X"
 )
 
+// header direction definition
+const (
+	Request  = "Request"
+	Response = "Response"
+)
+
 // Host key for routing in Header
 const (
 	StrikeHeaderHostKey         = "x-strike-host"
@@ -70,6 +76,17 @@ func (h CommonHeader) Range(f func(key, value string) bool) {
 			break
 		}
 	}
+}
+
+// Clone used to deep copy header's map
+func (h CommonHeader) Clone() HeaderMap {
+	copy := make(map[string]string)
+
+	for k, v := range h {
+		copy[k] = v
+	}
+
+	return CommonHeader(copy)
 }
 
 func (h CommonHeader) ByteSize() uint64 {

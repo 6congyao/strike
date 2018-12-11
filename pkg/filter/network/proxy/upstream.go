@@ -72,7 +72,7 @@ func (r *upstreamRequest) OnResetStream(reason stream.StreamResetReason) {
 	workerPool.Offer(&resetEvent{
 		streamEvent: streamEvent{
 			direction: Upstream,
-			streamID:  r.downStream.streamID,
+			streamID:  r.downStream.ID,
 			stream:    r.downStream,
 		},
 		reason: reason,

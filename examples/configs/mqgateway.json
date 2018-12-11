@@ -2,7 +2,7 @@
   "servers":[
     {
       "default_log_path":"stdout",
-      "use_edge_mode": true,
+      "use_edge_mode": false,
       "listeners":[
         {
           "name":"serverListener",

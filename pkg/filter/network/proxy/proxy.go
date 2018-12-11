@@ -32,7 +32,8 @@ import (
 )
 
 var (
-	workerPool strikesync.ShardWorkerPool
+	currProxyID uint32
+	workerPool  strikesync.ShardWorkerPool
 )
 
 func init() {
@@ -87,7 +88,6 @@ func NewProxy(ctx context.Context, config *v2.Proxy) Proxy {
 
 func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.readCallbacks = cb
-
 	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamCallbacks)
 }
 
@@ -102,8 +102,8 @@ func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {
 
 func (p *proxy) OnGoAway() {}
 
-func (p *proxy) NewStream(context context.Context, streamID string, responseSender stream.StreamSender) stream.StreamReceiver {
-	s := newActiveStream(context, streamID, p, responseSender)
+func (p *proxy) NewStream(ctx context.Context, streamID string, responseSender stream.StreamSender) stream.StreamReceiver {
+	s := newActiveStream(ctx, streamID, p, responseSender)
 
 	//todo: stream filter
 	if ff := p.context.Value(types.ContextKeyStreamFilterChainFactories); ff != nil {

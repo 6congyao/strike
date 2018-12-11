@@ -23,7 +23,6 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
-	"strike/pkg/config"
 	. "strike/pkg/evio"
 	"strike/pkg/protocol/http/v1"
 	"syscall"
@@ -177,7 +176,7 @@ func ServeListenHttp(loops int, port int, workerQueues []chan *HttpRequest) erro
 				break
 			}
 
-			index := getHashCode(httpContext.req.parameter) % *config.ConsumerHttpProcessors
+			index := getHashCode(httpContext.req.parameter)
 			workerQueues[index] <- httpContext.req
 			httpContext.req = nil
 			//data = leftover

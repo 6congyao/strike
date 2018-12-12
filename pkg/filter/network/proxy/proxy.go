@@ -145,6 +145,19 @@ func (p *proxy) deleteActiveStream(s *downStream) {
 	}
 }
 
+func (p *proxy) convertProtocol() (dp, up protocol.Protocol) {
+	if p.serverCodec == nil {
+		dp = protocol.Protocol(p.config.DownstreamProtocol)
+	} else {
+		dp = p.serverCodec.Protocol()
+	}
+	up = protocol.Protocol(p.config.UpstreamProtocol)
+	if up == protocol.AUTO {
+		up = dp
+	}
+	return
+}
+
 // ConnectionEventListener
 type downstreamCallbacks struct {
 	proxy *proxy

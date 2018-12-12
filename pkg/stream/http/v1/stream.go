@@ -175,6 +175,13 @@ type serverStream struct {
 // stream.StreamSender
 func (s *serverStream) AppendHeaders(context context.Context, headerIn protocol.HeaderMap, endStream bool) error {
 
+	//if status, ok := headerIn.Get(types.HeaderStatus); ok {
+	//	headerIn.Del(types.HeaderStatus)
+	//
+	//	statusCode, _ := strconv.Atoi(status)
+	//	s.response.SetStatusCode(statusCode)
+	//
+	//}
 	return nil
 }
 
@@ -213,9 +220,11 @@ func (s *serverStream) handleRequest() {
 	header[protocol.IstioHeaderHostKey] = string(s.req.Header.Host())
 	header[protocol.StrikeHeaderMethod] = string(s.req.Header.Method())
 
-	s.receiver.OnReceiveHeaders(s.context, protocol.CommonHeader(header), false)
+	noBody := s.req.Header.NoBody()
 
-	if !s.req.Header.NoBody() {
+	s.receiver.OnReceiveHeaders(s.context, protocol.CommonHeader(header), noBody)
+
+	if !noBody {
 		buf := buffer.NewIoBufferBytes(s.req.Body)
 		s.receiver.OnReceiveData(s.context, buf, true)
 	}
@@ -235,7 +244,10 @@ func decodeReqHeader(in v1.RequestHeader) (out map[string]string) {
 func (s *serverStream) endStream() {
 	s.doSend()
 	close(s.responseDoneChan)
+
+
 }
 
 func (s *serverStream) doSend() {
+	//s.response
 }

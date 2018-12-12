@@ -170,7 +170,7 @@ func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) 
 }
 
 func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
-
+	s.sendHijackReply(types.RouterUnavailableCode, headers, false)
 }
 
 func (s *downStream) ReceiveData(data buffer.IoBuffer, endStream bool) {
@@ -213,7 +213,8 @@ func (s *downStream) onUpstreamHeaders(headers protocol.HeaderMap, endStream boo
 	}
 
 	// todo: insert proxy headers
-	s.appendHeaders(headers, endStream)
+	nh := s.convertHeader(headers)
+	s.appendHeaders(nh, endStream)
 }
 
 func (s *downStream) onUpstreamData(data buffer.IoBuffer, endStream bool) {
@@ -242,10 +243,9 @@ func (s *downStream) onUpstreamResponseRecvFinished() {
 }
 
 // active stream sender wrapper
-
 func (s *downStream) appendHeaders(headers protocol.HeaderMap, endStream bool) {
 	s.upstreamProcessDone = endStream
-	s.doAppendHeaders(nil, s.convertHeader(headers), endStream)
+	s.doAppendHeaders(nil, headers, endStream)
 }
 
 func (s *downStream) appendData(data buffer.IoBuffer, endStream bool) {
@@ -259,6 +259,14 @@ func (s *downStream) appendTrailers(trailers protocol.HeaderMap) {
 }
 
 func (s *downStream) doAppendHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
+	//Currently, just log the error
+	if err := s.responseSender.AppendHeaders(s.context, headers, endStream); err != nil {
+		log.Println("downstream append headers error:", err)
+	}
+
+	if endStream {
+		s.endStream()
+	}
 }
 
 func (s *downStream) doAppendData(filter interface{}, data buffer.IoBuffer, endStream bool) {
@@ -268,18 +276,16 @@ func (s *downStream) doAppendTrailers(filter interface{}, trailers protocol.Head
 }
 
 func (s *downStream) convertHeader(headers protocol.HeaderMap) protocol.HeaderMap {
-	// todo: need protocol convert
-
-	//dp := protocol.Protocol(s.proxy.config.DownstreamProtocol)
-	//up := protocol.Protocol(s.proxy.config.UpstreamProtocol)
+	dp, up := s.proxy.convertProtocol()
 
 	//if dp != up {
 	//	if convHeader, err := protocol.ConvertHeader(s.context, up, dp, headers); err == nil {
 	//		return convHeader
 	//	} else {
-	//		s.logger.Errorf("convert header from %s to %s failed, %s", up, dp, err.Error())
+			log.Println("convert header failed:", up, dp)
 	//	}
 	//}
+
 	return headers
 }
 
@@ -366,6 +372,30 @@ func (s *downStream) cleanStream() {
 	s.proxy.deleteActiveStream(s)
 }
 
+// case 1: downstream's lifecycle ends normally
+// case 2: downstream got reset. See downStream.resetStream for more detail
+func (s *downStream) endStream() {
+	var isReset bool
+	if s.responseSender != nil {
+		if !s.downstreamRecvDone || !s.upstreamProcessDone {
+			// if downstream req received not done, or local proxy process not done by handle upstream response,
+			// just mark it as done and reset stream as a failed case
+			s.upstreamProcessDone = true
+
+			// reset downstream will trigger a clean up, see OnResetStream
+			s.responseSender.GetStream().ResetStream(stream.StreamLocalReset)
+			isReset = true
+		}
+	}
+
+	if !isReset {
+		s.cleanStream()
+	}
+
+	// note: if proxy logic resets the stream, there maybe some underlying data in the conn.
+	// we ignore this for now, fix as a todo
+}
+
 func (s *downStream) cleanUp() {
 	// reset upstream request
 	// if a downstream filter ends downstream before send to upstream, upstreamRequest will be nil
@@ -404,17 +434,17 @@ func (s *downStream) OnDecodeError(context context.Context, err error, headers p
 	// Check headers' info to do hijack
 	switch err.Error() {
 	case types.CodecException:
-		s.sendHijackReply(types.CodecExceptionCode, headers)
+		s.sendHijackReply(types.CodecExceptionCode, headers, true)
 	case types.DeserializeException:
-		s.sendHijackReply(types.DeserialExceptionCode, headers)
+		s.sendHijackReply(types.DeserialExceptionCode, headers, true)
 	default:
-		s.sendHijackReply(types.UnknownCode, headers)
+		s.sendHijackReply(types.UnknownCode, headers, true)
 	}
 
 	s.OnResetStream(stream.StreamLocalReset)
 }
 
-func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap) {
+func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doConv bool) {
 	if headers == nil {
 		log.Println("hijack with no headers, stream id:", s.ID)
 		raw := make(map[string]string, 5)
@@ -422,7 +452,13 @@ func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap) {
 	}
 
 	headers.Set(types.HeaderStatus, strconv.Itoa(code))
-	s.appendHeaders(headers, true)
+
+	nh := headers
+	if doConv {
+		nh = s.convertHeader(headers)
+	}
+
+	s.appendHeaders(nh, true)
 }
 
 func (s *downStream) startEventProcess() {

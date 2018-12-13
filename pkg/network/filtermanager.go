@@ -15,6 +15,10 @@
 
 package network
 
+import (
+	"strike/pkg/buffer"
+)
+
 type filterManager struct {
 	upstreamFilters   []*activeReadFilter
 	downstreamFilters []WriteFilter
@@ -96,8 +100,16 @@ func (fm *filterManager) OnRead() {
 	fm.onContinueReading(nil)
 }
 
-func (fm *filterManager) OnWrite(buffer []byte) FilterStatus {
-	panic("implement me")
+func (fm *filterManager) OnWrite(buf []buffer.IoBuffer) FilterStatus {
+	for _, df := range fm.downstreamFilters {
+		status := df.OnWrite(buf)
+
+		if status == Stop {
+			return Stop
+		}
+	}
+
+	return Continue
 }
 
 // as a ReadFilterCallbacks

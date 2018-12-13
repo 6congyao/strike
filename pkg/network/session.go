@@ -43,15 +43,18 @@ type Session struct {
 	remoteAddr net.Addr
 	closeFlag  int32
 
-	In            evio.InputStream
-	Out           []byte
-	Pr            *PipelineReader
-	Mu            sync.Mutex
-	filterManager FilterManager
-	rawc          interface{}
-	readBuffer    buffer.IoBuffer
-	bufferLimit   uint32
-	stopChan      chan struct{}
+	In              evio.InputStream
+	Out             []byte
+	Pr              *PipelineReader
+	Mu              sync.Mutex
+	filterManager   FilterManager
+	rawc            interface{}
+	readBuffer      buffer.IoBuffer
+	bufferLimit     uint32
+	stopChan        chan struct{}
+	writeBuffers    net.Buffers
+	ioBuffers       []buffer.IoBuffer
+	writeBufferChan chan *[]buffer.IoBuffer
 
 	// readLoop/writeLoop goroutine fields:
 	internalLoopStarted bool
@@ -62,9 +65,11 @@ type Session struct {
 
 func NewSession(rawc interface{}, radd net.Addr) *Session {
 	s := &Session{
-		id:         atomic.AddUint64(&globalSessionId, 1),
-		remoteAddr: radd,
-		rawc:       rawc,
+		id:               atomic.AddUint64(&globalSessionId, 1),
+		remoteAddr:       radd,
+		rawc:             rawc,
+		internalStopChan: make(chan struct{}),
+		writeBufferChan:  make(chan *[]buffer.IoBuffer, 32),
 	}
 
 	s.filterManager = newFilterManager(s)
@@ -111,10 +116,43 @@ func (s *Session) RemoteAddr() net.Addr {
 	return s.remoteAddr
 }
 
-// todo:
-func (s *Session) Write(b []byte) (n int, err error) {
-	s.Out = append(s.Out, b...)
-	return len(b), nil
+func (s *Session) Write(bufs ...buffer.IoBuffer) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Write panic:", r)
+		}
+	}()
+
+	fs := s.filterManager.OnWrite(bufs)
+
+	if fs == Stop {
+		return nil
+	}
+
+	if s.internalLoopStarted {
+		s.writeBufferChan <- &bufs
+	} else {
+		// Start schedule if not started
+		//select {
+		//case s.writeSchedChan <- true:
+		//	s.scheduleWrite()
+		//default:
+		}
+
+	wait:
+		// we use for-loop with select:c.writeSchedChan to avoid chan-send blocking
+		// 'c.writeBufferChan <- &buffers' might block if write goroutine costs much time on 'doWriteIo'
+		for {
+			select {
+			case s.writeBufferChan <- &bufs:
+				break wait
+			//case s.writeSchedChan <- true:
+			//	s.scheduleWrite()
+			//}
+		}
+	}
+
+	return nil
 }
 
 func (s *Session) SetRemoteAddr(addr net.Addr) {
@@ -290,17 +328,17 @@ func (s *Session) startWriteLoop() {
 		case <-s.internalStopChan:
 			return
 
-			//case buf := <-s.writeBufferChan:
-			//	s.appendBuffer(buf)
+		case buf := <-s.writeBufferChan:
+			s.appendBuffer(buf)
 
-			//	for i := 0; i < 10; i++ {
-			//		select {
-			//		case buf := <-s.writeBufferChan:
-			//			c.appendBuffer(buf)
-			//		default:
-			//		}
-			//	}
-			//	_, err = s.doWrite()
+			for i := 0; i < 10; i++ {
+				select {
+				case buf := <-s.writeBufferChan:
+					s.appendBuffer(buf)
+				default:
+				}
+			}
+			_, err = s.doWrite()
 		}
 
 		if err != nil {
@@ -322,6 +360,51 @@ func (s *Session) startWriteLoop() {
 		}
 	}
 }
+
+func (s *Session) appendBuffer(iobuffers *[]buffer.IoBuffer) {
+	if iobuffers == nil {
+		return
+	}
+	for _, buf := range *iobuffers {
+		if buf == nil {
+			continue
+		}
+		s.ioBuffers = append(s.ioBuffers, buf)
+		s.writeBuffers = append(s.writeBuffers, buf.Bytes())
+	}
+}
+
+func (s *Session) doWrite() (int64, error) {
+	bytesSent, err := s.doWriteIo()
+
+	//for _, cb := range s.bytesSendCallbacks {
+	//	cb(uint64(bytesSent))
+	//}
+
+	return bytesSent, err
+}
+
+func (s *Session) doWriteIo() (bytesSent int64, err error) {
+	buffers := s.writeBuffers
+	if conn, ok := s.rawc.(net.Conn); ok {
+		bytesSent, err = buffers.WriteTo(conn)
+	}
+	if err != nil {
+		return bytesSent, err
+	}
+	for _, buf := range s.ioBuffers {
+		buffer.PutIoBuffer(buf)
+	}
+	s.ioBuffers = s.ioBuffers[:0]
+	s.writeBuffers = s.writeBuffers[:0]
+	if len(buffers) != 0 {
+		for _, buf := range buffers {
+			s.writeBuffers = append(s.writeBuffers, buf)
+		}
+	}
+	return
+}
+
 
 // PipelineReader ...
 type PipelineReader struct {

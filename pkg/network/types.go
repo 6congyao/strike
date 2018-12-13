@@ -170,7 +170,7 @@ type Connection interface {
 
 	// Write writes data to the connection.
 	// Called by other-side stream connection's read loop. Will loop through stream filters with the buffer if any are installed.
-	Write(b []byte) (n int, err error)
+	Write(buf ...buffer.IoBuffer) error
 
 	// Close closes connection with connection type and event type.
 	// ConnectionCloseType - how to close to connection
@@ -252,7 +252,7 @@ type FilterManager interface {
 	OnRead()
 
 	// OnWrite is called before data write
-	OnWrite(buffer []byte) FilterStatus
+	OnWrite(buffer []buffer.IoBuffer) FilterStatus
 }
 
 // ReadFilter is a connection binary read filter, registered by FilterManager.AddReadFilter
@@ -270,7 +270,7 @@ type ReadFilter interface {
 // WriteFilter is a connection binary write filter, only called by conn accept loop
 type WriteFilter interface {
 	// OnWrite is called before data write to raw connection
-	OnWrite(buffer []byte) FilterStatus
+	OnWrite(buf []buffer.IoBuffer) FilterStatus
 }
 
 type TLSContextManager interface {

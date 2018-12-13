@@ -20,17 +20,47 @@ import (
 	"errors"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
+	"sync"
 )
+
+var (
+	requestPool  sync.Pool
+	responsePool sync.Pool
+)
+
+func AcquireRequest() *Request {
+	v := requestPool.Get()
+	if v == nil {
+		return &Request{}
+	}
+	return v.(*Request)
+}
+
+func ReleaseRequest(req *Request) {
+	req.Reset()
+	requestPool.Put(req)
+}
+
+func AcquireResponse() *Response {
+	v := responsePool.Get()
+	if v == nil {
+		return &Response{}
+	}
+	return v.(*Response)
+}
+
+func ReleaseResponse(resp *Response) {
+	resp.Reset()
+	responsePool.Put(resp)
+}
 
 var ErrBodyTooLarge = errors.New("body size exceeds the given limit")
 
 type codec struct {
-	req *SimpleRequest
 }
 
 func NewCodec() protocol.Codec {
 	return &codec{
-		req: &SimpleRequest{},
 	}
 }
 
@@ -49,18 +79,20 @@ func (c *codec) EncodeTrailers(ctx context.Context, trailers protocol.HeaderMap)
 func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protocol.DecodeFilter) {
 	// todo: loop then data.Drain()
 	if data.Len() > 0 {
-		err := readLimitBody(data.Bytes(), c.req, 40000)
+		req := AcquireRequest()
+
+		err := readLimitBody(data.Bytes(), req, 40000)
 		if err != nil {
 			filter.OnDecodeError(err, nil)
 			return
 		}
 		streamID := protocol.GenerateIDString()
 		// notify
-		filter.OnDecodeDone(streamID, c.req)
+		filter.OnDecodeDone(streamID, req)
 	}
 }
 
-func readLimitBody(data []byte, req *SimpleRequest, maxRequestBodySize int) error {
+func readLimitBody(data []byte, req *Request, maxRequestBodySize int) error {
 	n, err := parseHeader(data, &req.Header)
 	if err != nil {
 		return err
@@ -79,7 +111,7 @@ func parseHeader(data []byte, header *RequestHeader) (int, error) {
 	return header.Parse(data)
 }
 
-func continueReadBody(data []byte, offset int, req *SimpleRequest, maxRequestBodySize int) error {
+func continueReadBody(data []byte, offset int, req *Request, maxRequestBodySize int) error {
 	data = data[offset:]
 	contentLength := req.Header.ContentLength()
 	if contentLength > 0 {
@@ -98,7 +130,9 @@ func continueReadBody(data []byte, offset int, req *SimpleRequest, maxRequestBod
 	}
 
 	var err error
-	req.Body, err = readBody(data, contentLength, req.Body)
+	bodyBuf := req.bodyBuffer()
+	bodyBuf.Reset()
+	bodyBuf.B, err = readBody(data, contentLength, bodyBuf.B)
 	return err
 }
 

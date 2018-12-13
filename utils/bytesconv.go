@@ -283,7 +283,7 @@ func readHexInt(r *bufio.Reader) (int, error) {
 
 var hexIntBufPool sync.Pool
 
-func writeHexInt(w *bufio.Writer, n int) error {
+func WriteHexInt(w *bufio.Writer, n int) error {
 	if n < 0 {
 		panic("BUG: int must be positive")
 	}

@@ -17,6 +17,7 @@ package v1
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"strike/utils"
@@ -29,11 +30,6 @@ var copyBufPool = sync.Pool{
 	New: func() interface{} {
 		return make([]byte, 4096)
 	},
-}
-
-type SimpleRequest struct {
-	Body   []byte
-	Header RequestHeader
 }
 
 // Request represents HTTP request.
@@ -115,6 +111,84 @@ func (req *Request) resetSkipHeader() {
 	req.isTLS = false
 }
 
+func (req *Request) Body() []byte {
+	if req.bodyStream != nil {
+		bodyBuf := req.bodyBuffer()
+		bodyBuf.Reset()
+		_, err := copyZeroAlloc(bodyBuf, req.bodyStream)
+		req.closeBodyStream()
+		if err != nil {
+			bodyBuf.SetString(err.Error())
+		}
+	} else if req.onlyMultipartForm() {
+		body, err := marshalMultipartForm(req.multipartForm, req.multipartFormBoundary)
+		if err != nil {
+			return []byte(err.Error())
+		}
+		return body
+	}
+	return req.bodyBytes()
+}
+
+func (req *Request) onlyMultipartForm() bool {
+	return req.multipartForm != nil && (req.body == nil || len(req.body.B) == 0)
+}
+
+func marshalMultipartForm(f *multipart.Form, boundary string) ([]byte, error) {
+	var buf ByteBuffer
+	if err := WriteMultipartForm(&buf, f, boundary); err != nil {
+		return nil, err
+	}
+	return buf.B, nil
+}
+
+func WriteMultipartForm(w io.Writer, f *multipart.Form, boundary string) error {
+	// Do not care about memory allocations here, since multipart
+	// form processing is slooow.
+	if len(boundary) == 0 {
+		panic("BUG: form boundary cannot be empty")
+	}
+
+	mw := multipart.NewWriter(w)
+	if err := mw.SetBoundary(boundary); err != nil {
+		return fmt.Errorf("cannot use form boundary %q: %s", boundary, err)
+	}
+
+	// marshal values
+	for k, vv := range f.Value {
+		for _, v := range vv {
+			if err := mw.WriteField(k, v); err != nil {
+				return fmt.Errorf("cannot write form field %q value %q: %s", k, v, err)
+			}
+		}
+	}
+
+	// marshal files
+	for k, fvv := range f.File {
+		for _, fv := range fvv {
+			vw, err := mw.CreateFormFile(k, fv.Filename)
+			if err != nil {
+				return fmt.Errorf("cannot create form file %q (%q): %s", k, fv.Filename, err)
+			}
+			fh, err := fv.Open()
+			if err != nil {
+				return fmt.Errorf("cannot open form file %q (%q): %s", k, fv.Filename, err)
+			}
+			if _, err = copyZeroAlloc(vw, fh); err != nil {
+				return fmt.Errorf("error when copying form file %q (%q): %s", k, fv.Filename, err)
+			}
+			if err = fh.Close(); err != nil {
+				return fmt.Errorf("cannot close form file %q (%q): %s", k, fv.Filename, err)
+			}
+		}
+	}
+
+	if err := mw.Close(); err != nil {
+		return fmt.Errorf("error when closing multipart form writer: %s", err)
+	}
+
+	return nil
+}
 // ResetBody resets request body.
 func (req *Request) ResetBody() {
 	req.RemoveMultipartFormFiles()

@@ -18,6 +18,7 @@ package v1
 import (
 	"context"
 	"log"
+	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
@@ -91,12 +92,12 @@ func (sc *streamConnection) OnDecodeTrailer(streamID string, trailers protocol.H
 
 // http v1 decode filter use this cb to handle the request
 func (sc *streamConnection) OnDecodeDone(streamID string, result interface{}) network.FilterStatus {
-	if req, ok := result.(*v1.SimpleRequest); ok {
+	if req, ok := result.(*v1.Request); ok {
 		srvStream := &serverStream{
 			streamBase: streamBase{
+				req:     req,
 				context: context.WithValue(sc.context, types.ContextKeyStreamID, streamID),
 			},
-			req:              req,
 			connection:       sc,
 			responseDoneChan: make(chan struct{}),
 		}
@@ -128,9 +129,23 @@ func (sc *streamConnection) GoAway() {
 	panic("implement me")
 }
 
+func (sc *streamConnection) Write(p []byte) (n int, err error) {
+	n = len(p)
+
+	// TODO avoid copy
+	buf := buffer.GetIoBuffer(n)
+	buf.Write(p)
+
+	err = sc.connection.Write(buf)
+	return
+}
+
 // stream.Stream
 // stream.StreamSender
 type streamBase struct {
+	id               uint64
+	req              *v1.Request
+	res              *v1.Response
 	context          context.Context
 	readDisableCount int32
 	receiver         stream.StreamReceiver
@@ -138,6 +153,10 @@ type streamBase struct {
 }
 
 // stream.Stream
+func (s *streamBase) ID() uint64 {
+	return s.id
+}
+
 func (s *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
 	s.streamCbs = append(s.streamCbs, streamCb)
 }
@@ -167,21 +186,26 @@ func (s *streamBase) ResetStream(reason stream.StreamResetReason) {
 // stream.Stream
 type serverStream struct {
 	streamBase
-	req              *v1.SimpleRequest
-	connection       stream.StreamConnection
+
+	connection       *streamConnection
 	responseDoneChan chan struct{}
 }
 
 // stream.StreamSender
 func (s *serverStream) AppendHeaders(context context.Context, headerIn protocol.HeaderMap, endStream bool) error {
+	if s.res == nil {
+		s.res = v1.AcquireResponse()
+	}
+	if status, ok := headerIn.Get(types.HeaderStatus); ok {
+		headerIn.Del(types.HeaderStatus)
 
-	//if status, ok := headerIn.Get(types.HeaderStatus); ok {
-	//	headerIn.Del(types.HeaderStatus)
-	//
-	//	statusCode, _ := strconv.Atoi(status)
-	//	s.response.SetStatusCode(statusCode)
-	//
-	//}
+		statusCode, _ := strconv.Atoi(status)
+		s.res.SetStatusCode(statusCode)
+
+	}
+	if endStream {
+		s.endStream()
+	}
 	return nil
 }
 
@@ -225,7 +249,7 @@ func (s *serverStream) handleRequest() {
 	s.receiver.OnReceiveHeaders(s.context, protocol.CommonHeader(header), noBody)
 
 	if !noBody {
-		buf := buffer.NewIoBufferBytes(s.req.Body)
+		buf := buffer.NewIoBufferBytes(s.req.Body())
 		s.receiver.OnReceiveData(s.context, buf, true)
 	}
 
@@ -245,9 +269,8 @@ func (s *serverStream) endStream() {
 	s.doSend()
 	close(s.responseDoneChan)
 
-
 }
 
 func (s *serverStream) doSend() {
-	//s.response
+	s.res.WriteTo(s.connection)
 }

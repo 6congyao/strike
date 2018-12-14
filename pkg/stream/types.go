@@ -135,19 +135,19 @@ type ServerStreamConnection interface {
 type ServerStreamConnectionEventListener interface {
 	StreamConnectionEventListener
 
-	// NewStream returns request stream decoder
-	NewStream(context context.Context, streamID string, responseEncoder StreamSender) StreamReceiver
+	// NewStreamDetect returns stream event receiver
+	NewStreamDetect(context context.Context, streamID string, responseEncoder StreamSender) StreamReceiver
 }
 
 type ProtocolStreamFactory interface {
-	CreateClientStream(context context.Context, connection network.ClientConnection,
+	CreateClientStreamConnection(context context.Context, connection network.ClientConnection,
 		streamConnCallbacks StreamConnectionEventListener,
 		callbacks network.ConnectionEventListener) ClientStreamConnection
 
-	CreateServerStream(context context.Context, connection network.Connection,
+	CreateServerStreamConnection(context context.Context, connection network.Connection,
 		callbacks ServerStreamConnectionEventListener) ServerStreamConnection
 
-	CreateBiDirectStream(context context.Context, connection network.ClientConnection,
+	CreateBiDirectStreamConnection(context context.Context, connection network.ClientConnection,
 		clientCallbacks StreamConnectionEventListener,
 		serverCallbacks ServerStreamConnectionEventListener) ClientStreamConnection
 }

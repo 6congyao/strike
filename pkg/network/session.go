@@ -137,8 +137,6 @@ func (s *Session) Write(bufs ...buffer.IoBuffer) error {
 		//case s.writeSchedChan <- true:
 		//	s.scheduleWrite()
 		//default:
-		}
-
 	wait:
 		// we use for-loop with select:c.writeSchedChan to avoid chan-send blocking
 		// 'c.writeBufferChan <- &buffers' might block if write goroutine costs much time on 'doWriteIo'
@@ -146,9 +144,10 @@ func (s *Session) Write(bufs ...buffer.IoBuffer) error {
 			select {
 			case s.writeBufferChan <- &bufs:
 				break wait
-			//case s.writeSchedChan <- true:
-			//	s.scheduleWrite()
-			//}
+				//case s.writeSchedChan <- true:
+				//	s.scheduleWrite()
+				//}
+			}
 		}
 	}
 
@@ -331,6 +330,7 @@ func (s *Session) startWriteLoop() {
 		case buf := <-s.writeBufferChan:
 			s.appendBuffer(buf)
 
+			//todo: dynamic set loop nums
 			for i := 0; i < 10; i++ {
 				select {
 				case buf := <-s.writeBufferChan:
@@ -404,7 +404,6 @@ func (s *Session) doWriteIo() (bytesSent int64, err error) {
 	}
 	return
 }
-
 
 // PipelineReader ...
 type PipelineReader struct {

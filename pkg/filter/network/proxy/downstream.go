@@ -26,6 +26,7 @@ import (
 	"strike/pkg/types"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // stream.StreamEventListener
@@ -170,7 +171,23 @@ func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) 
 }
 
 func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
-	s.sendHijackReply(types.RouterUnavailableCode, headers, false)
+	//pool, err := s.initializeUpstreamConnectionPool(s)
+	//
+	//if err != nil {
+	//	log.Println("initialize Upstream Connection Pool error, request can't be proxyed,error:", err)
+	//	return
+	//}
+
+	pb := proxyBuffersByContext(s.context)
+	s.upstreamRequest = &pb.request
+	s.upstreamRequest.downStream = s
+	s.upstreamRequest.proxy = s.proxy
+
+	s.upstreamRequest.appendHeaders(headers, endStream)
+
+	if endStream {
+		s.onUpstreamRequestSent()
+	}
 }
 
 func (s *downStream) ReceiveData(data buffer.IoBuffer, endStream bool) {
@@ -185,7 +202,14 @@ func (s *downStream) ReceiveData(data buffer.IoBuffer, endStream bool) {
 }
 
 func (s *downStream) doReceiveData(filter interface{}, data buffer.IoBuffer, endStream bool) {
+	if endStream {
+		s.onUpstreamRequestSent()
+	}
+	s.upstreamRequest.appendData(data, endStream)
 
+	if s.upstreamProcessDone {
+		s.cleanStream()
+	}
 }
 
 func (s *downStream) ReceiveTrailers(trailers protocol.HeaderMap) {
@@ -459,6 +483,46 @@ func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doCon
 	}
 
 	s.appendHeaders(nh, true)
+}
+
+
+func (s *downStream) onUpstreamRequestSent() {
+	s.upstreamRequestSent = true
+
+	if s.upstreamRequest != nil {
+		// setup per req timeout timer
+		s.setupPerReqTimeout()
+
+		// setup global timeout timer
+		if s.timeout.GlobalTimeout > 0 {
+			if s.responseTimer != nil {
+				s.responseTimer.stop()
+			}
+
+			s.responseTimer = newTimer(s.onResponseTimeout, s.timeout.GlobalTimeout)
+			s.responseTimer.start()
+		}
+	}
+}
+
+func (s *downStream) setupPerReqTimeout() {
+	timeout := s.timeout
+
+	if timeout.TryTimeout > 0 {
+		if s.perRetryTimer != nil {
+			s.perRetryTimer.stop()
+		}
+
+		s.perRetryTimer = newTimer(s.onPerReqTimeout, timeout.TryTimeout*time.Second)
+		s.perRetryTimer.start()
+	}
+}
+
+func (s *downStream) onResponseTimeout() {
+
+}
+
+func (s *downStream) onPerReqTimeout() {
 }
 
 func (s *downStream) startEventProcess() {

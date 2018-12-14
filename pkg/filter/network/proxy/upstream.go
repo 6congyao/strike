@@ -90,9 +90,18 @@ func (r *upstreamRequest) ReceiveData(data buffer.IoBuffer, endStream bool) {
 	}
 }
 
-
 func (r *upstreamRequest) ReceiveTrailers(trailers protocol.HeaderMap) {
 	if !r.setupRetry {
 		r.downStream.onUpstreamTrailers(trailers)
 	}
+}
+
+func (r *upstreamRequest) appendHeaders(headers protocol.HeaderMap, endStream bool) {
+	r.sendComplete = endStream
+}
+
+func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
+	r.sendComplete = endStream
+	r.dataSent = true
+	//r.requestSender.AppendData(r.downStream.context, r.convertData(data), endStream)
 }

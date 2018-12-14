@@ -34,18 +34,18 @@ func init() {
 
 type streamConnFactory struct{}
 
-func (f *streamConnFactory) CreateClientStream(context context.Context, connection network.ClientConnection,
+func (f *streamConnFactory) CreateClientStreamConnection(context context.Context, connection network.ClientConnection,
 	streamConnCallbacks stream.StreamConnectionEventListener,
 	callbacks network.ConnectionEventListener) stream.ClientStreamConnection {
 	return nil
 }
 
-func (f *streamConnFactory) CreateServerStream(context context.Context, connection network.Connection,
+func (f *streamConnFactory) CreateServerStreamConnection(context context.Context, connection network.Connection,
 	callbacks stream.ServerStreamConnectionEventListener) stream.ServerStreamConnection {
 	return newStreamConnection(context, connection, nil, callbacks)
 }
 
-func (f *streamConnFactory) CreateBiDirectStream(context context.Context, connection network.ClientConnection,
+func (f *streamConnFactory) CreateBiDirectStreamConnection(context context.Context, connection network.ClientConnection,
 	clientCallbacks stream.StreamConnectionEventListener,
 	serverCallbacks stream.ServerStreamConnectionEventListener) stream.ClientStreamConnection {
 	return nil
@@ -101,7 +101,7 @@ func (sc *streamConnection) OnDecodeDone(streamID string, result interface{}) ne
 			connection:       sc,
 			responseDoneChan: make(chan struct{}),
 		}
-		srvStream.receiver = sc.sscCallbacks.NewStream(sc.context, streamID, srvStream)
+		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, streamID, srvStream)
 
 		if atomic.LoadInt32(&srvStream.readDisableCount) <= 0 {
 			srvStream.handleRequest()
@@ -269,6 +269,12 @@ func (s *serverStream) endStream() {
 	s.doSend()
 	close(s.responseDoneChan)
 
+	if s.req != nil {
+		v1.ReleaseRequest(s.req)
+	}
+	if s.res != nil {
+		v1.ReleaseResponse(s.res)
+	}
 }
 
 func (s *serverStream) doSend() {

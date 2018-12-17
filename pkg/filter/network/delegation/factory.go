@@ -31,7 +31,7 @@ type delegationFilterConfigFactory struct {
 	Delegation *v2.Delegation
 }
 
-func (dfcf *delegationFilterConfigFactory) CreateFilterChain(context context.Context, callbacks network.NetWorkFilterChainFactoryCallbacks) {
+func (dfcf *delegationFilterConfigFactory) CreateFilterChain(context context.Context, clusterManager interface{}, callbacks network.NetWorkFilterChainFactoryCallbacks) {
 	rf := NewDelegate(context, dfcf.Delegation)
 	callbacks.AddReadFilter(rf)
 }

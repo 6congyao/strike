@@ -18,12 +18,14 @@ package proxy
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
 	"strike/pkg/types"
+	"strike/pkg/upstream"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -171,12 +173,12 @@ func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) 
 }
 
 func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
-	//pool, err := s.initializeUpstreamConnectionPool(s)
-	//
-	//if err != nil {
-	//	log.Println("initialize Upstream Connection Pool error, request can't be proxyed,error:", err)
-	//	return
-	//}
+	_, err := s.initializeUpstreamConnectionPool()
+
+	if err != nil {
+		log.Println("initialize Upstream Connection Pool error, request can't be proxyed,error:", err)
+		return
+	}
 
 	pb := proxyBuffersByContext(s.context)
 	s.upstreamRequest = &pb.request
@@ -224,6 +226,34 @@ func (s *downStream) ReceiveTrailers(trailers protocol.HeaderMap) {
 }
 
 func (s *downStream) doReceiveTrailers(filter interface{}, trailers protocol.HeaderMap) {
+
+}
+
+func (s *downStream) initializeUpstreamConnectionPool() (connPool stream.ConnectionPool, err error) {
+	var upProtocol protocol.Protocol
+
+	if s.proxy.config.UpstreamProtocol == string(protocol.AUTO) {
+		if s.proxy.serverCodec == nil {
+			upProtocol = protocol.Protocol(s.proxy.config.DownstreamProtocol)
+		} else {
+			upProtocol = s.proxy.serverCodec.Protocol()
+		}
+	} else {
+		upProtocol = protocol.Protocol(s.proxy.config.UpstreamProtocol)
+	}
+
+	s.getUpstreamConnPool(upProtocol)
+
+	return
+}
+
+func (s *downStream) getUpstreamConnPool(protocol protocol.Protocol) {
+	var host upstream.Host
+	if factory, ok := stream.ConnPoolFactories[protocol]; ok {
+		connPool := factory(host)
+
+		fmt.Println(connPool)
+	}
 
 }
 
@@ -306,7 +336,7 @@ func (s *downStream) convertHeader(headers protocol.HeaderMap) protocol.HeaderMa
 	//	if convHeader, err := protocol.ConvertHeader(s.context, up, dp, headers); err == nil {
 	//		return convHeader
 	//	} else {
-			log.Println("convert header failed:", up, dp)
+	log.Println("convert header failed:", up, dp)
 	//	}
 	//}
 
@@ -484,7 +514,6 @@ func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doCon
 
 	s.appendHeaders(nh, true)
 }
-
 
 func (s *downStream) onUpstreamRequestSent() {
 	s.upstreamRequestSent = true

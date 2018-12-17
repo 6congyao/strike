@@ -60,8 +60,7 @@ type codec struct {
 }
 
 func NewCodec() protocol.Codec {
-	return &codec{
-	}
+	return &codec{}
 }
 
 func (c *codec) EncodeHeaders(ctx context.Context, headers protocol.HeaderMap) (buffer.IoBuffer, error) {

@@ -28,11 +28,32 @@ import (
 )
 
 var protocolsSupported = map[string]bool{
-	string(protocol.MQ):     true,
+	string(protocol.MQ):        true,
 	string(protocol.HTTP2):     true,
 	string(protocol.HTTP1):     true,
 	string(protocol.Xprotocol): true,
 }
+
+const (
+	MinHostWeight               = uint32(1)
+	MaxHostWeight               = uint32(128)
+	DefaultMaxRequestPerConn    = uint32(1024)
+	DefaultConnBufferLimitBytes = uint32(16 * 1024)
+)
+
+// ParsedCallback is an
+// alias for closure func(data interface{}, endParsing bool) error
+type ParsedCallback func(data interface{}, endParsing bool) error
+type ContentKey string
+
+var configParsedCBMaps = make(map[ContentKey][]ParsedCallback)
+
+// Group of ContentKey
+// notes: configcontentkey equals to the key of config file
+const (
+	ParseCallbackKeyCluster        ContentKey = "clusters"
+	ParseCallbackKeyServiceRgtInfo ContentKey = "service_registry"
+)
 
 // ParseServerConfig
 func ParseServerConfig(c *ServerConfig) *server.Config {
@@ -144,4 +165,65 @@ func ParseProxyFilter(cfg map[string]interface{}) *v2.Proxy {
 	}
 
 	return proxyConfig
+}
+
+// ParseClusterConfig parses config data to api data, verify whether the config is valid
+func ParseClusterConfig(clusters []v2.Cluster) ([]v2.Cluster, map[string][]v2.Host) {
+	if len(clusters) == 0 {
+		stdlog.Println("No Cluster provided in cluster config")
+	}
+	var pClusters []v2.Cluster
+	clusterV2Map := make(map[string][]v2.Host)
+	for _, c := range clusters {
+		if c.Name == "" {
+			stdlog.Println("[name] is required in cluster config")
+		}
+		if c.MaxRequestPerConn == 0 {
+			c.MaxRequestPerConn = DefaultMaxRequestPerConn
+			stdlog.Println("[max_request_per_conn] is not specified, use default value:",
+				DefaultMaxRequestPerConn)
+		}
+		if c.ConnBufferLimitBytes == 0 {
+			c.ConnBufferLimitBytes = DefaultConnBufferLimitBytes
+			stdlog.Println("[conn_buffer_limit_bytes] is not specified, use default value:",
+				DefaultConnBufferLimitBytes)
+		}
+		if c.LBSubSetConfig.FallBackPolicy > 2 {
+			stdlog.Println("lb subset config 's fall back policy set error. ",
+				"For 0, represent NO_FALLBACK",
+				"For 1, represent ANY_ENDPOINT",
+				"For 2, represent DEFAULT_SUBSET")
+		}
+		if _, ok := protocolsSupported[c.HealthCheck.Protocol]; !ok && c.HealthCheck.Protocol != "" {
+			stdlog.Println("unsupported health check protocol:", c.HealthCheck.Protocol)
+		}
+		c.Hosts = parseHostConfig(c.Hosts)
+		clusterV2Map[c.Name] = c.Hosts
+		pClusters = append(pClusters, c)
+	}
+	// trigger all callbacks
+	if cbs, ok := configParsedCBMaps[ParseCallbackKeyCluster]; ok {
+		for _, cb := range cbs {
+			cb(pClusters, false)
+		}
+	}
+	return pClusters, clusterV2Map
+}
+
+func parseHostConfig(hosts []v2.Host) (hs []v2.Host) {
+	for _, host := range hosts {
+		host.Weight = transHostWeight(host.Weight)
+		hs = append(hs, host)
+	}
+	return
+}
+
+func transHostWeight(weight uint32) uint32 {
+	if weight > MaxHostWeight {
+		return MaxHostWeight
+	}
+	if weight < MinHostWeight {
+		return MinHostWeight
+	}
+	return weight
 }

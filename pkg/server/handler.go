@@ -30,6 +30,7 @@ import (
 	"strike/pkg/network"
 	"strike/pkg/stream"
 	"strike/pkg/types"
+	"strike/pkg/upstream"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -38,13 +39,16 @@ import (
 type connHandler struct {
 	numConnections int64
 	listeners      []*activeListener
+	cm             upstream.ClusterManager
 }
 
 // NewHandler
 // create network.ConnectionHandler's implement connHandler
-func NewHandler() network.ConnectionHandler {
+func NewHandler(cm upstream.ClusterManager) network.ConnectionHandler {
 	ch := &connHandler{
 		numConnections: 0,
+		listeners:      make([]*activeListener, 0),
+		cm:             cm,
 	}
 
 	return ch
@@ -235,6 +239,25 @@ func (ch *connHandler) findActiveListenerByAddress(addr net.Addr) *activeListene
 	return nil
 }
 
+// ClusterConfigFactoryCb
+func (ch *connHandler) UpdateClusterConfig(clusters []v2.Cluster) error {
+
+	for _, cluster := range clusters {
+		if !ch.cm.AddOrUpdatePrimaryCluster(cluster) {
+			return fmt.Errorf("UpdateClusterConfig: AddOrUpdatePrimaryCluster failure, cluster name = %s", cluster.Name)
+		}
+	}
+
+	// TODO: remove cluster
+
+	return nil
+}
+
+// ClusterHostFactoryCb
+func (ch *connHandler) UpdateClusterHost(cluster string, priority uint32, hosts []v2.Host) error {
+	return ch.cm.UpdateClusterHosts(cluster, priority, hosts)
+}
+
 // ListenerEventListener
 type activeListener struct {
 	disableConnIo           bool
@@ -289,7 +312,7 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {
 	filterManager := conn.FilterManager()
 	for _, nfcf := range al.networkFiltersFactories {
-		nfcf.CreateFilterChain(ctx, filterManager)
+		nfcf.CreateFilterChain(ctx, al.handler.cm, filterManager)
 	}
 
 	filterManager.InitializeReadFilters()

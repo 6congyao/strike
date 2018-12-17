@@ -74,12 +74,12 @@ type RouterConfig struct {
 }
 
 type RouterActionConfig struct {
-	ClusterName      string            `json:"cluster_name"`
-	ClusterHeader    string            `json:"cluster_header"`
-	WeightedClusters []WeightedCluster `json:"weighted_clusters"`
-	MetadataConfig   MetadataConfig    `json:"metadata_match"`
-	TimeoutConfig    DurationConfig    `json:"timeout"`
-	RetryPolicy      *RetryPolicy      `json:"retry_policy"`
+	ClusterName             string               `json:"cluster_name"`
+	ClusterHeader           string               `json:"cluster_header"`
+	WeightedClusters        []WeightedCluster    `json:"weighted_clusters"`
+	MetadataConfig          MetadataConfig       `json:"metadata_match"`
+	TimeoutConfig           DurationConfig       `json:"timeout"`
+	RetryPolicy             *RetryPolicy         `json:"retry_policy"`
 	PrefixRewrite           string               `json:"prefix_rewrite"`
 	HostRewrite             string               `json:"host_rewrite"`
 	AutoHostRewrite         bool                 `json:"auto_host_rewrite"`

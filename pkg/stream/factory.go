@@ -19,12 +19,19 @@ import (
 	"context"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
+	"strike/pkg/upstream"
 )
 
-var streamFactories map[protocol.Protocol]ProtocolStreamFactory
+var (
+	streamFactories   map[protocol.Protocol]ProtocolStreamFactory
+	ConnPoolFactories map[protocol.Protocol]connNewPool
+)
+
+type connNewPool func(host upstream.Host) ConnectionPool
 
 func init() {
 	streamFactories = make(map[protocol.Protocol]ProtocolStreamFactory)
+	ConnPoolFactories = make(map[protocol.Protocol]connNewPool)
 }
 
 func Register(prot protocol.Protocol, factory ProtocolStreamFactory) {
@@ -39,4 +46,8 @@ func CreateServerStreamConnection(context context.Context, prot protocol.Protoco
 	}
 
 	return nil
+}
+
+func RegisterConnPool(protocol protocol.Protocol, factory connNewPool) {
+	ConnPoolFactories[protocol] = factory
 }

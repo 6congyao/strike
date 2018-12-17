@@ -28,6 +28,7 @@ var (
 	bufioWriterPool  sync.Pool
 	statsWriterPool  sync.Pool
 )
+
 const maxSmallFileSize = 2 * 4096
 
 type Response struct {

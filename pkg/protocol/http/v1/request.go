@@ -189,6 +189,7 @@ func WriteMultipartForm(w io.Writer, f *multipart.Form, boundary string) error {
 
 	return nil
 }
+
 // ResetBody resets request body.
 func (req *Request) ResetBody() {
 	req.RemoveMultipartFormFiles()

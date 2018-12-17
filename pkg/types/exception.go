@@ -50,4 +50,3 @@ const (
 	TimeoutExceptionCode  int = 504
 	LimitExceededCode     int = 509
 )
-

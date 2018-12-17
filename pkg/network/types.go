@@ -305,7 +305,7 @@ type ListenerFilterCallbacks interface {
 
 // NetworkFilterChainFactory adds filter into NetWorkFilterChainFactoryCallbacks
 type NetworkFilterChainFactory interface {
-	CreateFilterChain(context context.Context, callbacks NetWorkFilterChainFactoryCallbacks)
+	CreateFilterChain(context context.Context, clusterManager interface{}, callbacks NetWorkFilterChainFactoryCallbacks)
 }
 
 // NetWorkFilterChainFactoryCallbacks is a wrapper of FilterManager that called in NetworkFilterChainFactory

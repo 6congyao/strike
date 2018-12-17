@@ -28,6 +28,7 @@ import (
 	"strike/pkg/stream"
 	strikesync "strike/pkg/sync"
 	"strike/pkg/types"
+	"strike/pkg/upstream"
 	"sync"
 )
 
@@ -49,8 +50,8 @@ func init() {
 // network.ReadFilter
 // stream.ServerStreamConnectionEventListener
 type proxy struct {
-	config *v2.Proxy
-	//clusterManager      types.ClusterManager
+	config              *v2.Proxy
+	cm                  upstream.ClusterManager
 	readCallbacks       network.ReadFilterCallbacks
 	upstreamConnection  network.ClientConnection
 	downstreamCallbacks DownstreamCallbacks
@@ -63,11 +64,12 @@ type proxy struct {
 }
 
 // NewProxy create proxy instance for given v2.Proxy config
-func NewProxy(ctx context.Context, config *v2.Proxy) Proxy {
+func NewProxy(ctx context.Context, config *v2.Proxy, clusterManager interface{}) Proxy {
 	proxy := &proxy{
 		config:       config,
 		activeSteams: list.New(),
 		context:      ctx,
+		cm:           clusterManager.(upstream.ClusterManager),
 	}
 
 	extJSON, err := json.Marshal(proxy.config.ExtendConfig)

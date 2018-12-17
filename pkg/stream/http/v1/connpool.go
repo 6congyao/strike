@@ -13,31 +13,42 @@
  * limitations under the License.
  */
 
-package proxy
+package v1
 
 import (
 	"context"
-	"strike/pkg/api/v2"
-	"strike/pkg/config"
-	"strike/pkg/filter"
-	"strike/pkg/network"
+	"fmt"
+	"strike/pkg/protocol"
+	"strike/pkg/stream"
+	"strike/pkg/upstream"
+	"sync"
 )
 
 func init() {
-	filter.RegisterNetwork(v2.DEFAULT_NETWORK_FILTER, CreateProxyFactory)
+	stream.RegisterConnPool(protocol.MQ, NewConnPool)
 }
 
-type genericProxyFilterConfigFactory struct {
-	Proxy *v2.Proxy
+func NewConnPool(host upstream.Host) stream.ConnectionPool {
+	return &connPool{
+		host: host,
+	}
 }
 
-func (gfcf *genericProxyFilterConfigFactory) CreateFilterChain(context context.Context, clusterManager interface{}, callbacks network.NetWorkFilterChainFactoryCallbacks) {
-	p := NewProxy(context, gfcf.Proxy, clusterManager)
-	callbacks.AddReadFilter(p)
+// stream.ConnectionPool
+type connPool struct {
+	host          upstream.Host
+	activeClients sync.Map
 }
 
-func CreateProxyFactory(conf map[string]interface{}) (network.NetworkFilterChainFactory, error) {
-	return &genericProxyFilterConfigFactory{
-		Proxy: config.ParseProxyFilter(conf),
-	}, nil
+func (p *connPool) Close() {
+	panic("implement me")
+}
+
+func (p *connPool) NewStream(ctx context.Context, streamID string, responseDecoder stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
+	fmt.Println("in")
+	return nil
+}
+
+func (p *connPool) Protocol() protocol.Protocol {
+	return protocol.HTTP1
 }

@@ -273,5 +273,3 @@ func (b *ByteBuffer) String() string {
 func (b *ByteBuffer) Reset() {
 	b.B = b.B[:0]
 }
-
-

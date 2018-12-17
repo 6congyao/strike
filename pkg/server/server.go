@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"strike/pkg/api/v2"
 	"strike/pkg/network"
+	"strike/pkg/upstream"
 )
 
 var servers []*server
@@ -42,7 +43,7 @@ func GetServer() Server {
 	return servers[0]
 }
 
-func NewServer(config *Config) Server {
+func NewServer(config *Config, cm upstream.ClusterManager) Server {
 	procNum := runtime.NumCPU()
 
 	if config != nil {
@@ -64,7 +65,7 @@ func NewServer(config *Config) Server {
 		serverName: config.ServerName,
 		logger:     *log.New(os.Stdout, "strike", log.LstdFlags),
 		stopChan:   make(chan struct{}),
-		handler:    NewHandler(),
+		handler:    NewHandler(cm),
 	}
 
 	servers = append(servers, server)

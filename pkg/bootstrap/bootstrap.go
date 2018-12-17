@@ -22,10 +22,13 @@ import (
 	_ "strike/pkg/filter/network/proxy"
 	"strike/pkg/server"
 	_ "strike/pkg/stream/http/v1"
+	"strike/pkg/upstream"
+	"strike/pkg/upstream/cluster"
 )
 
 type Strike struct {
 	servers []server.Server
+	cm      upstream.ClusterManager
 }
 
 func NewStrike(sc *config.StrikeConfig) *Strike {
@@ -39,13 +42,17 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 		log.Fatalln("multiple server not supported yet, got ", srvNum)
 	}
 
+	// parse cluster all in ones
+	clusters, clusterMap := config.ParseClusterConfig(sc.ClusterManager.Clusters)
+	sk.cm = cluster.NewClusterManager(nil, clusters, clusterMap, sc.ClusterManager.AutoDiscovery, sc.ClusterManager.RegistryUseHealthCheck)
+
 	for _, srvConfig := range sc.Servers {
 		c := config.ParseServerConfig(&srvConfig)
 
 		var srv server.Server
 
 		if mode == config.File {
-			srv = server.NewServer(c)
+			srv = server.NewServer(c, sk.cm)
 
 			for _, listenerConfig := range srvConfig.Listeners {
 				lc := config.ParseListenerConfig(&listenerConfig)
@@ -85,4 +92,5 @@ func (sk *Strike) Stop() {
 	for _, srv := range sk.servers {
 		srv.Close()
 	}
+	sk.cm.Destroy()
 }

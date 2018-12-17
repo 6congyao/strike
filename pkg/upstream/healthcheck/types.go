@@ -13,15 +13,5 @@
  * limitations under the License.
  */
 
-package filter
+package healthcheck
 
-import (
-	"strike/pkg/network"
-	"strike/pkg/stream"
-)
-
-// NetworkFilterFactoryCreator creates a NetworkFilterChainFactory according to config
-type NetworkFilterFactoryCreator func(config map[string]interface{}) (network.NetworkFilterChainFactory, error)
-
-// StreamFilterFactoryCreator creates a StreamFilterChainFactory according to config
-type StreamFilterFactoryCreator func(config map[string]interface{}) (stream.StreamFilterChainFactory, error)

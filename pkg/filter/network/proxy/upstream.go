@@ -17,9 +17,11 @@ package proxy
 
 import (
 	"container/list"
+	"context"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	"strike/pkg/upstream"
 )
 
 // stream.StreamEventListener
@@ -98,10 +100,91 @@ func (r *upstreamRequest) ReceiveTrailers(trailers protocol.HeaderMap) {
 
 func (r *upstreamRequest) appendHeaders(headers protocol.HeaderMap, endStream bool) {
 	r.sendComplete = endStream
+	r.connPool.NewStream(r.downStream.context, r, r)
 }
 
 func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
 	r.sendComplete = endStream
 	r.dataSent = true
 	//r.requestSender.AppendData(r.downStream.context, r.convertData(data), endStream)
+}
+
+// stream.StreamReceiver
+// Method to decode upstream's response message
+func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
+	// save response code
+	//if status, ok := headers.Get(protocol.StrikeResponseStatusCode); ok {
+	//	if code, err := strconv.Atoi(status); err == nil {
+	//		r.downStream.requestInfo.SetResponseCode(uint32(code))
+	//	}
+	//	headers.Del(protocol.StrikeResponseStatusCode)
+	//}
+
+	workerPool.Offer(&receiveHeadersEvent{
+		streamEvent: streamEvent{
+			direction: Upstream,
+			streamID:  r.downStream.ID,
+			stream:    r.downStream,
+		},
+		headers:   headers,
+		endStream: endStream,
+	})
+}
+
+func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
+	r.downStream.downstreamRespDataBuf = data.Clone()
+	data.Drain(data.Len())
+
+	workerPool.Offer(&receiveDataEvent{
+		streamEvent: streamEvent{
+			direction: Upstream,
+			streamID:  r.downStream.ID,
+			stream:    r.downStream,
+		},
+		data:      r.downStream.downstreamRespDataBuf,
+		endStream: endStream,
+	})
+}
+
+func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
+	workerPool.Offer(&receiveTrailerEvent{
+		streamEvent: streamEvent{
+			direction: Upstream,
+			streamID:  r.downStream.ID,
+			stream:    r.downStream,
+		},
+		trailers: trailers,
+	})
+}
+
+func (r *upstreamRequest) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
+	r.OnResetStream(stream.StreamLocalReset)
+}
+
+// stream.PoolEventListener
+func (r *upstreamRequest) OnFailure(reason stream.PoolFailureReason, host upstream.Host) {
+	var resetReason stream.StreamResetReason
+
+	switch reason {
+	case stream.Overflow:
+		resetReason = stream.StreamOverflow
+	case stream.ConnectionFailure:
+		resetReason = stream.StreamConnectionFailed
+	}
+
+	r.ResetStream(resetReason)
+}
+
+func (r *upstreamRequest) OnReady(sender stream.StreamSender, host upstream.Host) {
+	r.requestSender = sender
+	r.requestSender.GetStream().AddEventListener(r)
+
+	endStream := r.sendComplete && !r.dataSent && !r.trailerSent
+	r.requestSender.AppendHeaders(r.downStream.context, r.convertHeader(r.downStream.downstreamReqHeaders), endStream)
+
+	// todo: check if we get a reset on send headers
+}
+
+func (r *upstreamRequest) convertHeader(headers protocol.HeaderMap) protocol.HeaderMap {
+	return headers
 }

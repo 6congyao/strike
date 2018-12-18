@@ -44,7 +44,7 @@ func (p *connPool) Close() {
 	panic("implement me")
 }
 
-func (p *connPool) NewStream(ctx context.Context, streamID string, responseDecoder stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
+func (p *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
 	fmt.Println("in")
 	return nil
 }

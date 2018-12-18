@@ -117,7 +117,7 @@ type ClusterManager interface {
 	SetInitializedCb(cb func())
 
 	// Get, use to get the snapshot of a cluster
-	GetClusterSnapshot(context context.Context, cluster string) ClusterSnapshot
+	GetClusterSnapshot(context context.Context, clusterName string) ClusterSnapshot
 
 	// PutClusterSnapshot release snapshot lock
 	PutClusterSnapshot(snapshot ClusterSnapshot)

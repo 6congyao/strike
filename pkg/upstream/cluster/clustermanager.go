@@ -61,8 +61,20 @@ func (cm *clusterManager) SetInitializedCb(cb func()) {
 	panic("implement me")
 }
 
-func (cm *clusterManager) GetClusterSnapshot(context context.Context, cluster string) ClusterSnapshot {
-	panic("implement me")
+func (cm *clusterManager) GetClusterSnapshot(context context.Context, clusterName string) ClusterSnapshot {
+	//if v, ok := cm.primaryClusters.Load(clusterName); ok {
+	//	pc := v.(*primaryCluster)
+	//	pcc := pc.cluster
+	//
+	//	clusterSnapshot := &clusterSnapshot{
+	//		prioritySet:  pcc.PrioritySet(),
+	//		clusterInfo:  pcc.Info(),
+	//	}
+	//
+	//	return clusterSnapshot
+	//}
+
+	return nil
 }
 
 func (cm *clusterManager) PutClusterSnapshot(snapshot ClusterSnapshot) {
@@ -99,7 +111,7 @@ func (cm *clusterManager) Shutdown() error {
 }
 
 func (cm *clusterManager) SourceAddress() net.Addr {
-	panic("implement me")
+	return cm.sourceAddr
 }
 
 func (cm *clusterManager) VersionInfo() string {
@@ -243,6 +255,11 @@ func (pc *primaryCluster) UpdateHosts(hosts []Host) error {
 	pc.configUsed = config
 
 	return nil
+}
+
+type clusterSnapshot struct {
+	prioritySet  PrioritySet
+	clusterInfo  ClusterInfo
 }
 
 func deepCopyCluster(cluster *v2.Cluster) *v2.Cluster {

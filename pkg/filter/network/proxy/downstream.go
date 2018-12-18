@@ -18,7 +18,6 @@ package proxy
 import (
 	"container/list"
 	"context"
-	"fmt"
 	"log"
 	"strconv"
 	"strike/pkg/buffer"
@@ -173,7 +172,7 @@ func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) 
 }
 
 func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
-	_, err := s.initializeUpstreamConnectionPool()
+	connPool, err := s.initializeUpstreamConnectionPool()
 
 	if err != nil {
 		log.Println("initialize Upstream Connection Pool error, request can't be proxyed,error:", err)
@@ -184,6 +183,7 @@ func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.Heade
 	s.upstreamRequest = &pb.request
 	s.upstreamRequest.downStream = s
 	s.upstreamRequest.proxy = s.proxy
+	s.upstreamRequest.connPool = connPool
 
 	s.upstreamRequest.appendHeaders(headers, endStream)
 
@@ -242,19 +242,20 @@ func (s *downStream) initializeUpstreamConnectionPool() (connPool stream.Connect
 		upProtocol = protocol.Protocol(s.proxy.config.UpstreamProtocol)
 	}
 
-	s.getUpstreamConnPool(upProtocol)
+	connPool = s.getUpstreamConnPool(upProtocol)
+	if connPool == nil {
+		s.sendHijackReply(types.NoHealthUpstreamCode, s.downstreamReqHeaders, false)
+	}
 
 	return
 }
 
-func (s *downStream) getUpstreamConnPool(protocol protocol.Protocol) {
+func (s *downStream) getUpstreamConnPool(protocol protocol.Protocol) stream.ConnectionPool {
 	var host upstream.Host
 	if factory, ok := stream.ConnPoolFactories[protocol]; ok {
-		connPool := factory(host)
-
-		fmt.Println(connPool)
+		return factory(host)
 	}
-
+	return nil
 }
 
 func (s *downStream) onUpstreamHeaders(headers protocol.HeaderMap, endStream bool) {

@@ -20,6 +20,7 @@ import (
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
+	"strike/pkg/upstream"
 )
 
 // StreamResetReason defines the reason why stream reset
@@ -332,16 +333,16 @@ const (
 type ConnectionPool interface {
 	Protocol() protocol.Protocol
 
-	NewStream(ctx context.Context, streamID string, responseDecoder StreamReceiver, cb PoolEventListener) Cancellable
+	NewStream(ctx context.Context, receiver StreamReceiver, cb PoolEventListener) Cancellable
 
 	Close()
 }
 
 //todo
 type PoolEventListener interface {
-	OnFailure(streamID string, reason PoolFailureReason, host interface{})
+	OnFailure(reason PoolFailureReason, host upstream.Host)
 
-	OnReady(streamID string, requestEncoder StreamSender, host interface{})
+	OnReady(sender StreamSender, host upstream.Host)
 }
 
 type Cancellable interface {

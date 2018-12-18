@@ -179,6 +179,14 @@ func (s *Session) FilterManager() FilterManager {
 	return s.filterManager
 }
 
+func (s *Session) SetNoDelay(enable bool) {
+	if s.rawc != nil {
+		if rawc, ok := s.rawc.(*net.TCPConn); ok {
+			rawc.SetNoDelay(enable)
+		}
+	}
+}
+
 func (s *Session) RawConn() interface{} {
 	return s.rawc
 }

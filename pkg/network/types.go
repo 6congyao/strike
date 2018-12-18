@@ -159,6 +159,17 @@ const (
 	ConnectFailed   ConnectionEvent = "ConnectFailed"
 )
 
+// IsClose represents whether the event is triggered by connection close
+func (ce ConnectionEvent) IsClose() bool {
+	return ce == LocalClose || ce == RemoteClose ||
+		ce == OnReadErrClose || ce == OnWriteErrClose
+}
+
+// ConnectFailure represents whether the event is triggered by connection failure
+func (ce ConnectionEvent) ConnectFailure() bool {
+	return ce == ConnectFailed || ce == ConnectTimeout
+}
+
 // Connection interface
 type Connection interface {
 	// ID returns unique connection id
@@ -209,6 +220,9 @@ type Connection interface {
 
 	// BufferLimit returns the buffer limit.
 	BufferLimit() uint32
+
+	// SetNoDelay enable/disable tcp no delay
+	SetNoDelay(enable bool)
 
 	// RawConn returns the original connections.
 	RawConn() interface{}

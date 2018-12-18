@@ -17,7 +17,6 @@ package v1
 
 import (
 	"context"
-	"fmt"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
 	"strike/pkg/upstream"
@@ -45,7 +44,8 @@ func (p *connPool) Close() {
 }
 
 func (p *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
-	fmt.Println("in")
+
+	cb.OnReady(nil, nil)
 	return nil
 }
 

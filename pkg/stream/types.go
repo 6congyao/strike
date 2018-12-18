@@ -124,7 +124,7 @@ type ClientStreamConnection interface {
 	// NewStream creates a new outgoing request stream
 	// responseDecoder supplies the decoder listeners on decode event
 	// StreamSender supplies the encoder to write the request
-	NewStream(ctx context.Context, streamID string, responseDecoder StreamReceiver) StreamSender
+	NewStream(ctx context.Context, receiver StreamReceiver) StreamSender
 }
 
 // ServerStreamConnection is a server side stream connection.
@@ -338,7 +338,6 @@ type ConnectionPool interface {
 	Close()
 }
 
-//todo
 type PoolEventListener interface {
 	OnFailure(reason PoolFailureReason, host upstream.Host)
 
@@ -347,4 +346,31 @@ type PoolEventListener interface {
 
 type Cancellable interface {
 	Cancel()
+}
+
+type CodecClientCallbacks interface {
+	OnStreamDestroy()
+
+	OnStreamReset(reason StreamResetReason)
+}
+
+type CodecClient interface {
+	network.ConnectionEventListener
+	network.ReadFilter
+
+	ID() uint64
+
+	AddConnectionCallbacks(cb network.ConnectionEventListener)
+
+	ActiveRequestsNum() int
+
+	NewStream(context context.Context, respDecoder StreamReceiver) StreamSender
+
+	SetCodecClientCallbacks(cb CodecClientCallbacks)
+
+	SetCodecConnectionCallbacks(cb StreamConnectionEventListener)
+
+	Close()
+
+	RemoteClose() bool
 }

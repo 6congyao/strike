@@ -280,3 +280,18 @@ func (s *serverStream) endStream() {
 func (s *serverStream) doSend() {
 	s.res.WriteTo(s.connection)
 }
+
+// types.ClientStreamConnection
+type clientStreamConnection struct {
+	streamConnection
+
+	stream              *clientStream
+	connCallbacks       network.ConnectionEventListener
+	streamConnCallbacks stream.StreamConnectionEventListener
+}
+
+type clientStream struct {
+	streamBase
+
+	connection *clientStreamConnection
+}

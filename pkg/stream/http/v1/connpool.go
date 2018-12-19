@@ -45,7 +45,7 @@ func (p *connPool) Close() {
 
 func (p *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
 
-	cb.OnReady(nil, nil)
+	//cb.OnReady(nil, nil)
 	return nil
 }
 

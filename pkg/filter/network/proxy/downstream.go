@@ -519,7 +519,7 @@ func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doCon
 func (s *downStream) onUpstreamRequestSent() {
 	s.upstreamRequestSent = true
 
-	if s.upstreamRequest != nil {
+	if s.upstreamRequest != nil && s.timeout != nil {
 		// setup per req timeout timer
 		s.setupPerReqTimeout()
 

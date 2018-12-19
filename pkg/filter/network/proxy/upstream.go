@@ -106,7 +106,7 @@ func (r *upstreamRequest) appendHeaders(headers protocol.HeaderMap, endStream bo
 func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
 	r.sendComplete = endStream
 	r.dataSent = true
-	//r.requestSender.AppendData(r.downStream.context, r.convertData(data), endStream)
+	r.requestSender.AppendData(r.downStream.context, data, endStream)
 }
 
 // stream.StreamReceiver

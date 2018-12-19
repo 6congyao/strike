@@ -122,7 +122,7 @@ type ClientStreamConnection interface {
 	StreamConnection
 
 	// NewStream creates a new outgoing request stream
-	// responseDecoder supplies the decoder listeners on decode event
+	// receiver supplies the decoder listeners on decode event
 	// StreamSender supplies the encoder to write the request
 	NewStream(ctx context.Context, receiver StreamReceiver) StreamSender
 }

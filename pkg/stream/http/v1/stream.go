@@ -281,7 +281,7 @@ func (s *serverStream) doSend() {
 	s.res.WriteTo(s.connection)
 }
 
-// types.ClientStreamConnection
+// stream.ClientStreamConnection
 type clientStreamConnection struct {
 	streamConnection
 

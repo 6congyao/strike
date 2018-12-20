@@ -106,6 +106,7 @@ func (r *upstreamRequest) appendHeaders(headers protocol.HeaderMap, endStream bo
 func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
 	r.sendComplete = endStream
 	r.dataSent = true
+	//r.downStream.sendHijackReply(types.UpstreamOverFlowCode, r.downStream.downstreamReqHeaders, false)
 	r.requestSender.AppendData(r.downStream.context, data, endStream)
 }
 

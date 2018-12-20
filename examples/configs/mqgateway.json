@@ -70,7 +70,52 @@
                   }]
                 }
               }]
-          }]
+          }],
+          "stream_filters": [
+            {
+              "type": "commonrule",
+              "config": {
+                "rule_configs": [
+                  {
+                    "enable": true,
+                    "id": 1,
+                    "index": 3,
+                    "limit": {
+                      "limit_strategy": "QPS",
+                      "max_burst_ratio": 1.0,
+                      "period_ms": 1000,
+                      "max_allows": 5
+                    },
+                    "name": "rule1",
+                    "resources": [
+                      {
+                        "headers": [
+                          {
+                            "compare_type": "EQUALS",
+                            "key": "path",
+                            "value": "/serverlist"
+                          },
+                          {
+                            "compare_type": "EQUALS",
+                            "key": "method",
+                            "value": "GET"
+                          }
+                        ],
+                        "params": [
+                          {
+                            "compare_type": "EQUALS",
+                            "key": "aa",
+                            "value": "a1"
+                          }
+                        ]
+                      }
+                    ],
+                    "run_mode": "CONTROL"
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }

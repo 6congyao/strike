@@ -25,3 +25,4 @@ type NetworkFilterFactoryCreator func(config map[string]interface{}) (network.Ne
 
 // StreamFilterFactoryCreator creates a StreamFilterChainFactory according to config
 type StreamFilterFactoryCreator func(config map[string]interface{}) (stream.StreamFilterChainFactory, error)
+

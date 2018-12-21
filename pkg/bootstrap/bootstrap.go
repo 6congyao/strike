@@ -20,6 +20,7 @@ import (
 	"strike/pkg/config"
 	_ "strike/pkg/filter/network/delegation"
 	_ "strike/pkg/filter/network/proxy"
+	_ "strike/pkg/filter/stream/common"
 	"strike/pkg/server"
 	_ "strike/pkg/stream/http/v1"
 	"strike/pkg/upstream"
@@ -60,9 +61,10 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 
 				// NetworkFilterChainFactory
 				nfcf := config.GetNetworkFilters(&lc.FilterChains[0])
+				sfcf := config.GetStreamFilters(lc.StreamFilters)
 
 				// Listener
-				_, err := srv.AddListener(lc, nfcf)
+				_, err := srv.AddListener(lc, nfcf, sfcf)
 				if err != nil {
 					log.Fatalln("AddListener error:", err.Error())
 				}

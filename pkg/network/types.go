@@ -68,48 +68,21 @@ type ConnectionEventListener interface {
 	OnEvent(event ConnectionEvent)
 }
 
-type ConnectionHandler interface {
-	// NumConnections reports the connections that ConnectionHandler keeps.
-	NumConnections() uint64
-
-	// AddOrUpdateListener
-	// adds a listener into the ConnectionHandler or
-	// update a listener
-	AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []NetworkFilterChainFactory) (ListenerEventListener, error)
-
-	// StartListener starts a listener by the specified listener tag
-	StartListener(lctx context.Context, listenerTag uint64)
-
-	//StartListeners starts all listeners the ConnectionHandler has
-	StartListeners(lctx context.Context)
-
-	// FindListenerByAddress finds and returns a listener by the specified network address
-	FindListenerByAddress(addr net.Addr) Listener
-
-	// FindListenerByName finds and returns a listener by the listener name
-	FindListenerByName(name string) Listener
-
-	// RemoveListeners find and removes a listener by listener name.
-	RemoveListeners(name string)
-
-	// StopListener stops a listener  by listener name
-	StopListener(lctx context.Context, name string, stop bool) error
-
-	// StopListeners stops all listeners the ConnectionHandler has.
-	// The close indicates whether the listening sockets will be closed.
-	StopListeners(lctx context.Context, close bool) error
-
-	// ListListenersFD reports all listeners' fd
-	ListListenersFD(lctx context.Context) []uintptr
-
-	// StopConnection Stop Connection
-	StopConnection()
-}
-
 // NetworkFilterChainFactory adds filter into NetWorkFilterChainFactoryCallbacks
 //type NetworkFilterChainFactory interface {
 //	CreateFilterChain(context context.Context, clusterManager ClusterManager, callbacks NetWorkFilterChainFactoryCallbacks)
 //}
+
+// NetworkFilterChainFactory adds filter into NetWorkFilterChainFactoryCallbacks
+type NetworkFilterChainFactory interface {
+	CreateFilterChain(context context.Context, clusterManager interface{}, callbacks NetWorkFilterChainFactoryCallbacks)
+}
+
+// NetWorkFilterChainFactoryCallbacks is a wrapper of FilterManager that called in NetworkFilterChainFactory
+type NetWorkFilterChainFactoryCallbacks interface {
+	AddReadFilter(rf ReadFilter)
+	AddWriteFilter(wf WriteFilter)
+}
 
 // ListenerEventListener is a Callback invoked by a listener.
 type ListenerEventListener interface {
@@ -315,17 +288,6 @@ type ListenerFilterCallbacks interface {
 
 	// SetOriginalAddr sets the original ip and port
 	SetOriginalAddr(ip string, port int)
-}
-
-// NetworkFilterChainFactory adds filter into NetWorkFilterChainFactoryCallbacks
-type NetworkFilterChainFactory interface {
-	CreateFilterChain(context context.Context, clusterManager interface{}, callbacks NetWorkFilterChainFactoryCallbacks)
-}
-
-// NetWorkFilterChainFactoryCallbacks is a wrapper of FilterManager that called in NetworkFilterChainFactory
-type NetWorkFilterChainFactoryCallbacks interface {
-	AddReadFilter(rf ReadFilter)
-	AddWriteFilter(wf WriteFilter)
 }
 
 // ClientConnection is a wrapper of Connection

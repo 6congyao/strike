@@ -16,10 +16,13 @@
 package server
 
 import (
+	"context"
+	"net"
 	"os"
 	"strike/pkg/api/v2"
 	"strike/pkg/log"
 	"strike/pkg/network"
+	"strike/pkg/stream"
 	"time"
 )
 
@@ -44,7 +47,8 @@ type Config struct {
 }
 
 type Server interface {
-	AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory) (network.ListenerEventListener, error)
+	AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
+		streamFiltersFactories []stream.StreamFilterChainFactory) (network.ListenerEventListener, error)
 
 	Start()
 
@@ -52,5 +56,44 @@ type Server interface {
 
 	Close()
 
-	Handler() network.ConnectionHandler
+	Handler() ConnectionHandler
+}
+
+type ConnectionHandler interface {
+	// NumConnections reports the connections that ConnectionHandler keeps.
+	NumConnections() uint64
+
+	// AddOrUpdateListener
+	// adds a listener into the ConnectionHandler or
+	// update a listener
+	AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
+		streamFiltersFactories []stream.StreamFilterChainFactory) (network.ListenerEventListener, error)
+
+	// StartListener starts a listener by the specified listener tag
+	StartListener(lctx context.Context, listenerTag uint64)
+
+	//StartListeners starts all listeners the ConnectionHandler has
+	StartListeners(lctx context.Context)
+
+	// FindListenerByAddress finds and returns a listener by the specified network address
+	FindListenerByAddress(addr net.Addr) network.Listener
+
+	// FindListenerByName finds and returns a listener by the listener name
+	FindListenerByName(name string) network.Listener
+
+	// RemoveListeners find and removes a listener by listener name.
+	RemoveListeners(name string)
+
+	// StopListener stops a listener  by listener name
+	StopListener(lctx context.Context, name string, stop bool) error
+
+	// StopListeners stops all listeners the ConnectionHandler has.
+	// The close indicates whether the listening sockets will be closed.
+	StopListeners(lctx context.Context, close bool) error
+
+	// ListListenersFD reports all listeners' fd
+	ListListenersFD(lctx context.Context) []uintptr
+
+	// StopConnection Stop Connection
+	StopConnection()
 }

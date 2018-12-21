@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"strike/pkg/api/v2"
 	"strike/pkg/network"
+	"strike/pkg/stream"
 	"strike/pkg/upstream"
 )
 
@@ -30,7 +31,7 @@ type server struct {
 	serverName string
 	logger     log.Logger
 	stopChan   chan struct{}
-	handler    network.ConnectionHandler
+	handler    ConnectionHandler
 }
 
 // currently, only one server supported
@@ -73,9 +74,10 @@ func NewServer(config *Config, cm upstream.ClusterManager) Server {
 	return server
 }
 
-func (srv *server) AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory) (network.ListenerEventListener, error) {
+func (srv *server) AddListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
+	streamFiltersFactories []stream.StreamFilterChainFactory) (network.ListenerEventListener, error) {
 
-	return srv.handler.AddOrUpdateListener(lc, networkFiltersFactories)
+	return srv.handler.AddOrUpdateListener(lc, networkFiltersFactories, streamFiltersFactories)
 }
 
 func (srv *server) Start() {
@@ -100,6 +102,6 @@ func (srv *server) Close() {
 	close(srv.stopChan)
 }
 
-func (srv *server) Handler() network.ConnectionHandler {
+func (srv *server) Handler() ConnectionHandler {
 	return srv.handler
 }

@@ -73,7 +73,7 @@
           }],
           "stream_filters": [
             {
-              "type": "commonrule",
+              "type": "common",
               "config": {
                 "rule_configs": [
                   {

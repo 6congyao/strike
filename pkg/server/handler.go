@@ -44,7 +44,7 @@ type connHandler struct {
 
 // NewHandler
 // create network.ConnectionHandler's implement connHandler
-func NewHandler(cm upstream.ClusterManager) network.ConnectionHandler {
+func NewHandler(cm upstream.ClusterManager) ConnectionHandler {
 	ch := &connHandler{
 		numConnections: 0,
 		listeners:      make([]*activeListener, 0),
@@ -68,7 +68,8 @@ func (ch *connHandler) GenerateListenerID() string {
 }
 
 // ConnectionHandler
-func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory) (network.ListenerEventListener, error) {
+func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
+	streamFiltersFactories []stream.StreamFilterChainFactory) (network.ListenerEventListener, error) {
 	var listenerName string
 	if lc.Name == "" {
 		listenerName = ch.GenerateListenerID()
@@ -89,6 +90,7 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactor
 
 		equalConfig := reflect.DeepEqual(al.listener.Config(), lc)
 		equalNetworkFilter := reflect.DeepEqual(al.networkFiltersFactories, networkFiltersFactories)
+		equalStreamFilters := reflect.DeepEqual(al.streamFiltersFactories, streamFiltersFactories)
 		// duplicate config does nothing
 		if equalConfig && equalNetworkFilter {
 			log.Println("duplicate listener found. no add/update: ", listenerName)
@@ -109,13 +111,19 @@ func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactor
 			al.networkFiltersFactories = networkFiltersFactories
 			log.Println("AddOrUpdateListener: use new networkFiltersFactories: ", networkFiltersFactories)
 		}
+
+		// update stream filter
+		if !equalStreamFilters {
+			al.streamFiltersFactories = streamFiltersFactories
+			log.Println("AddOrUpdateListener: use new streamFiltersFactories:", streamFiltersFactories)
+		}
 	} else {
 		// listener doesn't exist, add the listener
 		listenerStopChan := make(chan struct{})
 
 		l := network.NewListener(lc)
 
-		al, err := newActiveListener(l, lc, networkFiltersFactories, ch, listenerStopChan)
+		al, err := newActiveListener(l, lc, networkFiltersFactories, streamFiltersFactories, ch, listenerStopChan)
 		if err != nil {
 			return al, err
 		}
@@ -274,11 +282,13 @@ type activeListener struct {
 	tlsMng                  network.TLSContextManager
 }
 
-func newActiveListener(listener network.Listener, lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory, handler *connHandler, stopChan chan struct{}) (*activeListener, error) {
+func newActiveListener(listener network.Listener, lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
+	streamFiltersFactories []stream.StreamFilterChainFactory, handler *connHandler, stopChan chan struct{}) (*activeListener, error) {
 	al := &activeListener{
 		disableConnIo:           lc.DisableConnIo,
 		listener:                listener,
 		networkFiltersFactories: networkFiltersFactories,
+		streamFiltersFactories:  streamFiltersFactories,
 		handler:                 handler,
 		stopChan:                stopChan,
 		updatedLabel:            false,
@@ -304,6 +314,7 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 
 	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
 	ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
+	ctx = context.WithValue(ctx, types.ContextKeyNetworkFilterChainFactories, al.networkFiltersFactories)
 	ctx = context.WithValue(ctx, types.ContextKeyStreamFilterChainFactories, al.streamFiltersFactories)
 
 	arc.ContinueFilterChain(ctx, true)

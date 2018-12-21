@@ -25,6 +25,7 @@ import (
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/server"
+	"strike/pkg/stream"
 )
 
 var protocolsSupported = map[string]bool{
@@ -144,6 +145,22 @@ func GetNetworkFilters(c *v2.FilterChain) []network.NetworkFilterChainFactory {
 		}
 		factories = append(factories, factory)
 	}
+	return factories
+}
+
+// GetStreamFilters returns a stream filter factory by filter.Type
+func GetStreamFilters(configs []v2.Filter) []stream.StreamFilterChainFactory {
+	var factories []stream.StreamFilterChainFactory
+
+	for _, c := range configs {
+		sfcc, err := filter.CreateStreamFilterChainFactory(c.Type, c.Config)
+		if err != nil {
+			stdlog.Println(err)
+			continue
+		}
+		factories = append(factories, sfcc)
+	}
+
 	return factories
 }
 

@@ -76,8 +76,8 @@ type downStream struct {
 	upstreamReset     uint32
 
 	// filters
-	//senderFilters   []*activeStreamSenderFilter
-	//receiverFilters []*activeStreamReceiverFilter
+	senderFilters   []*activeStreamSenderFilter
+	receiverFilters []*activeStreamReceiverFilter
 
 	// mux for downstream-upstream flow
 	mux sync.Mutex
@@ -472,11 +472,13 @@ func (s *downStream) cleanUp() {
 }
 
 func (s *downStream) AddStreamSenderFilter(filter stream.StreamSenderFilter) {
-
+	sf := newActiveStreamSenderFilter(len(s.senderFilters), s, filter)
+	s.senderFilters = append(s.senderFilters, sf)
 }
 
 func (s *downStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilter) {
-
+	sf := newActiveStreamReceiverFilter(len(s.receiverFilters), s, filter)
+	s.receiverFilters = append(s.receiverFilters, sf)
 }
 
 func (s *downStream) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
@@ -497,6 +499,10 @@ func (s *downStream) OnDecodeError(context context.Context, err error, headers p
 	}
 
 	s.OnResetStream(stream.StreamLocalReset)
+}
+
+func (s *downStream) resetStream() {
+	s.endStream()
 }
 
 func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doConv bool) {
@@ -575,4 +581,79 @@ func (s *downStream) stopEventProcess() {
 			stream:    s,
 		},
 	})
+}
+
+func (s *downStream) addEncodedData(filter *activeStreamSenderFilter, data buffer.IoBuffer, streaming bool) {
+	if s.filterStage == 0 || s.filterStage&EncodeHeaders > 0 ||
+		s.filterStage&EncodeData > 0 {
+
+		filter.handleBufferData(data)
+	} else if s.filterStage&EncodeTrailers > 0 {
+		s.runAppendDataFilters(filter, data, false)
+	}
+}
+
+func (s *downStream) runAppendDataFilters(filter *activeStreamSenderFilter, data buffer.IoBuffer, endStream bool) bool {
+	var index int
+	var f *activeStreamSenderFilter
+
+	if filter != nil {
+		index = filter.index + 1
+	}
+
+	for ; index < len(s.senderFilters); index++ {
+		f = s.senderFilters[index]
+
+		s.filterStage |= EncodeData
+		status := f.filter.AppendData(data, endStream)
+		s.filterStage &= ^EncodeData
+		if f.handleDataStatus(status, data) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *downStream) setBufferLimit(bufferLimit uint32) {
+	s.bufferLimit = bufferLimit
+}
+
+func (s *downStream) addDecodedData(filter *activeStreamReceiverFilter, data buffer.IoBuffer, streaming bool) {
+	if s.filterStage == 0 || s.filterStage&DecodeHeaders > 0 ||
+		s.filterStage&DecodeData > 0 {
+
+		filter.handleBufferData(data)
+	} else if s.filterStage&EncodeTrailers > 0 {
+		s.runReceiveDataFilters(filter, data, false)
+	}
+}
+
+func (s *downStream) runReceiveDataFilters(filter *activeStreamReceiverFilter, data buffer.IoBuffer, endStream bool) bool {
+	if s.upstreamProcessDone {
+		return false
+	}
+
+	var index int
+	var f *activeStreamReceiverFilter
+
+	if filter != nil {
+		index = filter.index + 1
+	}
+
+	for ; index < len(s.receiverFilters); index++ {
+		f = s.receiverFilters[index]
+
+		s.filterStage |= DecodeData
+		status := f.filter.OnDecodeData(data, endStream)
+		s.filterStage &= ^DecodeData
+		if f.handleDataStatus(status, data) {
+			// TODO: If it is the last filter, continue with
+			// processing since we need to handle the case where a terminal filter wants to buffer, but
+			// a previous filter has added body.
+			return true
+		}
+	}
+
+	return false
 }

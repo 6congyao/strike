@@ -317,7 +317,7 @@ type StreamReceiverFilterCallbacks interface {
 	// DecoderBufferLimit returns the decoder buffer limit
 	DecoderBufferLimit() uint32
 	// SendHijackReply is called when the filter will response directly
-	SendHijackReply(code int, headers protocol.HeaderMap)
+	SendHijackReply(code int, headers protocol.HeaderMap, doConv bool)
 }
 
 // PoolFailureReason type

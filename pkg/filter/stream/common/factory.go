@@ -107,10 +107,9 @@ func parseCommonRuleConfig(config map[string]interface{}) *CommonRuleConfig {
 
 var factoryInstance *RuleEngineFactory
 
-// NewFacatoryInstance as
 func NewFacatoryInstance(config *CommonRuleConfig) {
 	factoryInstance = NewRuleEngineFactory(config)
-	log.Println("newFacatoryInstance:", factoryInstance)
+	//log.Println("newFacatoryInstance:", factoryInstance)
 }
 
 // RuleEngine as

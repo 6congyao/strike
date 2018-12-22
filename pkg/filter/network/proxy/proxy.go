@@ -124,7 +124,23 @@ func (p *proxy) NewStreamDetect(ctx context.Context, streamID string, responseSe
 
 //rpc realize upstream on event
 func (p *proxy) onDownstreamEvent(event network.ConnectionEvent) {
+	if event.IsClose() {
+		var urEleNext *list.Element
 
+		p.asMux.RLock()
+		downStreams := make([]*downStream, 0, p.activeSteams.Len())
+		for urEle := p.activeSteams.Front(); urEle != nil; urEle = urEleNext {
+			urEleNext = urEle.Next()
+
+			ds := urEle.Value.(*downStream)
+			downStreams = append(downStreams, ds)
+		}
+		p.asMux.RUnlock()
+
+		for _, ds := range downStreams {
+			ds.OnResetStream(stream.StreamConnectionTermination)
+		}
+	}
 }
 
 func (p *proxy) OnNewConnection() network.FilterStatus {
@@ -160,7 +176,7 @@ func (p *proxy) convertProtocol() (dp, up protocol.Protocol) {
 	return
 }
 
-// ConnectionEventListener
+// network.ConnectionEventListener
 type downstreamCallbacks struct {
 	proxy *proxy
 }

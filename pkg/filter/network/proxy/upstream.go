@@ -18,9 +18,11 @@ package proxy
 import (
 	"container/list"
 	"context"
+	"log"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	"strike/pkg/types"
 	"strike/pkg/upstream"
 )
 
@@ -106,7 +108,12 @@ func (r *upstreamRequest) appendHeaders(headers protocol.HeaderMap, endStream bo
 func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
 	r.sendComplete = endStream
 	r.dataSent = true
-	//r.downStream.sendHijackReply(types.UpstreamOverFlowCode, r.downStream.downstreamReqHeaders, false)
+	if r.requestSender == nil {
+		r.downStream.upstreamProcessDone = true
+		r.downStream.sendHijackReply(types.UpstreamOverFlowCode, r.downStream.downstreamReqHeaders, false)
+		log.Println("Request sender is nil while appending data.")
+		return
+	}
 	r.requestSender.AppendData(r.downStream.context, data, endStream)
 }
 

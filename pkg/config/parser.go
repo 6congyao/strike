@@ -56,6 +56,18 @@ const (
 	ParseCallbackKeyServiceRgtInfo ContentKey = "service_registry"
 )
 
+// RegisterConfigParsedListener
+// used to register ParsedCallback
+func RegisterConfigParsedListener(key ContentKey, cb ParsedCallback) {
+	if cbs, ok := configParsedCBMaps[key]; ok {
+		cbs = append(cbs, cb)
+	} else {
+		stdlog.Println("added to configParsedCBMaps:", key)
+		cpc := []ParsedCallback{cb}
+		configParsedCBMaps[key] = cpc
+	}
+}
+
 // ParseServerConfig
 func ParseServerConfig(c *ServerConfig) *server.Config {
 	sc := &server.Config{
@@ -182,6 +194,30 @@ func ParseProxyFilter(cfg map[string]interface{}) *v2.Proxy {
 	}
 
 	return proxyConfig
+}
+
+// ParseFaultInjectFilter
+func ParseFaultInjectFilter(cfg map[string]interface{}) *v2.FaultInject {
+	filterConfig := &v2.FaultInject{}
+	if data, err := json.Marshal(cfg); err == nil {
+		json.Unmarshal(data, filterConfig)
+	} else {
+		stdlog.Println("parsing fault inject filter error")
+	}
+	return filterConfig
+}
+
+// ParseStreamFaultInjectFilter
+func ParseStreamFaultInjectFilter(cfg map[string]interface{}) (*v2.StreamFaultInject, error) {
+	filterConfig := &v2.StreamFaultInject{}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(data, filterConfig); err != nil {
+		return nil, err
+	}
+	return filterConfig, nil
 }
 
 // ParseClusterConfig parses config data to api data, verify whether the config is valid

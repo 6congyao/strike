@@ -142,6 +142,23 @@ type FaultInject struct {
 	DelayDuration uint64 `json:"-"`
 }
 
+// StreamFaultInject
+type StreamFaultInject struct {
+	Delay           *DelayInject    `json:"delay"`
+	Abort           *AbortInject    `json:"abort"`
+	UpstreamCluster string          `json:"upstream_cluster"`
+	Headers         []HeaderMatcher `json:"headers"`
+}
+
+type DelayInject struct {
+	DelayInjectConfig
+	Delay time.Duration `json:"-"`
+}
+type AbortInject struct {
+	Status  int    `json:"status"`
+	Percent uint32 `json:"percentage"`
+}
+
 // Router, the list of routes that will be matched, in order, for incoming requests.
 // The first route that matches will be used.
 type Router struct {

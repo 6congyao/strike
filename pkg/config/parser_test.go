@@ -61,9 +61,9 @@ var mockedFilterChains = `
                 {
                   "type": "proxy",
                   "config": {
-                    "downstream_protocol": "SofaRpc",
+                    "downstream_protocol": "Http1",
                     "name": "proxy_config",
-                    "upstream_protocol": "SofaRpc",
+                    "upstream_protocol": "Http1",
                     "router_config_name":"test_router"
                   }
                 },
@@ -73,7 +73,7 @@ var mockedFilterChains = `
                     "router_config_name":"test_router",
                     "virtual_hosts": [
                       {
-                        "name": "sofa",
+                        "name": "http",
                         "require_tls": "no",
                         "domains":[
                           "*testwilccard"
@@ -84,7 +84,7 @@ var mockedFilterChains = `
                               "headers": [
                                 {
                                   "name": "service",
-                                  "value": "com.alipay.rpc.common.service.facade.pb.SampleServicePb:1.0",
+                                  "value": "*",
                                   "regex":false
                                 }
                               ]
@@ -93,7 +93,7 @@ var mockedFilterChains = `
                               "cluster_name": "test_cpp",
                               "metadata_match": {
                                 "filter_metadata": {
-                                  "mosn.lb": {
+                                  "strike.lb": {
                                     "version":"1.1",
                                     "stage":"pre-release",
                                     "label": "gray"
@@ -107,7 +107,7 @@ var mockedFilterChains = `
                                     "weight":90,m
                                     "metadata_match":{
                                       "filter_metadata": {
-                                        "mosn.lb": {
+                                        "strike.lb": {
                                           "version": "v1"
                                         }
                                       }
@@ -120,7 +120,7 @@ var mockedFilterChains = `
                                     "weight":10,
                                     "metadata_match":{
                                       "filter_metadata": {
-                                        "mosn.lb": {
+                                        "strike.lb": {
                                           "version": "v2"
                                         }
                                       }

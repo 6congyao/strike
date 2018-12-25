@@ -65,7 +65,7 @@ func TestClusterUnmarshal(t *testing.T) {
 				"address": "127.0.0.1",
 				"metadata": {
 					"filter_metadata": {
-						"mosn.lb": {
+						"strike.lb": {
 							"label": "gray"
 						}
 					}
@@ -253,7 +253,7 @@ func TestRouterConfigUmaeshal(t *testing.T) {
 										"weight":100,
 										"metadata_match": {
 											"filter_metadata": {
-												"mosn.lb": {
+												"strike.lb": {
 													"test":"test"
 												}
 											}
@@ -263,7 +263,7 @@ func TestRouterConfigUmaeshal(t *testing.T) {
 							],
 							"metadata_match": {
 								"filter_metadata": {
-									"mosn.lb": {
+									"strike.lb": {
 										"test":"test"
 									}
 								}
@@ -281,7 +281,7 @@ func TestRouterConfigUmaeshal(t *testing.T) {
 						},
 						"metadata":{
 							"filter_metadata": {
-								"mosn.lb": {
+								"strike.lb": {
 									 "test":"test"
 								}
 							}
@@ -361,7 +361,7 @@ func TestProxyUnmarshal(t *testing.T) {
 	proxy := `{
 		"name": "proxy",
 		"downstream_protocol": "Http1",
-		"upstream_protocol": "Sofarpc",
+		"upstream_protocol": "Http2",
 		"extend_config":{
 			"sub_protocol":"example"
 		}
@@ -374,7 +374,7 @@ func TestProxyUnmarshal(t *testing.T) {
 	}
 	if !(p.Name == "proxy" &&
 		p.DownstreamProtocol == "Http1" &&
-		p.UpstreamProtocol == "Sofarpc") {
+		p.UpstreamProtocol == "Http2") {
 		t.Error("baisc failed")
 	}
 }

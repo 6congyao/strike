@@ -15,3 +15,34 @@
 
 package healthcheck
 
+import (
+	"strike/pkg/api/v2"
+	"strike/pkg/upstream"
+)
+
+var HealthCheckFactoryInstance HealthCheckerFactory
+
+type HealthCheckerFactory interface {
+	New(config v2.HealthCheck) HealthChecker
+}
+
+// HealthChecker is a object that used to check an upstream cluster is health or not.
+type HealthChecker interface {
+	// Start starts health checking, which will continually monitor hosts in upstream cluster.
+	Start()
+
+	// Stop stops cluster health check. Client can use it to start/stop health check as a heartbeat.
+	Stop()
+
+	// AddHostCheckCompleteCb is a health check callback, which will be called on a check round-trip is completed for a specified host.
+	AddHostCheckCompleteCb(cb HealthCheckCb)
+
+	// OnClusterMemberUpdate updates cluster's hosts for health checking.
+	OnClusterMemberUpdate(hostsAdded []upstream.Host, hostDel []upstream.Host)
+
+	// SetCluster adds a cluster to health checker.
+	SetCluster(cluster upstream.Cluster)
+}
+
+// HealthCheckCb is the health check's callback function
+type HealthCheckCb func(host upstream.Host, changedState bool)

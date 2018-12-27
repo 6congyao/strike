@@ -1,0 +1,12 @@
+* retain1 存消息
+  retain1 qos0 删除该主题上的所有消息
+  retain0 gateway实现Push 在线实时转发 在就发 不在就不发 但是后来上线的 不能再收到这个消息 不保存  例如 让房间内在线的所有设备工作，过了一会有一台设备插上电源，这个设备接入了mqtt网络，但是并没有让它启动,
+
+* mqtt的topic映射mq的key
+* 订阅主题通配符，gateway实现push，mq实现pull，内部都有通配符，共享同一个通配符工具库
+* 抽象mqtt认证层，授权层 给外部接
+* 加解密 AES DES
+
+* qos0 使用sendOneway或者sendConcurrently 可以丢
+* qos1 in-flight=1 使用sendSync 100%有序 性能低
+       in-flight>=1 使用sendAsync 非100%有序 但性能高

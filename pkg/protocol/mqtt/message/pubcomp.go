@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type PubComp struct {
@@ -18,11 +18,11 @@ func NewPubComp() *PubComp {
 	return &PubComp{Header: Header{msgType: MsgTypePubComp}}
 }
 
-func (this *PubComp) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *PubComp) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *PubComp) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *PubComp) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.PacketIdentifier = getUint16(buf)
 	after := buf.Len()
@@ -30,12 +30,12 @@ func (this *PubComp) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *PubComp) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *PubComp) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
 func (this *PubComp) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
 	this.remainingLength = RemainingLength(buf.Len())

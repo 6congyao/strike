@@ -422,6 +422,30 @@ func makeSlice(n int) []byte {
 	return make([]byte, n)
 }
 
+func (b *ioBuffer) ReadByte() (bt byte, err error) {
+	if b.off >= len(b.buf) {
+		b.Reset()
+		err = io.EOF
+		return
+	}
+
+	bt = b.buf[b.off]
+	b.off++
+
+	return
+}
+
+func (b ioBuffer) WriteByte(p byte) (err error) {
+	m, ok := b.tryGrowByReslice(1)
+
+	if !ok {
+		m = b.grow(1)
+	}
+
+	b.buf[m] = p
+	return
+}
+
 func NewIoBuffer(capacity int) IoBuffer {
 	buffer := &ioBuffer{
 		offMark: ResetOffMark,

@@ -3,9 +3,9 @@
 package message
 
 import (
-	"github.com/alipay/sofa-mosn/pkg/buffer"
 	"github.com/smartystreets/goconvey/convey"
 	"reflect"
+	"strike/pkg/buffer"
 	"testing"
 )
 
@@ -13,13 +13,13 @@ func TestCodec_Decode(t *testing.T) {
 	convey.Convey("TestCodec_Decode", t, func() {
 		codec := NewCodec()
 
-		buf := &buffer.IoBuffer{}
+		buf := buffer.NewIoBuffer(0)
 
-		msgsLeft := []Connect{{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p0", ProtocolLevel: 3, UserNameFlag: true, passwordFlag: true},
-			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p1", ProtocolLevel: 0, UserNameFlag: false, passwordFlag: true},
-			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p2", ProtocolLevel: 1, UserNameFlag: true, passwordFlag: false},
-			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p3", ProtocolLevel: 4, UserNameFlag: true, passwordFlag: false},
-			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p4", ProtocolLevel: 7, UserNameFlag: false, passwordFlag: false},
+		msgsLeft := []Connect{{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p0", ProtocolLevel: 3, UserNameFlag: true, passwordFlag: true, Username: "bill", Password: "bill pwd", ClientId: "dsf"},
+			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p1", ProtocolLevel: 0, UserNameFlag: false, passwordFlag: false, ClientId: "dsf"},
+			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p2", ProtocolLevel: 1, UserNameFlag: false, passwordFlag: false, ClientId: "dsf"},
+			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p3", ProtocolLevel: 4, UserNameFlag: false, passwordFlag: false, ClientId: "dsf"},
+			{Header: Header{msgType: MsgTypeConnect}, ProtocolName: "p4", ProtocolLevel: 7, UserNameFlag: false, passwordFlag: false, ClientId: "dsf"},
 		}
 
 		for i := 0; i < len(msgsLeft); i++ {

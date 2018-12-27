@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type Subscribe struct {
@@ -26,11 +26,11 @@ func NewSubscribe() *Subscribe {
 	return &Subscribe{Header: Header{msgType: MsgTypeSubscribe}}
 }
 
-func (this *Subscribe) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *Subscribe) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Subscribe) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *Subscribe) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.PacketIdentifier = getUint16(buf)
 	after := buf.Len()
@@ -41,7 +41,7 @@ func (this *Subscribe) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Subscribe) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *Subscribe) DecodePayload(buf buffer.IoBuffer) bool {
 	if int(this.remainingLength) > buf.Len() {
 		return false
 	}
@@ -54,7 +54,7 @@ func (this *Subscribe) DecodePayload(buf *buffer.IoBuffer) bool {
 }
 
 func (this *Subscribe) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
 	for _, tf := range this.TopicFilters {

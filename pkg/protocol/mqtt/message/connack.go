@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type ConnAck struct {
@@ -19,11 +19,11 @@ func NewConnAck() *ConnAck {
 	return &ConnAck{Header: Header{msgType: MsgTypeConnAck}}
 }
 
-func (this *ConnAck) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *ConnAck) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *ConnAck) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *ConnAck) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	b1 := getUint8(buf)
 	this.SessionPresentFlag = b1&0x01 > 0
@@ -36,12 +36,12 @@ func (this *ConnAck) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *ConnAck) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *ConnAck) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
 func (this *ConnAck) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	err := buf.WriteByte(boolToByte(this.SessionPresentFlag))
 	if err != nil {
 		return nil, err

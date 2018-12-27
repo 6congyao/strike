@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type Header struct {
@@ -13,7 +13,7 @@ type Header struct {
 	remainingLength RemainingLength
 }
 
-func (this *Header) decode(buf *buffer.IoBuffer) {
+func (this *Header) decode(buf buffer.IoBuffer) {
 	byte1 := getUint8(buf)
 	this.msgType = Type(byte1 & 0xf0 >> 4)
 	if !this.msgType.IsValid() {
@@ -23,8 +23,8 @@ func (this *Header) decode(buf *buffer.IoBuffer) {
 	this.remainingLength = decodeLength(buf)
 }
 
-func (this *Header) encode() *buffer.IoBuffer {
-	buf := &buffer.IoBuffer{}
+func (this *Header) encode() buffer.IoBuffer {
+	buf := buffer.NewIoBuffer(0)
 	buf.WriteByte(byte(this.msgType)<<4 | this.msgFlag)
 	encodeLength(this.remainingLength, buf)
 	return buf

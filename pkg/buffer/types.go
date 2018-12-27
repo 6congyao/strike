@@ -101,4 +101,14 @@ type IoBuffer interface {
 
 	// Count sets and returns reference count
 	Count(int) int
+
+	// Write byte
+	WriteByte(p byte) (err error)
+
+	// Read byte
+	ReadByte() (bt byte, err error)
+
+	Mark()
+
+	Restore()
 }

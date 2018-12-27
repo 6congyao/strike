@@ -2,7 +2,7 @@
 //Email: zhbinary@gmail.com
 package message
 
-import "github.com/alipay/sofa-mosn/pkg/buffer"
+import "strike/pkg/buffer"
 
 type PingResp struct {
 	Header
@@ -12,15 +12,15 @@ func NewPingResp() *PingResp {
 	return &PingResp{Header: Header{msgType: MsgTypePingResp}}
 }
 
-func (this *PingResp) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *PingResp) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *PingResp) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *PingResp) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
-func (this *PingResp) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *PingResp) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 

@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type Unsubscribe struct {
@@ -21,11 +21,11 @@ func NewUnsubscribe() *Unsubscribe {
 	return &Unsubscribe{Header: Header{msgType: MsgTypeUnsubscribe}}
 }
 
-func (this *Unsubscribe) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *Unsubscribe) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Unsubscribe) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *Unsubscribe) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.PacketIdentifier = getUint16(buf)
 	after := buf.Len()
@@ -36,7 +36,7 @@ func (this *Unsubscribe) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Unsubscribe) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *Unsubscribe) DecodePayload(buf buffer.IoBuffer) bool {
 	if int(this.remainingLength) > buf.Len() {
 		return false
 	}
@@ -49,7 +49,7 @@ func (this *Unsubscribe) DecodePayload(buf *buffer.IoBuffer) bool {
 }
 
 func (this *Unsubscribe) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
 	this.Header.remainingLength = RemainingLength(buf.Len())

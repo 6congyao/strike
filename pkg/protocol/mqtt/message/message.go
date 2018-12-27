@@ -5,15 +5,15 @@ package message
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type Type uint8
 
 type Message interface {
-	DecodeFixedHeader(buf *buffer.IoBuffer) bool
-	DecodeVariableHeader(buf *buffer.IoBuffer) bool
-	DecodePayload(buf *buffer.IoBuffer) bool
+	DecodeFixedHeader(buf buffer.IoBuffer) bool
+	DecodeVariableHeader(buf buffer.IoBuffer) bool
+	DecodePayload(buf buffer.IoBuffer) bool
 	Encode() ([]byte, error)
 	//Equal(message Message) bool
 }
@@ -131,7 +131,7 @@ func NewMessage(header Header) (msg Message) {
 	return
 }
 
-func decodeLength(buf *buffer.IoBuffer) (v RemainingLength) {
+func decodeLength(buf buffer.IoBuffer) (v RemainingLength) {
 	var shift uint
 	for i := 0; i < 4; i++ {
 		if b, err := buf.ReadByte(); err == nil {
@@ -147,7 +147,7 @@ func decodeLength(buf *buffer.IoBuffer) (v RemainingLength) {
 	panic(errors.New(ErrorInvalidRemainingLength))
 }
 
-func encodeLength(len RemainingLength, buf *buffer.IoBuffer) {
+func encodeLength(len RemainingLength, buf buffer.IoBuffer) {
 	if len == 0 {
 		buf.WriteByte(0)
 		return
@@ -162,7 +162,7 @@ func encodeLength(len RemainingLength, buf *buffer.IoBuffer) {
 	}
 }
 
-func getString(buf *buffer.IoBuffer) (s string) {
+func getString(buf buffer.IoBuffer) (s string) {
 	strLen := getUint16(buf)
 
 	if buf.Len() < int(strLen) {
@@ -181,7 +181,7 @@ func getString(buf *buffer.IoBuffer) (s string) {
 	}
 }
 
-func getUint16(buf *buffer.IoBuffer) (i uint16) {
+func getUint16(buf buffer.IoBuffer) (i uint16) {
 	if buf.Len() < 2 {
 		panic(errors.New(ErrorInvalidRemainingLength))
 	}
@@ -198,7 +198,7 @@ func getUint16(buf *buffer.IoBuffer) (i uint16) {
 	}
 }
 
-func getUint8(buf *buffer.IoBuffer) (i uint8) {
+func getUint8(buf buffer.IoBuffer) (i uint8) {
 	if b, err := buf.ReadByte(); err == nil {
 		return b
 	} else {
@@ -206,13 +206,16 @@ func getUint8(buf *buffer.IoBuffer) (i uint8) {
 	}
 }
 
-func putString(s string, buf *buffer.IoBuffer) {
+func putString(s string, buf buffer.IoBuffer) {
 	len := uint16(len(s))
 	putUint16(len, buf)
+	if s == "" {
+		panic(errors.New("Nil utf8 string "))
+	}
 	buf.Write([]byte(s))
 }
 
-func putUint16(i uint16, buf *buffer.IoBuffer) {
+func putUint16(i uint16, buf buffer.IoBuffer) {
 	buf.WriteByte(byte(i >> 8))
 	buf.WriteByte(byte(i))
 }

@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type Publish struct {
@@ -25,14 +25,14 @@ func NewPublish() *Publish {
 	return &Publish{Header: Header{msgType: MsgTypePublish}}
 }
 
-func (this *Publish) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *Publish) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	this.Dup = this.msgFlag&0x08 > 0
 	this.Qos = Qos(this.msgFlag & 0x06 >> 1)
 	this.Retain = this.msgFlag&0x01 > 0
 	return false
 }
 
-func (this *Publish) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *Publish) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.TopicName = getString(buf)
 	if this.Qos.HasId() {
@@ -46,7 +46,7 @@ func (this *Publish) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Publish) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *Publish) DecodePayload(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	if int(this.remainingLength) > buf.Len() {
 		return false
@@ -59,7 +59,7 @@ func (this *Publish) DecodePayload(buf *buffer.IoBuffer) bool {
 }
 
 func (this *Publish) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	putString(this.TopicName, buf)
 	if this.Qos.HasId() {
 		putUint16(this.PacketIdentifier, buf)

@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type Connect struct {
@@ -33,11 +33,11 @@ func NewConnect() *Connect {
 	return &Connect{Header: Header{msgType: MsgTypeConnect}}
 }
 
-func (this *Connect) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *Connect) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Connect) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *Connect) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.ProtocolName = getString(buf)
 	this.ProtocolLevel = getUint8(buf)
@@ -54,7 +54,7 @@ func (this *Connect) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *Connect) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *Connect) DecodePayload(buf buffer.IoBuffer) bool {
 	if int(this.remainingLength) > buf.Len() {
 		return false
 	}
@@ -84,7 +84,7 @@ func (this *Connect) Encode() ([]byte, error) {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
 
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	// Variable header
 	flags := boolToByte(this.UserNameFlag) << 7
 	flags |= boolToByte(this.passwordFlag) << 6

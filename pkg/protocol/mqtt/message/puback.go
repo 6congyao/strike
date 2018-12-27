@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type PubAck struct {
@@ -18,11 +18,11 @@ func NewPubAck() *PubAck {
 	return &PubAck{Header: Header{msgType: MsgTypePubAck}}
 }
 
-func (this *PubAck) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *PubAck) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *PubAck) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *PubAck) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.PacketIdentifier = getUint16(buf)
 	after := buf.Len()
@@ -30,12 +30,12 @@ func (this *PubAck) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *PubAck) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *PubAck) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
 func (this *PubAck) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
 	this.Header.remainingLength = RemainingLength(buf.Len())

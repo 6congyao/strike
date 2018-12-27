@@ -5,6 +5,7 @@ package mqtt
 import "qingcloud.com/gateway/mqtt/message"
 
 type Connection struct {
+	// raw conn
 	ProtocolName  string
 	ProtocolLevel uint8
 	UserNameFlag  bool

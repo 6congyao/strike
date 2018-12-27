@@ -4,7 +4,7 @@ package message
 
 import (
 	"errors"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
+	"strike/pkg/buffer"
 )
 
 type SubAck struct {
@@ -30,11 +30,11 @@ func NewSubAck() *SubAck {
 	return &SubAck{Header: Header{msgType: MsgTypeSubAck}}
 }
 
-func (this *SubAck) DecodeFixedHeader(buf *buffer.IoBuffer) bool {
+func (this *SubAck) DecodeFixedHeader(buf buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *SubAck) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
+func (this *SubAck) DecodeVariableHeader(buf buffer.IoBuffer) bool {
 	before := buf.Len()
 	this.PacketIdentifier = getUint16(buf)
 	after := buf.Len()
@@ -45,7 +45,7 @@ func (this *SubAck) DecodeVariableHeader(buf *buffer.IoBuffer) bool {
 	return false
 }
 
-func (this *SubAck) DecodePayload(buf *buffer.IoBuffer) bool {
+func (this *SubAck) DecodePayload(buf buffer.IoBuffer) bool {
 	if int(this.remainingLength) > buf.Len() {
 		return false
 	}
@@ -58,7 +58,7 @@ func (this *SubAck) DecodePayload(buf *buffer.IoBuffer) bool {
 }
 
 func (this *SubAck) Encode() ([]byte, error) {
-	buf := &buffer.IoBuffer{}
+	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
 	for _, ack := range this.acks {

@@ -5,8 +5,8 @@ package message
 import (
 	"errors"
 	"fmt"
-	"github.com/alipay/sofa-mosn/pkg/buffer"
 	"runtime/debug"
+	"strike/pkg/buffer"
 )
 
 type Codec struct {
@@ -27,7 +27,7 @@ func NewCodec() *Codec {
 	return &Codec{decoderState: DecoderStateReadFixedHeader}
 }
 
-func (this *Codec) Decode(buf *buffer.IoBuffer) (msgs []Message, e error) {
+func (this *Codec) Decode(buf buffer.IoBuffer) (msgs []Message, e error) {
 	defer func() {
 		if err := recover(); err != nil {
 			if msgs != nil {

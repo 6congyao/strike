@@ -29,6 +29,7 @@ const (
 	MQ        Protocol = "MQ"
 	HTTP1     Protocol = "Http1"
 	HTTP2     Protocol = "Http2"
+	MQTT      Protocol = "Mqtt"
 	Xprotocol Protocol = "X"
 )
 

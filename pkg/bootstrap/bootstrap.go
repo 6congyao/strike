@@ -23,6 +23,7 @@ import (
 	_ "strike/pkg/filter/stream/common"
 	"strike/pkg/server"
 	_ "strike/pkg/stream/http/v1"
+	_ "strike/pkg/stream/mqtt"
 	"strike/pkg/upstream"
 	"strike/pkg/upstream/cluster"
 )

@@ -2,7 +2,7 @@
 //Email: zhbinary@gmail.com
 package mqtt
 
-import "qingcloud.com/gateway/mqtt/message"
+import "strike/pkg/protocol/mqtt/message"
 
 type Connection struct {
 	// raw conn

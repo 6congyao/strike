@@ -32,6 +32,7 @@ var protocolsSupported = map[string]bool{
 	string(protocol.MQ):        true,
 	string(protocol.HTTP2):     true,
 	string(protocol.HTTP1):     true,
+	string(protocol.MQTT):      true,
 	string(protocol.Xprotocol): true,
 }
 

@@ -5,7 +5,7 @@
       "use_edge_mode": false,
       "listeners":[
         {
-          "name":"clientListener",
+          "name":"httpListener",
           "address": "127.0.0.1:8045",
           "bind_port": true,
           "log_path": "stdout",
@@ -82,6 +82,40 @@
               }
             }
           ]
+        },
+        {
+          "name":"mqttListener",
+          "address": "127.0.0.1:8055",
+          "bind_port": true,
+          "log_path": "stdout",
+          "filter_chains": [{
+            "tls_context":{},
+            "filters": [
+              {
+                "type": "proxy",
+                "config": {
+                  "downstream_protocol": "Mqtt",
+                  "upstream_protocol": "Http1",
+                  "router_config_name":"client_router"
+                }
+              },
+              {
+                "type":"connection_manager",
+                "config":{
+                  "router_config_name":"client_router",
+                  "virtual_hosts":[{
+                    "name":"clientHost",
+                    "domains": ["*"],
+                    "routers": [
+                      {
+                        "match":{"headers":[{"name":"service","value":".*"}]},
+                        "route":{"cluster_name":"clientCluster"}
+                      }
+                    ]
+                  }]
+                }
+              }]
+          }]
         }
       ]
     }

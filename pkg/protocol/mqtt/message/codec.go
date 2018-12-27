@@ -3,10 +3,14 @@
 package message
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"runtime/debug"
 	"strike/pkg/buffer"
+	"strike/pkg/network"
+	"strike/pkg/protocol"
 )
 
 type Codec struct {
@@ -27,7 +31,7 @@ func NewCodec() *Codec {
 	return &Codec{decoderState: DecoderStateReadFixedHeader}
 }
 
-func (this *Codec) Decode(buf buffer.IoBuffer) (msgs []Message, e error) {
+func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 	defer func() {
 		if err := recover(); err != nil {
 			if msgs != nil {
@@ -96,4 +100,32 @@ func (this *Codec) Decode(buf buffer.IoBuffer) (msgs []Message, e error) {
 
 func Encode(m Message) ([]byte, error) {
 	return m.Encode()
+}
+
+func (c *Codec) EncodeHeaders(ctx context.Context, headers protocol.HeaderMap) (buffer.IoBuffer, error) {
+	panic("implement me")
+}
+
+func (c *Codec) EncodeData(ctx context.Context, data buffer.IoBuffer) buffer.IoBuffer {
+	panic("implement me")
+}
+
+func (c *Codec) EncodeTrailers(ctx context.Context, trailers protocol.HeaderMap) buffer.IoBuffer {
+	panic("implement me")
+}
+
+func (c *Codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protocol.DecodeFilter) {
+	msgs, err := c.doDecode(data)
+
+	if err != nil {
+		log.Println("mqtt decode error:", err)
+	}
+	for _, msg := range msgs {
+		streamID := protocol.GenerateIDString()
+		// notify
+		status := filter.OnDecodeDone(streamID, msg)
+		if status == network.Stop {
+			return
+		}
+	}
 }

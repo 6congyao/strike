@@ -17,7 +17,6 @@ package mqtt
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
@@ -93,10 +92,9 @@ func (sc *streamConnection) OnDecodeTrailer(streamID string, trailers protocol.H
 
 func (sc *streamConnection) OnDecodeDone(streamID string, result interface{}) network.FilterStatus {
 	if msg, ok := result.(message.Message); ok {
-		fmt.Println("got msg:", msg)
 
 		//todo: doing business with processor
-		sc.processor.Process(msg)
+		sc.processor.Process(sc.context, msg)
 	}
 
 	return network.Continue

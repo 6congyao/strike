@@ -98,19 +98,11 @@ func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 	return
 }
 
-func Encode(m Message) ([]byte, error) {
+func doEncode(m Message) ([]byte, error) {
 	return m.Encode()
 }
 
-func (c *Codec) EncodeHeaders(ctx context.Context, headers protocol.HeaderMap) (buffer.IoBuffer, error) {
-	panic("implement me")
-}
-
-func (c *Codec) EncodeData(ctx context.Context, data buffer.IoBuffer) buffer.IoBuffer {
-	panic("implement me")
-}
-
-func (c *Codec) EncodeTrailers(ctx context.Context, trailers protocol.HeaderMap) buffer.IoBuffer {
+func (c *Codec) Encode(ctx context.Context, model interface{}) (buffer.IoBuffer, error) {
 	panic("implement me")
 }
 

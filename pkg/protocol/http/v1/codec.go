@@ -63,15 +63,7 @@ func NewCodec() protocol.Codec {
 	return &codec{}
 }
 
-func (c *codec) EncodeHeaders(ctx context.Context, headers protocol.HeaderMap) (buffer.IoBuffer, error) {
-	panic("implement me")
-}
-
-func (c *codec) EncodeData(ctx context.Context, data buffer.IoBuffer) buffer.IoBuffer {
-	panic("implement me")
-}
-
-func (c *codec) EncodeTrailers(ctx context.Context, trailers protocol.HeaderMap) buffer.IoBuffer {
+func (c *codec) Encode(ctx context.Context, model interface{}) (buffer.IoBuffer, error) {
 	panic("implement me")
 }
 

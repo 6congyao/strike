@@ -22,6 +22,7 @@ type ContextKey string
 const (
 	ContextKeyStreamID                    ContextKey = "StreamId"
 	ContextKeyConnectionID                ContextKey = "ConnectionId"
+	ContextKeyConnectionRef               ContextKey = "ConnectionRef"
 	ContextKeyListenerPort                ContextKey = "ListenerPort"
 	ContextKeyListenerName                ContextKey = "ListenerName"
 	ContextKeyNetworkFilterChainFactories ContextKey = "NetworkFilterChainFactory"

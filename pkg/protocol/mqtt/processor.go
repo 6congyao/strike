@@ -10,6 +10,7 @@ import (
 	//"qingcloud.com/qing-cloud-mq/network"
 	//"qingcloud.com/qing-cloud-mq/producer"
 	//"time"
+	"context"
 	"strike/pkg/protocol/mqtt/message"
 )
 
@@ -18,7 +19,7 @@ const (
 )
 
 type Processor struct {
-	//connManager  ConnectionManager
+	connManager ConnectionManager
 	//producer     *producer.Producer
 	//retryHandler *network.RetryHandler
 }
@@ -41,30 +42,33 @@ func NewProcessor() *Processor {
 	return nil
 }
 
-func (this *Processor) Process(m message.Message) {
-	//if m == nil {
-	//	return
-	//}
-	//switch msg := m.(type) {
-	//case *message.Connect:
-	//	// Check fields base on protocol
-	//
-	//	// Check client id or fix it
-	//
-	//	// Authentication
-	//
-	//	// Retrieve conn or create
-	//	conn := this.connManager.GetConnection(msg.ClientId)
-	//	if conn == nil {
-	//		conn = &Connection{}
-	//		this.connManager.PutConnection(msg.ClientId, conn)
-	//	}
-	//
-	//	// Send ack to client
-	//
-	//	break
-	//case *message.ConnAck:
-	//	break
+func (this *Processor) Process(context context.Context, m message.Message) {
+	if m == nil {
+		return
+	}
+	// got network.connection from context
+	// conn, _ := context.Value(types.ContextKeyConnectionRef).(network.Connection)
+
+	switch msg := m.(type) {
+	case *message.Connect:
+		// Check fields base on protocol
+
+		// Check client id or fix it
+
+		// Authentication
+
+		// Retrieve conn or create
+		conn := this.connManager.GetConnection(msg.ClientId)
+		if conn == nil {
+			conn = &Connection{}
+			this.connManager.PutConnection(msg.ClientId, conn)
+		}
+
+		// Send ack to client
+
+		break
+	case *message.ConnAck:
+		break
 	//case *message.Publish:
 	//	if msg.Dup {
 	//		// This is a resent message
@@ -157,9 +161,9 @@ func (this *Processor) Process(m message.Message) {
 	//	// Close conn and clean resources
 	//
 	//	break
-	//default:
-	//	break
-	//}
+	default:
+		break
+	}
 }
 
 type ReceiveCallback struct {

@@ -175,7 +175,7 @@ func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.Heade
 	connPool, err := s.initializeUpstreamConnectionPool()
 
 	if err != nil {
-		log.Println("initialize Upstream Connection Pool error, request can't be proxyed,error:", err)
+		log.Println("initialize Upstream Connection Pool error:", err)
 		return
 	}
 

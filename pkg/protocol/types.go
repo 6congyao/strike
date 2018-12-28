@@ -123,9 +123,8 @@ type HeaderMap interface {
 type Codec interface {
 	// Encoder is a encoder interface to extend various of protocols
 	Encoder
-	// Decode decodes data to headers-data-trailers by Stream
-	// Stream register a DecodeFilter to receive decode event
-	Decode(ctx context.Context, data buffer.IoBuffer, filter DecodeFilter)
+	// Decoder decodes data to model
+	Decoder
 }
 
 // DecodeFilter is a filter used by Stream to receive decode events
@@ -149,12 +148,20 @@ type DecodeFilter interface {
 
 // Encoder is a encoder interface to extend various of protocols
 type Encoder interface {
-	// EncodeHeaders encodes the headers based on it's protocol
-	EncodeHeaders(ctx context.Context, headers HeaderMap) (buffer.IoBuffer, error)
+	// Encode encodes a model to binary data
+	// return 1. encoded bytes 2. encode error
+	Encode(ctx context.Context, model interface{}) (buffer.IoBuffer, error)
 
-	// EncodeData encodes the data based on it's protocol
-	EncodeData(ctx context.Context, data buffer.IoBuffer) buffer.IoBuffer
+	// EncodeTo encodes a model to binary data, and append into the given buffer
+	// This method should be used in term of performance
+	// return 1. encoded bytes number 2. encode error
+	//EncodeTo(ctx context.Context, model interface{}, buf IoBuffer) (int, error)
+}
 
-	// EncodeTrailers encodes the trailers based on it's protocol
-	EncodeTrailers(ctx context.Context, trailers HeaderMap) buffer.IoBuffer
+// Decoder is a decoder interface to extend various of protocols
+type Decoder interface {
+	// Decode decodes binary data to a model
+	// pass sub protocol type to identify protocol format
+	// return 1. decoded model(nil if no enough data) 2. decode error
+	Decode(ctx context.Context, data buffer.IoBuffer, cb DecodeFilter)
 }

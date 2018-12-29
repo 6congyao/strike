@@ -272,3 +272,15 @@ func TestIoBufferAllocAndFree(t *testing.T) {
 		}
 	}
 }
+
+func TestIoBufferWriteByte(t *testing.T) {
+	b := NewIoBuffer(0)
+	b.WriteByte('0')
+	b.WriteByte('0')
+	b.WriteByte('1')
+
+	shouldBe := []byte{'0','0','1'}
+	if !bytes.Equal(b.Bytes(), shouldBe) {
+		t.Errorf("Expect %s but got %s", shouldBe, string(b.Bytes()))
+	}
+}

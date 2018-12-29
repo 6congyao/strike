@@ -464,7 +464,7 @@ func (b *ioBuffer) ReadByte() (bt byte, err error) {
 	return
 }
 
-func (b ioBuffer) WriteByte(p byte) (err error) {
+func (b *ioBuffer) WriteByte(p byte) (err error) {
 	m, ok := b.tryGrowByReslice(1)
 
 	if !ok {

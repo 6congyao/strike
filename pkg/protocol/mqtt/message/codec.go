@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"runtime/debug"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
@@ -41,7 +40,7 @@ func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 			if re, ok := err.(error); ok {
 				e = re
 				fmt.Printf("Error:%v", err)
-				debug.PrintStack()
+				//debug.PrintStack()
 			} else {
 				fmt.Printf("Unknown error ")
 			}
@@ -72,6 +71,10 @@ func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 			break
 		case DecoderStateReadVariableHeader:
 			buf.Mark()
+			//wait for remaining bytes here
+			if RemainingLength(buf.Len()) < this.header.remainingLength {
+				panic(errors.New(ErrorInvalidRemainingLength))
+			}
 			if this.msg.DecodeVariableHeader(buf) {
 				msgs = append(msgs, this.msg)
 				this.msg = nil
@@ -111,6 +114,7 @@ func (c *Codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protoco
 
 	if err != nil {
 		log.Println("mqtt decode error:", err)
+		return
 	}
 	for _, msg := range msgs {
 		streamID := protocol.GenerateIDString()

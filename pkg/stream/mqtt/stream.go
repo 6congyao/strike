@@ -92,9 +92,7 @@ func (sc *streamConnection) OnDecodeTrailer(streamID string, trailers protocol.H
 
 func (sc *streamConnection) OnDecodeDone(streamID string, result interface{}) network.FilterStatus {
 	if msg, ok := result.(message.Message); ok {
-
-		//todo: doing business with processor
-		sc.processor.Process(sc.context, msg)
+		sc.handleMessage(msg)
 	}
 
 	return network.Continue
@@ -114,4 +112,9 @@ func (sc *streamConnection) Protocol() protocol.Protocol {
 
 func (sc *streamConnection) GoAway() {
 	panic("implement me")
+}
+
+func (sc *streamConnection) handleMessage(msg message.Message) {
+	//todo: doing business with processor
+	sc.processor.Process(sc.context, msg)
 }

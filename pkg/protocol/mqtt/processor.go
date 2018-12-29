@@ -11,6 +11,7 @@ import (
 	//"qingcloud.com/qing-cloud-mq/producer"
 	//"time"
 	"context"
+	"fmt"
 	"strike/pkg/protocol/mqtt/message"
 )
 
@@ -24,6 +25,7 @@ type Processor struct {
 	//retryHandler *network.RetryHandler
 }
 
+//TODO: singleton
 func NewProcessor() *Processor {
 	// Create producer
 	//opts := producer.NewOptions()
@@ -46,8 +48,9 @@ func (this *Processor) Process(context context.Context, m message.Message) {
 	if m == nil {
 		return
 	}
+	fmt.Println("got msg:", m)
 	// got network.connection from context
-	// conn, _ := context.Value(types.ContextKeyConnectionRef).(network.Connection)
+	//conn, _ := context.Value(types.ContextKeyConnectionRef).(network.Connection)
 
 	switch msg := m.(type) {
 	case *message.Connect:

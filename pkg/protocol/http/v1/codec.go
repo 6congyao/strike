@@ -18,6 +18,9 @@ package v1
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"mime/multipart"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 	"sync"
@@ -55,6 +58,7 @@ func ReleaseResponse(resp *Response) {
 }
 
 var ErrBodyTooLarge = errors.New("body size exceeds the given limit")
+const defaultMaxInMemoryFileSize = 16 * 1024 * 1024
 
 type codec struct {
 }
@@ -68,11 +72,8 @@ func (c *codec) Encode(ctx context.Context, model interface{}) (buffer.IoBuffer,
 }
 
 func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protocol.DecodeFilter) {
-	// todo: loop then data.Drain()
-	if data.Len() > 0 {
-		req := AcquireRequest()
-
-		err := readLimitBody(data.Bytes(), req, 40000)
+	for data.Len() > 0 {
+		req, err := decodeHttpReq(data)
 		if err != nil {
 			filter.OnDecodeError(err, nil)
 			return
@@ -83,31 +84,73 @@ func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protoco
 	}
 }
 
-func readLimitBody(data []byte, req *Request, maxRequestBodySize int) error {
-	n, err := parseHeader(data, &req.Header)
+func decodeHttpReq(data buffer.IoBuffer) (req *Request, err error) {
+	req = AcquireRequest()
+	err = readLimitBody(data, req, 40000)
+	return
+}
+
+func readLimitBody(r buffer.IoBuffer, req *Request, maxBodySize int) error {
+	req.resetSkipHeader()
+	err := parseHeader(r, &req.Header)
 	if err != nil {
 		return err
 	}
-
 	if req.Header.NoBody() {
 		return nil
 	}
+	if req.MayContinue() {
+		// 'Expect: 100-continue' header found. Let the caller deciding
+		// whether to read request body or
+		// to return StatusExpectationFailed.
+		return nil
+	}
 
-	return continueReadBody(data, n, req, maxRequestBodySize)
+	return continueReadBody(r, req, maxBodySize)
 }
 
-func parseHeader(data []byte, header *RequestHeader) (int, error) {
-	header.ResetSkipNormalize()
+func parseHeader(r buffer.IoBuffer, h *RequestHeader) error {
+	//n := 1
+	//for {
+	//	err := h.doParse(r, n)
+	//	if err == nil {
+	//		return nil
+	//	}
+	//	if err != errNeedMore {
+	//		h.ResetSkipNormalize()
+	//		return err
+	//	}
+	//	n = r.Len() + 1
+	//}
 
-	return header.Parse(data)
+	err := h.doParse(r, 1)
+
+	if err != nil {
+		if err != errNeedMore {
+			h.ResetSkipNormalize()
+		}
+		return err
+	}
+	return nil
 }
 
-func continueReadBody(data []byte, offset int, req *Request, maxRequestBodySize int) error {
-	data = data[offset:]
+func continueReadBody(r buffer.IoBuffer, req *Request, maxBodySize int) (err error) {
 	contentLength := req.Header.ContentLength()
 	if contentLength > 0 {
-		if maxRequestBodySize > 0 && contentLength > maxRequestBodySize {
+		if maxBodySize > 0 && contentLength > maxBodySize {
 			return ErrBodyTooLarge
+		}
+
+		// Pre-read multipart form data of known length.
+		// This way we limit memory usage for large file uploads, since their contents
+		// is streamed into temporary files if file size exceeds defaultMaxInMemoryFileSize.
+		req.multipartFormBoundary = string(req.Header.MultipartFormBoundary())
+		if len(req.multipartFormBoundary) > 0 && len(req.Header.peek(strContentEncoding)) == 0 {
+			req.multipartForm, err = readMultipartForm(r, req.multipartFormBoundary, contentLength, defaultMaxInMemoryFileSize)
+			if err != nil {
+				req.Reset()
+			}
+			return err
 		}
 	}
 
@@ -120,25 +163,34 @@ func continueReadBody(data []byte, offset int, req *Request, maxRequestBodySize 
 		return nil
 	}
 
-	var err error
 	bodyBuf := req.bodyBuffer()
 	bodyBuf.Reset()
-	bodyBuf.B, err = readBody(data, contentLength, bodyBuf.B)
-	return err
+	bodyBuf.B, err = readBody(r, contentLength, maxBodySize, bodyBuf.B)
+	if err != nil {
+		req.Reset()
+		return err
+	}
+	req.Header.SetContentLength(len(bodyBuf.B))
+	return nil
 }
 
-func readBody(data []byte, contentLength int, dst []byte) ([]byte, error) {
+func readBody(r buffer.IoBuffer, contentLength, maxBodySize int, dst []byte) ([]byte, error) {
 	dst = dst[:0]
 	if contentLength >= 0 {
-		return appendBodyFixedSize(data, dst, contentLength)
+		if maxBodySize > 0 && contentLength > maxBodySize {
+			return dst, ErrBodyTooLarge
+		}
+		return appendBodyFixedSize(r, dst, contentLength)
 	}
+
 	if contentLength == -1 {
 		//return readBodyChunked(r, maxBodySize, dst)
 	}
-	return dst, nil
+	//return readBodyIdentity(r, maxBodySize, dst)
+	return nil, nil
 }
 
-func appendBodyFixedSize(data []byte, dst []byte, n int) ([]byte, error) {
+func appendBodyFixedSize(r buffer.IoBuffer, dst []byte, n int) ([]byte, error) {
 	if n == 0 {
 		return dst, nil
 	}
@@ -152,7 +204,21 @@ func appendBodyFixedSize(data []byte, dst []byte, n int) ([]byte, error) {
 	}
 	dst = dst[:dstLen]
 
-	return append(dst[:0], data[:n]...), nil
+	nn, err := r.Read(dst[offset:])
+	if nn <= 0 {
+		if err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return dst[:offset], err
+		}
+		panic(fmt.Sprintf("BUG: bufio.Read() returned (%d, nil)", nn))
+	}
+	offset += nn
+	if offset == dstLen {
+		return dst, nil
+	}
+	return dst, nil
 }
 
 func round2(n int) int {
@@ -166,4 +232,21 @@ func round2(n int) int {
 		x++
 	}
 	return 1 << x
+}
+
+func readMultipartForm(r io.Reader, boundary string, size, maxInMemoryFileSize int) (*multipart.Form, error) {
+	// Do not care about memory allocations here, since they are tiny
+	// compared to multipart data (aka multi-MB files) usually sent
+	// in multipart/form-data requests.
+
+	if size <= 0 {
+		panic(fmt.Sprintf("BUG: form size must be greater than 0. Given %d", size))
+	}
+	lr := io.LimitReader(r, int64(size))
+	mr := multipart.NewReader(lr, boundary)
+	f, err := mr.ReadForm(int64(maxInMemoryFileSize))
+	if err != nil {
+		return nil, fmt.Errorf("cannot read multipart/form-data body: %s", err)
+	}
+	return f, nil
 }

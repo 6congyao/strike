@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strike/pkg/buffer"
 	"strike/utils"
 	"sync/atomic"
 	"time"
@@ -1359,6 +1360,33 @@ func (h *RequestHeader) tryRead(r *bufio.Reader, n int) error {
 		return headerError("request", err, errParse, b)
 	}
 	mustDiscard(r, headersLen)
+	return nil
+}
+
+func (h *RequestHeader) doParse(r buffer.IoBuffer, n int) error {
+	h.ResetSkipNormalize()
+	b := r.Peek(n)
+	if len(b) == 0 || b == nil {
+		// treat all errors on the first byte read as EOF
+		if n == 1 {
+			return io.EOF
+		}
+
+		return &ErrSmallBuffer{
+			error: fmt.Errorf("error when reading request headers: %s", errSmallBuffer),
+		}
+	}
+	//must peek
+	b = r.Peek(r.Len())
+	if len(b) == 0 || b == nil {
+		panic("buffer.IoBuffer.Peek() returned unexpected data")
+	}
+
+	headersLen, errParse := h.Parse(b)
+	if errParse != nil {
+		return headerError("request", nil, errParse, b)
+	}
+	r.Drain(headersLen)
 	return nil
 }
 

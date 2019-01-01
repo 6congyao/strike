@@ -17,6 +17,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"strike/pkg/buffer"
@@ -27,6 +28,8 @@ import (
 	"strike/pkg/types"
 	"sync/atomic"
 )
+
+var errConnClose = errors.New("connection closed")
 
 func init() {
 	stream.Register(protocol.HTTP1, &streamConnFactory{})
@@ -56,6 +59,7 @@ func newStreamConnection(context context.Context, connection network.Connection,
 	return &streamConnection{
 		context:      context,
 		connection:   connection,
+		bufChan:      make(chan buffer.IoBuffer),
 		protocol:     protocol.HTTP1,
 		codec:        v1.NewCodec(),
 		cscCallbacks: clientCallbacks,
@@ -71,6 +75,7 @@ type streamConnection struct {
 	protocol      protocol.Protocol
 	codec         protocol.Codec
 	connection    network.Connection
+	bufChan       chan buffer.IoBuffer
 	connCallbacks network.ConnectionEventListener
 	// Client Stream Conn Callbacks
 	cscCallbacks stream.StreamConnectionEventListener
@@ -127,6 +132,21 @@ func (sc *streamConnection) Protocol() protocol.Protocol {
 
 func (sc *streamConnection) GoAway() {
 	panic("implement me")
+}
+
+func (sc *streamConnection) Read(p []byte) (n int, err error) {
+	data, ok := <-sc.bufChan
+
+	// Connection close
+	if !ok {
+		err = errConnClose
+		return
+	}
+
+	n = copy(p, data.Bytes())
+	data.Drain(n)
+	sc.bufChan <- nil
+	return
 }
 
 func (sc *streamConnection) Write(p []byte) (n int, err error) {
@@ -201,7 +221,6 @@ func (s *serverStream) AppendHeaders(context context.Context, headerIn protocol.
 
 		statusCode, _ := strconv.Atoi(status)
 		s.res.SetStatusCode(statusCode)
-
 	}
 	if endStream {
 		s.endStream()

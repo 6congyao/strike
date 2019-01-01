@@ -37,5 +37,5 @@ strike/examples/configs/mqgateway.json
 + 使用mqgateway.json 运行调试,编辑program arguments:
 
 ```
--c /<your_strike_path>/strike/examples/configs/mqgateway.json
+-c /<your_working_dir>/examples/configs/mqgateway.json
 ```

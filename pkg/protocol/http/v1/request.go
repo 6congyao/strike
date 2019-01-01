@@ -356,6 +356,9 @@ func (req *Request) SwapBody(body []byte) []byte {
 	return oldBody
 }
 
+func (req *Request) MayContinue() bool {
+	return bytes.Equal(req.Header.peek(strExpect), str100Continue)
+}
 //func (req *Request) Body() []byte {
 //	if req.bodyStream != nil {
 //		bodyBuf := req.bodyBuffer()

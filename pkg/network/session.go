@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -43,12 +42,14 @@ type Session struct {
 	remoteAddr net.Addr
 	closeFlag  int32
 
+	closeWithFlush  bool
 	In              evio.InputStream
 	Out             []byte
 	Pr              *PipelineReader
 	Mu              sync.Mutex
 	filterManager   FilterManager
 	rawc            interface{}
+	connCallbacks   []ConnectionEventListener
 	readBuffer      buffer.IoBuffer
 	bufferLimit     uint32
 	stopChan        chan struct{}
@@ -97,11 +98,55 @@ func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) e
 		return nil
 	}
 
+	rawc := s.RawConn()
+
+	// shutdown read first
+	if conn, ok := rawc.(*net.TCPConn); ok {
+		conn.CloseRead()
+	}
+
+	if ccType == FlushWrite {
+		if s.writeBufLen() > 0 {
+			s.closeWithFlush = true
+
+			for {
+				bytesSent, err := s.doWrite()
+
+				if err != nil {
+					if te, ok := err.(net.Error); !(ok && te.Timeout()) {
+						break
+					}
+				}
+
+				if bytesSent == 0 {
+					break
+				}
+			}
+		}
+	}
+
+	if s.internalLoopStarted {
+		// because close function must be called by one io loop thread, notify another loop here
+		close(s.internalStopChan)
+		close(s.writeBufferChan)
+	}
+
 	if conn, ok := s.RawConn().(net.Conn); ok {
 		conn.Close()
 	}
 
+	for _, cb := range s.connCallbacks {
+		cb.OnEvent(eventType)
+	}
+
 	return nil
+}
+
+func (c *Session) writeBufLen() (bufLen int) {
+	for _, buf := range c.writeBuffers {
+		bufLen += len(buf)
+	}
+	return
 }
 
 func (s *Session) IsClosed() bool {
@@ -169,6 +214,7 @@ func (s *Session) BufferLimit() uint32 {
 }
 
 func (s *Session) AddConnectionEventListener(cb ConnectionEventListener) {
+	s.connCallbacks = append(s.connCallbacks, cb)
 }
 
 func (s *Session) GetReadBuffer() buffer.IoBuffer {
@@ -335,13 +381,22 @@ func (s *Session) startWriteLoop() {
 		case <-s.internalStopChan:
 			return
 
-		case buf := <-s.writeBufferChan:
+		case buf, ok := <-s.writeBufferChan:
+			// check if chan closed
+			if ok == false {
+				return
+			}
 			s.appendBuffer(buf)
 
 			//todo: dynamic set loop nums
 			for i := 0; i < 10; i++ {
 				select {
-				case buf := <-s.writeBufferChan:
+				case buf, ok:= <-s.writeBufferChan:
+					// check if chan closed
+					if ok == false {
+						s.resetBuffer()
+						return
+					}
 					s.appendBuffer(buf)
 				default:
 				}
@@ -382,6 +437,11 @@ func (s *Session) appendBuffer(iobuffers *[]buffer.IoBuffer) {
 	}
 }
 
+func (s *Session) resetBuffer() {
+	s.ioBuffers = s.ioBuffers[:0]
+	s.writeBuffers = s.writeBuffers[:0]
+}
+
 func (s *Session) doWrite() (int64, error) {
 	bytesSent, err := s.doWriteIo()
 
@@ -403,8 +463,7 @@ func (s *Session) doWriteIo() (bytesSent int64, err error) {
 	for _, buf := range s.ioBuffers {
 		buffer.PutIoBuffer(buf)
 	}
-	s.ioBuffers = s.ioBuffers[:0]
-	s.writeBuffers = s.writeBuffers[:0]
+	s.resetBuffer()
 	if len(buffers) != 0 {
 		for _, buf := range buffers {
 			s.writeBuffers = append(s.writeBuffers, buf)
@@ -529,7 +588,7 @@ func readNextCommand(packet []byte, argsIn [][]byte, msg *Message, wr io.Writer)
 		}
 
 		if len(line) > 11 && string(line[len(line)-11:len(line)-5]) == " HTTP/" {
-			fmt.Println("http packet")
+			//fmt.Println("http packet")
 		}
 	}
 	return false, argsIn[:0], KindHttp, packet, nil

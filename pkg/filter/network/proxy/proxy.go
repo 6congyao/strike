@@ -91,6 +91,10 @@ func NewProxy(ctx context.Context, config *v2.Proxy, clusterManager interface{})
 func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.readCallbacks = cb
 	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamCallbacks)
+
+	if p.config.DownstreamProtocol != string(protocol.AUTO) {
+		p.serverCodec = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
+	}
 }
 
 func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {

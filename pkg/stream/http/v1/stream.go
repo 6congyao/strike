@@ -271,6 +271,7 @@ func (s *serverStream) handleRequest() {
 	header[protocol.StrikeHeaderHostKey] = string(s.req.Header.Host())
 	header[protocol.IstioHeaderHostKey] = string(s.req.Header.Host())
 	header[protocol.StrikeHeaderMethod] = string(s.req.Header.Method())
+	header[protocol.StrikeHeaderPathKey] = string(s.req.RequestURI())
 
 	noBody := s.req.Header.NoBody()
 

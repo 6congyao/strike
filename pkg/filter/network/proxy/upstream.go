@@ -20,7 +20,6 @@ import (
 	"context"
 	"log"
 	"strike/pkg/buffer"
-	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
 	"strike/pkg/types"
@@ -112,7 +111,7 @@ func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
 	if r.requestSender == nil {
 		r.downStream.upstreamProcessDone = true
 		r.downStream.sendHijackReply(types.UpstreamOverFlowCode, r.downStream.downstreamReqHeaders, false)
-		r.proxy.readCallbacks.Connection().Close(network.FlushWrite, network.LocalClose)
+		//r.proxy.readCallbacks.Connection().Close(network.FlushWrite, network.LocalClose)
 		log.Println("Request sender is nil while appending data.")
 		return
 	}

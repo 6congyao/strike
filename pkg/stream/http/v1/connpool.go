@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	stream.RegisterConnPool(protocol.MQ, NewConnPool)
+	stream.RegisterConnPool(protocol.HTTP1, NewConnPool)
 }
 
 func NewConnPool(host upstream.Host) stream.ConnectionPool {
@@ -44,11 +44,24 @@ func (p *connPool) Close() {
 }
 
 func (p *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
+	ac, reason := p.getAvailableClient(ctx)
+	if ac == nil {
+		cb.OnFailure(reason, nil)
+	}
 
-	//cb.OnReady(nil, nil)
 	return nil
 }
 
 func (p *connPool) Protocol() protocol.Protocol {
 	return protocol.HTTP1
+}
+
+func (p *connPool) getAvailableClient(ctx context.Context) (*activeClient, stream.PoolFailureReason) {
+	return nil, ""
+}
+
+type activeClient struct {
+	pool               *connPool
+	totalStream        uint64
+	closeWithActiveReq bool
 }

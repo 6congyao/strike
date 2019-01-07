@@ -24,6 +24,7 @@ import (
 	"strike/pkg/server"
 	_ "strike/pkg/stream/http/v1"
 	_ "strike/pkg/stream/mqtt"
+	_ "strike/pkg/stream/qmq"
 	"strike/pkg/upstream"
 	"strike/pkg/upstream/cluster"
 )

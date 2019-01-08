@@ -35,33 +35,39 @@ type connPool struct {
 	mux sync.RWMutex
 }
 
-func (cp *connPool) Protocol() protocol.Protocol {
-	return protocol.MQ
-}
-
-func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
-
-	cp.activeClient = cp.getAvailableClient(ctx)
-	return nil
-}
-
-func (cp *connPool) Close() {
-	panic("implement me")
-}
-
-func (cp *connPool) getAvailableClient(ctx context.Context) *activeClient {
-	ac := &activeClient{
-		pool: cp,
-	}
-
-	return ac
-}
-
 // NewConnPool
 func NewConnPool(host upstream.Host) stream.ConnectionPool {
 	return &connPool{
 		host: host,
 	}
+}
+
+func (cp *connPool) Protocol() protocol.Protocol {
+	return protocol.MQ
+}
+
+func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
+	//cp.mux.Lock()
+	if cp.activeClient == nil {
+		cp.activeClient = newActiveClient(ctx, cp)
+	}
+	//cp.mux.Unlock()
+
+	ac := cp.activeClient
+	if ac == nil {
+		cb.OnFailure(stream.ConnectionFailure, nil)
+		return nil
+	}
+
+	cb.OnReady(nil, cp.host)
+	return nil
+}
+
+func (cp *connPool) Close() {
+}
+
+func (cp *connPool) createCodecClient(context context.Context) stream.CodecClient {
+	return stream.NewCodecClient(context, protocol.MQ, nil, nil)
 }
 
 // stream.CodecClientCallbacks
@@ -71,4 +77,16 @@ type activeClient struct {
 	pool               *connPool
 	closeWithActiveReq bool
 	totalStream        uint64
+}
+
+func newActiveClient(ctx context.Context, pool *connPool) *activeClient {
+	ac := &activeClient{
+		pool: pool,
+	}
+
+	//cd := pool.host.CreateConnection(ctx)
+
+	pool.createCodecClient(ctx)
+
+	return ac
 }

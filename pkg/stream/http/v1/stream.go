@@ -281,7 +281,6 @@ func (s *serverStream) handleRequest() {
 		buf := buffer.NewIoBufferBytes(s.req.Body())
 		s.receiver.OnReceiveData(s.context, buf, true)
 	}
-
 }
 
 func decodeReqHeader(in v1.RequestHeader) (out map[string]string) {

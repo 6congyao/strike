@@ -106,7 +106,7 @@ type ClusterInfo interface {
 }
 
 type CreateConnectionData struct {
-	Connection network.Connection
+	Connection network.ClientConnection
 	HostInfo   HostInfo
 }
 

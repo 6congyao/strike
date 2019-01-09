@@ -337,7 +337,7 @@ func (s *downStream) convertHeader(headers protocol.HeaderMap) protocol.HeaderMa
 	//	if convHeader, err := protocol.ConvertHeader(s.context, up, dp, headers); err == nil {
 	//		return convHeader
 	//	} else {
-	log.Println("convert header failed:", up, dp)
+	log.Println("convert header for:", up, dp)
 	//	}
 	//}
 

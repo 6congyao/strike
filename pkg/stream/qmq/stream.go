@@ -158,7 +158,6 @@ func (s *streamBase) AppendData(ctx context.Context, data buffer.IoBuffer, endSt
 func (s *streamBase) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
 	path, _ := headers.Get(protocol.StrikeHeaderPathKey)
 	s.topic = strings.TrimLeft(path, "/")
-	fmt.Println("got topic:", s.topic)
 	return nil
 }
 
@@ -172,11 +171,22 @@ func (s *streamBase) GetStream() stream.Stream {
 
 func (s *streamBase) endStream() {
 	if s.msg != nil {
-		// todo: mq send
+		// todo: mq send and give response
 		fmt.Println("mq send msg")
-		raw := make(map[string]string, 5)
-		headers := protocol.CommonHeader(raw)
-		headers.Set(types.HeaderStatus, strconv.Itoa(types.SuccessCode))
-		s.receiver.OnReceiveHeaders(s.context, headers, true)
+		s.handleFailure()
 	}
+}
+
+func (s *streamBase) handleSuccess() {
+	raw := make(map[string]string, 5)
+	headers := protocol.CommonHeader(raw)
+	headers.Set(types.HeaderStatus, strconv.Itoa(types.SuccessCode))
+	s.receiver.OnReceiveHeaders(s.context, headers, true)
+}
+
+func (s *streamBase) handleFailure() {
+	raw := make(map[string]string, 5)
+	headers := protocol.CommonHeader(raw)
+	headers.Set(types.HeaderStatus, strconv.Itoa(types.RouterUnavailableCode))
+	s.receiver.OnReceiveHeaders(s.context, headers, true)
 }

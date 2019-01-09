@@ -35,7 +35,7 @@ Accept: */*
 Accept-Encoding: gzip, deflate, br
 Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
 
-lucas1234`
+strike1234`
 
 var doubleRequest = `POST /topic1 HTTP/1.1
 Host: 127.0.0.1:8045
@@ -50,7 +50,7 @@ Accept: */*
 Accept-Encoding: gzip, deflate, br
 Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
 
-lucas1234
+strike1234
 POST /topic2 HTTP/1.1
 Host: 127.0.0.1:8045
 Connection: keep-alive
@@ -64,7 +64,7 @@ Accept: */*
 Accept-Encoding: gzip, deflate, br
 Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
 
-lucas7890`
+strike7890`
 
 var defectiveRequest = `POST /topic1 HTTP/1.1
 Host: 127.0.0.1:8045
@@ -91,7 +91,7 @@ func TestSingleDecode(t *testing.T) {
 		t.Errorf("Expect header uri %s but got %s", expectedUri, string(req.Header.RequestURI()))
 	}
 
-	expectedBody := []byte("lucas1234")
+	expectedBody := []byte("strike1234")
 	if !bytes.Equal(req.Body(), expectedBody) {
 		t.Errorf("Expect body %s but got %s", expectedBody, string(req.Body()))
 	}
@@ -122,7 +122,7 @@ func TestDoubleDecode(t *testing.T) {
 		t.Errorf("Expect header uri %s but got %s", expectedUri, string(req.Header.RequestURI()))
 	}
 
-	expectedBody := []byte("lucas7890")
+	expectedBody := []byte("strike7890")
 	if !bytes.Equal(req.Body(), expectedBody) {
 		t.Errorf("Expect body %s but got %s", expectedBody, string(req.Body()))
 	}

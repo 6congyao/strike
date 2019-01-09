@@ -59,7 +59,8 @@ func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceive
 		return nil
 	}
 
-	cb.OnReady(nil, cp.host)
+	streamEncoder := ac.codecClient.NewStream(ctx, receiver)
+	cb.OnReady(streamEncoder, cp.host)
 	return nil
 }
 
@@ -75,6 +76,7 @@ func (cp *connPool) createCodecClient(context context.Context) stream.CodecClien
 // network.ConnectionEventListener
 type activeClient struct {
 	pool               *connPool
+	codecClient        stream.CodecClient
 	closeWithActiveReq bool
 	totalStream        uint64
 }
@@ -84,9 +86,8 @@ func newActiveClient(ctx context.Context, pool *connPool) *activeClient {
 		pool: pool,
 	}
 
-	//cd := pool.host.CreateConnection(ctx)
-
-	pool.createCodecClient(ctx)
+	codecClient := pool.createCodecClient(ctx)
+	ac.codecClient = codecClient
 
 	return ac
 }

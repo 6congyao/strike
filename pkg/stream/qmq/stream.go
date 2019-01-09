@@ -17,10 +17,14 @@ package qmq
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	"strike/pkg/types"
+	"strings"
 )
 
 func init() {
@@ -49,9 +53,9 @@ func (f *streamConnFactory) CreateBiDirectStreamConnection(context context.Conte
 func newStreamConnection(context context.Context, connection network.Connection, clientCallbacks stream.StreamConnectionEventListener,
 	serverCallbacks stream.ServerStreamConnectionEventListener) stream.ClientStreamConnection {
 	sc := &streamConnection{
-		context:      context,
-		connection:   connection,
-		protocol:     protocol.MQ,
+		context:    context,
+		connection: connection,
+		protocol:   protocol.MQ,
 
 		cscCallbacks: clientCallbacks,
 		sscCallbacks: serverCallbacks,
@@ -82,9 +86,97 @@ func (streamConnection) GoAway() {
 }
 
 func (streamConnection) NewStream(ctx context.Context, receiver stream.StreamReceiver) stream.StreamSender {
-	panic("implement me")
+	s := &streamBase{
+		id:        protocol.GenerateID(),
+		processor: nil,
+		context:   ctx,
+		receiver:  receiver,
+	}
+	return s
 }
 
 func (streamConnection) Protocol() protocol.Protocol {
+	return protocol.MQ
+}
+
+// stream.Stream
+// stream.StreamSender
+type streamBase struct {
+	id        uint64
+	processor interface{}
+	context   context.Context
+
+	topic string
+	msg   []byte
+
+	receiver  stream.StreamReceiver
+	streamCbs []stream.StreamEventListener
+}
+
+func (s *streamBase) ID() uint64 {
+	return s.id
+}
+
+func (s *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
+	s.streamCbs = append(s.streamCbs, streamCb)
+}
+
+func (s *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
+	cbIdx := -1
+
+	for i, streamCb := range s.streamCbs {
+		if streamCb == streamCb {
+			cbIdx = i
+			break
+		}
+	}
+
+	if cbIdx > -1 {
+		s.streamCbs = append(s.streamCbs[:cbIdx], s.streamCbs[cbIdx+1:]...)
+	}
+}
+
+func (s *streamBase) ResetStream(reason stream.StreamResetReason) {
+	for _, cb := range s.streamCbs {
+		cb.OnResetStream(reason)
+	}
+}
+
+func (s *streamBase) ReadDisable(disable bool) {
+	panic("unsupported")
+}
+
+func (s *streamBase) AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error {
+	s.msg = data.Bytes()
+
+	if endStream {
+		s.endStream()
+	}
+	return nil
+}
+
+func (s *streamBase) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
+	path, _ := headers.Get(protocol.StrikeHeaderPathKey)
+	s.topic = strings.TrimLeft(path, "/")
+	fmt.Println("got topic:", s.topic)
+	return nil
+}
+
+func (s *streamBase) AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) error {
 	panic("implement me")
+}
+
+func (s *streamBase) GetStream() stream.Stream {
+	return s
+}
+
+func (s *streamBase) endStream() {
+	if s.msg != nil {
+		// todo: mq send
+		fmt.Println("mq send msg")
+		raw := make(map[string]string, 5)
+		headers := protocol.CommonHeader(raw)
+		headers.Set(types.HeaderStatus, strconv.Itoa(types.SuccessCode))
+		s.receiver.OnReceiveHeaders(s.context, headers, true)
+	}
 }

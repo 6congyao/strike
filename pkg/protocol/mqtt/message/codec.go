@@ -117,7 +117,7 @@ func (c *Codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protoco
 		return
 	}
 	for _, msg := range msgs {
-		streamID := protocol.GenerateIDString()
+		streamID := protocol.GenerateID()
 		// notify
 		status := filter.OnDecodeDone(streamID, msg)
 		if status == network.Stop {

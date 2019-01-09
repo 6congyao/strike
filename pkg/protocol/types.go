@@ -130,20 +130,20 @@ type Codec interface {
 // DecodeFilter is a filter used by Stream to receive decode events
 type DecodeFilter interface {
 	// OnDecodeHeader is called on headers decoded
-	OnDecodeHeader(streamID string, headers HeaderMap, endStream bool) network.FilterStatus
+	OnDecodeHeader(streamID uint64, headers HeaderMap, endStream bool) network.FilterStatus
 
 	// OnDecodeData is called on data decoded
-	OnDecodeData(streamID string, data buffer.IoBuffer, endStream bool) network.FilterStatus
+	OnDecodeData(streamID uint64, data buffer.IoBuffer, endStream bool) network.FilterStatus
 
 	// OnDecodeTrailer is called on trailers decoded
-	OnDecodeTrailer(streamID string, trailers HeaderMap) network.FilterStatus
+	OnDecodeTrailer(streamID uint64, trailers HeaderMap) network.FilterStatus
 
 	// OnDecodeError is called when error occurs
 	// When error occurring, filter status = stop
 	OnDecodeError(err error, headers HeaderMap)
 
 	// OnDecodeDone is called on header+body+trailer decoded
-	OnDecodeDone(streamID string, result interface{}) network.FilterStatus
+	OnDecodeDone(streamID uint64, result interface{}) network.FilterStatus
 }
 
 // Encoder is a encoder interface to extend various of protocols

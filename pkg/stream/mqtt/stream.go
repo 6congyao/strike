@@ -78,19 +78,19 @@ type streamConnection struct {
 	sscCallbacks stream.ServerStreamConnectionEventListener
 }
 
-func (sc *streamConnection) OnDecodeHeader(streamID string, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
+func (sc *streamConnection) OnDecodeHeader(streamID uint64, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
 	return network.Continue
 }
 
-func (sc *streamConnection) OnDecodeData(streamID string, data buffer.IoBuffer, endStream bool) network.FilterStatus {
+func (sc *streamConnection) OnDecodeData(streamID uint64, data buffer.IoBuffer, endStream bool) network.FilterStatus {
 	return network.Continue
 }
 
-func (sc *streamConnection) OnDecodeTrailer(streamID string, trailers protocol.HeaderMap) network.FilterStatus {
+func (sc *streamConnection) OnDecodeTrailer(streamID uint64, trailers protocol.HeaderMap) network.FilterStatus {
 	return network.Continue
 }
 
-func (sc *streamConnection) OnDecodeDone(streamID string, result interface{}) network.FilterStatus {
+func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) network.FilterStatus {
 	if msg, ok := result.(message.Message); ok {
 		sc.handleMessage(msg)
 	}

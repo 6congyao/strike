@@ -78,7 +78,7 @@ func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protoco
 			filter.OnDecodeError(err, nil)
 			return
 		}
-		streamID := protocol.GenerateIDString()
+		streamID := protocol.GenerateID()
 		// notify
 		filter.OnDecodeDone(streamID, req)
 	}

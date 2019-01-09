@@ -137,7 +137,7 @@ type ServerStreamConnectionEventListener interface {
 	StreamConnectionEventListener
 
 	// NewStreamDetect returns stream event receiver
-	NewStreamDetect(context context.Context, streamID string, responseEncoder StreamSender) StreamReceiver
+	NewStreamDetect(context context.Context, streamID uint64, responseEncoder StreamSender) StreamReceiver
 }
 
 type ProtocolStreamFactory interface {

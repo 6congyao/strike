@@ -85,7 +85,7 @@ type downStream struct {
 	context context.Context
 }
 
-func newActiveStream(ctx context.Context, streamID string, proxy *proxy, responseSender stream.StreamSender) *downStream {
+func newActiveStream(ctx context.Context, streamID uint64, proxy *proxy, responseSender stream.StreamSender) *downStream {
 	newCtx := buffer.NewBufferPoolContext(ctx)
 
 	proxyBuffers := proxyBuffersByContext(newCtx)

@@ -23,6 +23,7 @@ import (
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 	"strike/pkg/filter"
+	"strike/pkg/filter/stream/common/model"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
 	"strike/pkg/types"
@@ -33,7 +34,7 @@ func init() {
 }
 
 type commonRuleFilterFactory struct {
-	commonRuleConfig *CommonRuleConfig
+	commonRuleConfig *model.CommonRuleConfig
 }
 
 func (f *commonRuleFilterFactory) CreateFilterChain(context context.Context, callbacks stream.StreamFilterChainFactoryCallbacks) {
@@ -41,15 +42,24 @@ func (f *commonRuleFilterFactory) CreateFilterChain(context context.Context, cal
 	callbacks.AddStreamReceiverFilter(filter)
 }
 
+// CreateCommonRuleFilterFactory as
+func CreateCommonRuleFilterFactory(conf map[string]interface{}) (stream.StreamFilterChainFactory, error) {
+	f := &commonRuleFilterFactory{
+		commonRuleConfig: parseCommonRuleConfig(conf),
+	}
+	NewFacatoryInstance(f.commonRuleConfig)
+	return f, nil
+}
+
 type commmonRuleFilter struct {
 	context           context.Context
 	cb                stream.StreamReceiverFilterCallbacks
-	commonRuleConfig  *CommonRuleConfig
+	commonRuleConfig  *model.CommonRuleConfig
 	RuleEngineFactory *RuleEngineFactory
 }
 
 // NewCommonRuleFilter as
-func NewCommonRuleFilter(context context.Context, config *CommonRuleConfig) stream.StreamReceiverFilter {
+func NewCommonRuleFilter(context context.Context, config *model.CommonRuleConfig) stream.StreamReceiverFilter {
 	f := &commmonRuleFilter{
 		context:          context,
 		commonRuleConfig: config,
@@ -85,17 +95,8 @@ func (f *commmonRuleFilter) SetDecoderFilterCallbacks(cb stream.StreamReceiverFi
 
 func (f *commmonRuleFilter) OnDestroy() {}
 
-// CreateCommonRuleFilterFactory as
-func CreateCommonRuleFilterFactory(conf map[string]interface{}) (stream.StreamFilterChainFactory, error) {
-	f := &commonRuleFilterFactory{
-		commonRuleConfig: parseCommonRuleConfig(conf),
-	}
-	NewFacatoryInstance(f.commonRuleConfig)
-	return f, nil
-}
-
-func parseCommonRuleConfig(config map[string]interface{}) *CommonRuleConfig {
-	commonRuleConfig := &CommonRuleConfig{}
+func parseCommonRuleConfig(config map[string]interface{}) *model.CommonRuleConfig {
+	commonRuleConfig := &model.CommonRuleConfig{}
 
 	if data, err := json.Marshal(config); err == nil {
 		json.Unmarshal(data, commonRuleConfig)
@@ -107,56 +108,19 @@ func parseCommonRuleConfig(config map[string]interface{}) *CommonRuleConfig {
 
 var factoryInstance *RuleEngineFactory
 
-func NewFacatoryInstance(config *CommonRuleConfig) {
+func NewFacatoryInstance(config *model.CommonRuleConfig) {
 	factoryInstance = NewRuleEngineFactory(config)
 	//log.Println("newFacatoryInstance:", factoryInstance)
 }
 
-// RuleEngine as
-type RuleEngine struct {
-	ruleConfig *RuleConfig
-}
-
-// NewRuleEngine new
-func NewRuleEngine(config *RuleConfig) *RuleEngine {
-	ruleEngine := &RuleEngine{
-		ruleConfig: config,
-	}
-
-	return ruleEngine
-}
-
-func (e *RuleEngine) invoke(headers protocol.HeaderMap) bool {
-	if e.match(headers) {
-		//e.stat.Counter(metrix.INVOKE).Inc(1)
-		//if e.limitEngine.OverLimit() {
-		//	e.stat.Counter(metrix.BLOCK).Inc(1)
-		//	if e.ruleConfig.RunMode == model.RunModeControl {
-		//		return false
-		//	}
-		//}
-	}
-	return true
-}
-
-func (e RuleEngine) match(headers protocol.HeaderMap) bool {
-	//return e.matcherEngine.Match(headers, e.ruleConfig)
-	return true
-}
-
-//stop timer
-func (e RuleEngine) stop() {
-	//e.stat.Stop()
-}
-
 // RuleEngineFactory as
 type RuleEngineFactory struct {
-	CommonRuleConfig *CommonRuleConfig
+	CommonRuleConfig *model.CommonRuleConfig
 	ruleEngines      []RuleEngine
 }
 
 // NewRuleEngineFactory new
-func NewRuleEngineFactory(config *CommonRuleConfig) *RuleEngineFactory {
+func NewRuleEngineFactory(config *model.CommonRuleConfig) *RuleEngineFactory {
 	f := &RuleEngineFactory{
 		CommonRuleConfig: config,
 	}

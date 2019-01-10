@@ -71,9 +71,6 @@ func (cp *connPool) createCodecClient(context context.Context) stream.CodecClien
 	return stream.NewCodecClient(context, protocol.MQ, nil, nil)
 }
 
-// stream.CodecClientCallbacks
-// stream.StreamConnectionEventListener
-// network.ConnectionEventListener
 type activeClient struct {
 	pool               *connPool
 	codecClient        stream.CodecClient

@@ -60,6 +60,9 @@ func newStreamConnection(context context.Context, connection network.Connection,
 		cscCallbacks: clientCallbacks,
 		sscCallbacks: serverCallbacks,
 	}
+	if connection != nil {
+		connection.AddConnectionEventListener(sc)
+	}
 
 	return sc
 }
@@ -97,6 +100,12 @@ func (streamConnection) NewStream(ctx context.Context, receiver stream.StreamRec
 
 func (streamConnection) Protocol() protocol.Protocol {
 	return protocol.MQ
+}
+
+func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
+	if event.IsClose() || event.ConnectFailure() {
+		// clear
+	}
 }
 
 // stream.Stream

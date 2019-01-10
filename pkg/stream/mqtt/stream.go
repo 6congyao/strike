@@ -51,7 +51,7 @@ func (f *streamConnFactory) CreateBiDirectStreamConnection(context context.Conte
 
 func newStreamConnection(context context.Context, connection network.Connection, clientCallbacks stream.StreamConnectionEventListener,
 	serverCallbacks stream.ServerStreamConnectionEventListener) stream.ServerStreamConnection {
-	return &streamConnection{
+	sc := &streamConnection{
 		context:      context,
 		connection:   connection,
 		protocol:     protocol.MQTT,
@@ -60,6 +60,9 @@ func newStreamConnection(context context.Context, connection network.Connection,
 		cscCallbacks: clientCallbacks,
 		sscCallbacks: serverCallbacks,
 	}
+
+	connection.AddConnectionEventListener(sc)
+	return sc
 }
 
 // protocol.DecodeFilter
@@ -112,6 +115,12 @@ func (sc *streamConnection) Protocol() protocol.Protocol {
 
 func (sc *streamConnection) GoAway() {
 	panic("implement me")
+}
+
+func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
+	if event.IsClose() || event.ConnectFailure() {
+		// clear
+	}
 }
 
 func (sc *streamConnection) handleMessage(msg message.Message) {

@@ -16,6 +16,7 @@
 package proxy
 
 import (
+	"log"
 	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
@@ -227,6 +228,21 @@ func (f *activeStreamReceiverFilter) handleBufferData(buf buffer.IoBuffer) {
 
 		f.activeStream.downstreamReqDataBuf.ReadFrom(buf)
 	}
+}
+
+// Status Handler Fucntion
+// handleHeaderStatus returns true means stop the iteration
+func (f *activeStreamReceiverFilter) handleHeaderStatus(status stream.StreamHeadersFilterStatus) bool {
+	if status == stream.StreamHeadersFilterStop {
+		f.stopped = true
+		return true
+	}
+	if status != stream.StreamHeadersFilterContinue {
+		log.Println("unexpected stream header filter status")
+	}
+
+	f.headersContinued = true
+	return false
 }
 
 // handleDataStatus returns true means stop the iteration

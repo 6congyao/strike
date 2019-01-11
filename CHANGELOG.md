@@ -1,3 +1,14 @@
 # Changelog
 
 ## 0.1.0
++ Network
++ Network filter (Proxy)
++ Protocol
++ Stream
+
+## 0.2.0
++ HTTP v1.1 protocol supported
++ MQTT v3.1.1 protocol supported
+
+## 0.2.1
++ Stream filter (QPS/Rate)

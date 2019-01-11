@@ -171,7 +171,12 @@ func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) 
 	s.doReceiveHeaders(nil, headers, endStream)
 }
 
-func (s *downStream) doReceiveHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
+func (s *downStream) doReceiveHeaders(filter *activeStreamReceiverFilter, headers protocol.HeaderMap, endStream bool) {
+	// run stream filters
+	if s.runReceiveHeadersFilters(filter, headers, endStream) {
+		return
+	}
+
 	connPool, err := s.initializeUpstreamConnectionPool()
 
 	if err != nil {
@@ -203,7 +208,7 @@ func (s *downStream) ReceiveData(data buffer.IoBuffer, endStream bool) {
 	s.doReceiveData(nil, data, endStream)
 }
 
-func (s *downStream) doReceiveData(filter interface{}, data buffer.IoBuffer, endStream bool) {
+func (s *downStream) doReceiveData(filter *activeStreamReceiverFilter, data buffer.IoBuffer, endStream bool) {
 	if endStream {
 		s.onUpstreamRequestSent()
 	}
@@ -225,7 +230,7 @@ func (s *downStream) ReceiveTrailers(trailers protocol.HeaderMap) {
 	s.doReceiveTrailers(nil, trailers)
 }
 
-func (s *downStream) doReceiveTrailers(filter interface{}, trailers protocol.HeaderMap) {
+func (s *downStream) doReceiveTrailers(filter *activeStreamReceiverFilter, trailers protocol.HeaderMap) {
 
 }
 
@@ -627,6 +632,32 @@ func (s *downStream) addDecodedData(filter *activeStreamReceiverFilter, data buf
 	} else if s.filterStage&EncodeTrailers > 0 {
 		s.runReceiveDataFilters(filter, data, false)
 	}
+}
+
+func (s *downStream) runReceiveHeadersFilters(filter *activeStreamReceiverFilter, headers protocol.HeaderMap, endStream bool) bool {
+	var index int
+	var f *activeStreamReceiverFilter
+
+	if filter != nil {
+		index = filter.index + 1
+	}
+
+	for ; index < len(s.receiverFilters); index++ {
+		f = s.receiverFilters[index]
+
+		s.filterStage |= DecodeHeaders
+		status := f.filter.OnDecodeHeaders(headers, endStream)
+		s.filterStage &= ^DecodeHeaders
+		if f.handleHeaderStatus(status) {
+			// TODO: If it is the last filter, continue with
+			// processing since we need to handle the case where a terminal filter wants to buffer, but
+			// a previous filter has added body.
+			return true
+		}
+		// TODO: Handle the case where we have a header only request, but a filter adds a body to it.
+	}
+
+	return false
 }
 
 func (s *downStream) runReceiveDataFilters(filter *activeStreamReceiverFilter, data buffer.IoBuffer, endStream bool) bool {

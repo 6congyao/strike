@@ -40,13 +40,13 @@ const (
 
 // Error codes
 const (
-	CodecExceptionCode    int = 0
-	UnknownCode           int = 2
-	DeserialExceptionCode int = 3
-	SuccessCode           int = 200
-	RouterUnavailableCode int = 404
-	NoHealthUpstreamCode  int = 502
-	UpstreamOverFlowCode  int = 503
-	TimeoutExceptionCode  int = 504
-	LimitExceededCode     int = 509
+	CodecExceptionCode    = 0
+	UnknownCode           = 2
+	DeserialExceptionCode = 3
+	SuccessCode           = 200
+	RouterUnavailableCode = 404
+	NoHealthUpstreamCode  = 502
+	UpstreamOverFlowCode  = 503
+	TimeoutExceptionCode  = 504
+	LimitExceededCode     = 509
 )

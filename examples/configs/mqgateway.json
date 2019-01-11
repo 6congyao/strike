@@ -49,29 +49,17 @@
                     "limit": {
                       "limit_strategy": "QPS",
                       "max_burst_ratio": 1.0,
-                      "period_ms": 1000,
-                      "max_allows": 5
+                      "period_ms": 100,
+                      "max_allows": 0
                     },
-                    "name": "rule1",
+                    "name": "GetLimitRule",
                     "resources": [
                       {
                         "headers": [
                           {
                             "compare_type": "EQUALS",
-                            "key": "path",
-                            "value": "/serverlist"
-                          },
-                          {
-                            "compare_type": "EQUALS",
-                            "key": "method",
+                            "key": "x-strike-method",
                             "value": "GET"
-                          }
-                        ],
-                        "params": [
-                          {
-                            "compare_type": "EQUALS",
-                            "key": "aa",
-                            "value": "a1"
                           }
                         ]
                       }

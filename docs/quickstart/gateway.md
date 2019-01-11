@@ -3,7 +3,7 @@
 ## 简介
 
 + 该示例描述了strike作为MDMP的边界代理
-+ 对外适配http v1 restful协议，对内可选
++ 对外适配http v1.1 restful协议，对内可选
 
 ## 准备
 

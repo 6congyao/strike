@@ -19,14 +19,11 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strconv"
 	"strike/pkg/api/v2"
-	"strike/pkg/buffer"
 	"strike/pkg/filter"
 	"strike/pkg/filter/stream/common/model"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
-	"strike/pkg/types"
 )
 
 func init() {
@@ -50,50 +47,6 @@ func CreateCommonRuleFilterFactory(conf map[string]interface{}) (stream.StreamFi
 	NewFacatoryInstance(f.commonRuleConfig)
 	return f, nil
 }
-
-type commmonRuleFilter struct {
-	context           context.Context
-	cb                stream.StreamReceiverFilterCallbacks
-	commonRuleConfig  *model.CommonRuleConfig
-	RuleEngineFactory *RuleEngineFactory
-}
-
-// NewCommonRuleFilter as
-func NewCommonRuleFilter(context context.Context, config *model.CommonRuleConfig) stream.StreamReceiverFilter {
-	f := &commmonRuleFilter{
-		context:          context,
-		commonRuleConfig: config,
-	}
-	f.RuleEngineFactory = factoryInstance
-	return f
-}
-
-//implement StreamReceiverFilter
-func (f *commmonRuleFilter) OnDecodeHeaders(headers protocol.HeaderMap, endStream bool) stream.StreamHeadersFilterStatus {
-	// do filter
-	if f.RuleEngineFactory.invoke(headers) {
-		return stream.StreamHeadersFilterContinue
-	}
-	headers.Set(types.HeaderStatus, strconv.Itoa(types.LimitExceededCode))
-	f.cb.AppendHeaders(headers, true)
-	return stream.StreamHeadersFilterStop
-}
-
-func (f *commmonRuleFilter) OnDecodeData(buf buffer.IoBuffer, endStream bool) stream.StreamDataFilterStatus {
-	//do filter
-	return stream.StreamDataFilterContinue
-}
-
-func (f *commmonRuleFilter) OnDecodeTrailers(trailers protocol.HeaderMap) stream.StreamTrailersFilterStatus {
-	//do filter
-	return stream.StreamTrailersFilterContinue
-}
-
-func (f *commmonRuleFilter) SetDecoderFilterCallbacks(cb stream.StreamReceiverFilterCallbacks) {
-	f.cb = cb
-}
-
-func (f *commmonRuleFilter) OnDestroy() {}
 
 func parseCommonRuleConfig(config map[string]interface{}) *model.CommonRuleConfig {
 	commonRuleConfig := &model.CommonRuleConfig{}

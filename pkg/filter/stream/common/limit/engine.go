@@ -52,3 +52,8 @@ func NewLimitEngine(ruleConfig *model.RuleConfig) (*LimitEngine, error) {
 	}
 	return nil, errors.New("Unknown LimitStrategy type:" + config.LimitStrategy)
 }
+
+// OverLimit check limit
+func (engine *LimitEngine) OverLimit() bool {
+	return !engine.limiter.TryAcquire()
+}

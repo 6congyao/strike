@@ -66,9 +66,13 @@ Stream:
 * Delegation (net.Conn)
 * Proxy
 
-## Protocols
-* Http v1
-* qim
+## Stream Filters
+* QPS
+* Rate
+
+## Supported protocols
+* HTTP v1.1
+* MQTT v3.1.1
 
 ## 示例请参考：
 + [mq-gateway](/docs/quickstart/gateway.md)

@@ -421,10 +421,10 @@ func (s *downStream) cleanStream() {
 	//for _, ef := range s.senderFilters {
 	//	ef.filter.OnDestroy()
 	//}
-	//
-	//for _, ef := range s.receiverFilters {
-	//	ef.filter.OnDestroy()
-	//}
+
+	for _, ef := range s.receiverFilters {
+		ef.filter.OnDestroy()
+	}
 
 	// stop event process
 	s.stopEventProcess()
@@ -687,4 +687,31 @@ func (s *downStream) runReceiveDataFilters(filter *activeStreamReceiverFilter, d
 	}
 
 	return false
+}
+
+func (s *downStream) reset() {
+	s.ID = 0
+	s.proxy = nil
+	//s.route = nil
+	//s.cluster = nil
+	s.element = nil
+	s.timeout = nil
+	//s.retryState = nil
+	//s.requestInfo = nil
+	s.responseSender = nil
+	s.upstreamRequest.downStream = nil
+	s.upstreamRequest.requestSender = nil
+	s.upstreamRequest.proxy = nil
+	s.upstreamRequest.upstreamRespHeaders = nil
+	s.upstreamRequest = nil
+	s.perRetryTimer = nil
+	s.responseTimer = nil
+	s.downstreamRespHeaders = nil
+	s.downstreamReqDataBuf = nil
+	s.downstreamReqTrailers = nil
+	s.downstreamRespHeaders = nil
+	s.downstreamRespDataBuf = nil
+	s.downstreamRespTrailers = nil
+	s.senderFilters = s.senderFilters[:0]
+	s.receiverFilters = s.receiverFilters[:0]
 }

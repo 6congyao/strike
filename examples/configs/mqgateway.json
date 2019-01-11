@@ -52,14 +52,14 @@
                       "period_ms": 100,
                       "max_allows": 0
                     },
-                    "name": "GetLimitRule",
+                    "name": "RuleAllowPost",
                     "resources": [
                       {
                         "headers": [
                           {
-                            "compare_type": "EQUALS",
+                            "compare_type": "NOTEQUALS",
                             "key": "x-strike-method",
-                            "value": "GET"
+                            "value": "POST"
                           }
                         ]
                       }

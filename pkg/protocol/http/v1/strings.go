@@ -16,8 +16,8 @@
 package v1
 
 var (
-	defaultServerName  = []byte("fasthttp")
-	defaultUserAgent   = []byte("fasthttp")
+	defaultServerName  = []byte("strike")
+	defaultUserAgent   = []byte("strike")
 	defaultContentType = []byte("text/plain; charset=utf-8")
 )
 

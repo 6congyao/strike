@@ -181,8 +181,8 @@ func (s *streamBase) GetStream() stream.Stream {
 func (s *streamBase) endStream() {
 	if s.msg != nil {
 		// todo: mq send and give response
-		fmt.Println("mq send msg")
-		s.handleFailure()
+		fmt.Println("mq send msg on topic:", s.topic)
+		s.handleSuccess()
 	}
 }
 

@@ -104,10 +104,11 @@ func (c *TLSConn) ConnectionState() tls.ConnectionState {
 //
 //	return buf.Len() - size
 //}
-//
-//// SetALPN sets ALPN
+
+// SetALPN sets ALPN
 //func (c *TLSConn) SetALPN(alpn string) {
 //	c.Conn.SetALPN(alpn)
+//	c.Conn
 //}
 
 // WriteTo writes data

@@ -28,6 +28,7 @@ import (
 	"strike/pkg/api/v2"
 	"strike/pkg/evio"
 	"strike/pkg/network"
+	"strike/pkg/stls"
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/pkg/upstream"
@@ -305,6 +306,13 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, networkFilter
 
 	al.listenIP = listenIP
 	al.listenPort = listenPort
+
+	mgr, err := stls.NewTLSServerContextManager(lc, listener)
+	if err != nil {
+		log.Println("create tls context manager failed")
+		return nil, err
+	}
+	al.tlsMng = mgr
 
 	return al, nil
 }

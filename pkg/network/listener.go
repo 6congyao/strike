@@ -160,6 +160,7 @@ func (l *listener) listen(lctx context.Context) error {
 
 	l.rawl = rawl
 
+	log.Println("listener started on: ", l.name, l.Addr())
 	return nil
 }
 

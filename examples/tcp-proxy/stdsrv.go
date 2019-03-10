@@ -76,7 +76,7 @@ func StdServe() error {
 
 				for _, msg := range msgs {
 					if msg != nil && msg.Command() != "" {
-						fmt.Println("got msg:", msg)
+						fmt.Println("got message:", msg)
 					}
 				}
 

@@ -57,6 +57,10 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 		if mode == config.File {
 			srv = server.NewServer(c, sk.cm)
 
+			if srvConfig.Listeners == nil || len(srvConfig.Listeners) == 0 {
+				log.Fatalln("no listener found")
+			}
+
 			for _, listenerConfig := range srvConfig.Listeners {
 				lc := config.ParseListenerConfig(&listenerConfig)
 				lc.DisableConnIo = config.GetListenerDisableIO(&lc.FilterChains[0])

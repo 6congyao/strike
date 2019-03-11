@@ -113,7 +113,7 @@ func CreateTemplate(cn string, isca bool, dns []string) (*x509.Certificate, erro
 	template := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"sofa mesh tls util"},
+			Organization: []string{"strike tls util"},
 			CommonName:   cn,
 		},
 		NotBefore:             time.Now(),

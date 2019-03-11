@@ -12,3 +12,6 @@
 
 ## 0.2.1
 + Stream filter (QPS/Rate)
+
+## 0.3.0
++ TLS 1.2 supported

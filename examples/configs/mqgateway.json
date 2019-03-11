@@ -117,7 +117,6 @@
               "ca_cert":"examples/certs/ca.pem",
               "cert_chain":"examples/certs/cert.pem",
               "private_key":"examples/certs/key.pem",
-              "verify_client": true,
               "ecdh_curves": "P256"
             },
             "filters": [

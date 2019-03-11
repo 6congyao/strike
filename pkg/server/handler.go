@@ -280,7 +280,7 @@ type activeListener struct {
 	handler                 *connHandler
 	stopChan                chan struct{}
 	updatedLabel            bool
-	tlsMng                  network.TLSContextManager
+	tlsMgr                  network.TLSContextManager
 }
 
 func newActiveListener(listener network.Listener, lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
@@ -312,12 +312,18 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, networkFilter
 		log.Println("create tls context manager failed")
 		return nil, err
 	}
-	al.tlsMng = mgr
+	al.tlsMgr = mgr
 
 	return al, nil
 }
 
 func (al *activeListener) OnAccept(rawc interface{}) {
+	if al.tlsMgr != nil && al.tlsMgr.Enabled() {
+		if c, ok := rawc.(net.Conn); ok {
+			rawc = al.tlsMgr.Conn(c)
+		}
+	}
+
 	arc := newActiveRawConn(rawc, al)
 
 	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)

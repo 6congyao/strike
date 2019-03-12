@@ -17,6 +17,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
@@ -263,6 +264,7 @@ type WriteFilter interface {
 type TLSContextManager interface {
 	Conn(net.Conn) net.Conn
 	Enabled() bool
+	Config() *tls.Config
 }
 
 // FilterStatus type

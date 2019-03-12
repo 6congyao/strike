@@ -53,7 +53,7 @@ var (
 var alpn = map[string]bool{
 	"h2":       true,
 	"http/1.1": true,
-	"sofa":     true,
+	"mqtt":     true,
 }
 
 // Ciphers

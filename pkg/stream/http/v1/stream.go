@@ -170,8 +170,6 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	}
 }
 
-// stream.Stream
-// stream.StreamSender
 type streamBase struct {
 	id               uint64
 	req              *v1.Request
@@ -183,18 +181,18 @@ type streamBase struct {
 }
 
 // stream.Stream
-func (s *streamBase) ID() uint64 {
-	return s.id
+func (sb *streamBase) ID() uint64 {
+	return sb.id
 }
 
-func (s *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
-	s.streamCbs = append(s.streamCbs, streamCb)
+func (sb *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
+	sb.streamCbs = append(sb.streamCbs, streamCb)
 }
 
-func (s *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
+func (sb *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
 	cbIdx := -1
 
-	for i, streamCb := range s.streamCbs {
+	for i, streamCb := range sb.streamCbs {
 		if streamCb == streamCb {
 			cbIdx = i
 			break
@@ -202,12 +200,12 @@ func (s *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
 	}
 
 	if cbIdx > -1 {
-		s.streamCbs = append(s.streamCbs[:cbIdx], s.streamCbs[cbIdx+1:]...)
+		sb.streamCbs = append(sb.streamCbs[:cbIdx], sb.streamCbs[cbIdx+1:]...)
 	}
 }
 
-func (s *streamBase) ResetStream(reason stream.StreamResetReason) {
-	for _, cb := range s.streamCbs {
+func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
+	for _, cb := range sb.streamCbs {
 		cb.OnResetStream(reason)
 	}
 }
@@ -222,65 +220,65 @@ type serverStream struct {
 }
 
 // stream.StreamSender
-func (s *serverStream) AppendHeaders(context context.Context, headerIn protocol.HeaderMap, endStream bool) error {
-	if s.res == nil {
-		s.res = v1.AcquireResponse()
+func (ss *serverStream) AppendHeaders(context context.Context, headerIn protocol.HeaderMap, endStream bool) error {
+	if ss.res == nil {
+		ss.res = v1.AcquireResponse()
 	}
 	if status, ok := headerIn.Get(types.HeaderStatus); ok {
 		headerIn.Del(types.HeaderStatus)
 
 		statusCode, _ := strconv.Atoi(status)
-		s.res.SetStatusCode(statusCode)
+		ss.res.SetStatusCode(statusCode)
 	}
 	if endStream {
-		s.endStream()
+		ss.endStream()
 	}
 	return nil
 }
 
-func (s *serverStream) AppendData(context context.Context, data buffer.IoBuffer, endStream bool) error {
+func (ss *serverStream) AppendData(context context.Context, data buffer.IoBuffer, endStream bool) error {
 
 	return nil
 }
 
-func (s *serverStream) AppendTrailers(context context.Context, trailers protocol.HeaderMap) error {
-	s.endStream()
+func (ss *serverStream) AppendTrailers(context context.Context, trailers protocol.HeaderMap) error {
+	ss.endStream()
 	return nil
 }
 
-func (s *serverStream) GetStream() stream.Stream {
-	return s
+func (ss *serverStream) GetStream() stream.Stream {
+	return ss
 }
 
-func (s *serverStream) ReadDisable(disable bool) {
+func (ss *serverStream) ReadDisable(disable bool) {
 	if disable {
-		atomic.AddInt32(&s.readDisableCount, 1)
+		atomic.AddInt32(&ss.readDisableCount, 1)
 	} else {
-		newCount := atomic.AddInt32(&s.readDisableCount, -1)
+		newCount := atomic.AddInt32(&ss.readDisableCount, -1)
 
 		if newCount <= 0 {
-			s.handleRequest()
+			ss.handleRequest()
 		}
 	}
 }
 
-func (s *serverStream) handleRequest() {
-	if s.req == nil {
+func (ss *serverStream) handleRequest() {
+	if ss.req == nil {
 		return
 	}
-	header := decodeReqHeader(s.req.Header)
-	header[protocol.StrikeHeaderHostKey] = string(s.req.Header.Host())
-	header[protocol.IstioHeaderHostKey] = string(s.req.Header.Host())
-	header[protocol.StrikeHeaderMethod] = string(s.req.Header.Method())
-	header[protocol.StrikeHeaderPathKey] = string(s.req.RequestURI())
+	header := decodeReqHeader(ss.req.Header)
+	header[protocol.StrikeHeaderHostKey] = string(ss.req.Header.Host())
+	header[protocol.IstioHeaderHostKey] = string(ss.req.Header.Host())
+	header[protocol.StrikeHeaderMethod] = string(ss.req.Header.Method())
+	header[protocol.StrikeHeaderPathKey] = string(ss.req.RequestURI())
 
-	noBody := s.req.Header.NoBody()
+	noBody := ss.req.Header.NoBody()
 
-	s.receiver.OnReceiveHeaders(s.context, protocol.CommonHeader(header), noBody)
+	ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), noBody)
 
 	if !noBody {
-		buf := buffer.NewIoBufferBytes(s.req.Body())
-		s.receiver.OnReceiveData(s.context, buf, true)
+		buf := buffer.NewIoBufferBytes(ss.req.Body())
+		ss.receiver.OnReceiveData(ss.context, buf, true)
 	}
 }
 
@@ -294,20 +292,20 @@ func decodeReqHeader(in v1.RequestHeader) (out map[string]string) {
 	return
 }
 
-func (s *serverStream) endStream() {
-	s.doSend()
-	close(s.responseDoneChan)
+func (ss *serverStream) endStream() {
+	ss.doSend()
+	close(ss.responseDoneChan)
 
-	if s.req != nil {
-		v1.ReleaseRequest(s.req)
+	if ss.req != nil {
+		v1.ReleaseRequest(ss.req)
 	}
-	if s.res != nil {
-		v1.ReleaseResponse(s.res)
+	if ss.res != nil {
+		v1.ReleaseResponse(ss.res)
 	}
 }
 
-func (s *serverStream) doSend() {
-	s.res.WriteTo(s.connection)
+func (ss *serverStream) doSend() {
+	ss.res.WriteTo(ss.connection)
 }
 
 // stream.ClientStreamConnection

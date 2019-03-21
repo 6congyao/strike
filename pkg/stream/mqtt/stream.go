@@ -127,3 +127,53 @@ func (sc *streamConnection) handleMessage(msg message.Message) {
 	//todo: doing business with processor
 	sc.processor.Process(sc.context, msg)
 }
+
+type streamBase struct {
+	id      uint64
+	msg     message.Message
+	context context.Context
+
+	receiver  stream.StreamReceiver
+	streamCbs []stream.StreamEventListener
+}
+
+func (sb *streamBase) ID() uint64 {
+	return sb.id
+}
+
+func (sb *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
+	sb.streamCbs = append(sb.streamCbs, streamCb)
+}
+
+func (sb *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
+	cbIdx := -1
+
+	for i, streamCb := range sb.streamCbs {
+		if streamCb == streamCb {
+			cbIdx = i
+			break
+		}
+	}
+
+	if cbIdx > -1 {
+		sb.streamCbs = append(sb.streamCbs[:cbIdx], sb.streamCbs[cbIdx+1:]...)
+	}
+}
+
+func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
+	for _, cb := range sb.streamCbs {
+		cb.OnResetStream(reason)
+	}
+}
+
+// stream.StreamSender
+// stream.Stream
+type serverStream struct {
+	streamBase
+
+	connection       *streamConnection
+}
+
+func (ss *serverStream) ReadDisable(disable bool) {
+
+}

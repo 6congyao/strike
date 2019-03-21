@@ -276,7 +276,7 @@ type activeListener struct {
 	listenIP                string
 	listenPort              int
 	sMap                    sync.Map
-	connsMux                sync.RWMutex
+	//connsMux                sync.RWMutex
 	handler                 *connHandler
 	stopChan                chan struct{}
 	updatedLabel            bool
@@ -349,6 +349,7 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 		return
 	}
 
+	al.sMap.Store(conn.ID(), conn)
 	atomic.AddInt64(&al.handler.numConnections, 1)
 
 	conn.Start(ctx)
@@ -375,7 +376,6 @@ func (al *activeListener) newConnection(ctx context.Context, rawc interface{}) {
 	}
 	newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, session.ID())
 	newCtx = context.WithValue(newCtx, types.ContextKeyConnectionRef, session)
-	al.sMap.Store(session.ID(), session)
 
 	// notify
 	al.OnNewConnection(newCtx, session)

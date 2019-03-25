@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -417,7 +418,7 @@ func (s *Session) startWriteLoop() {
 				s.Close(NoFlush, OnWriteErrClose)
 			}
 
-			log.Println("Error on write:", s.id, err)
+			fmt.Println("Error on write:", s.id, err)
 
 			return
 		}

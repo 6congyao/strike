@@ -47,6 +47,7 @@ const (
 	StrikeHeaderMethod          = "x-strike-method"
 	StrikeOriginalHeaderPathKey = "x-strike-original-path"
 	StrikeResponseStatusCode    = "x-strike-response-code"
+	StrikeHeaderCredential      = "x-strike-credential"
 	IstioHeaderHostKey          = "authority"
 )
 
@@ -114,6 +115,9 @@ type HeaderMap interface {
 	// Range calls f sequentially for each key and value present in the map.
 	// If f returns false, range stops the iteration.
 	Range(f func(key, value string) bool)
+
+	// Clone used to deep copy header's map
+	Clone() HeaderMap
 
 	// ByteSize return size of HeaderMap
 	ByteSize() uint64

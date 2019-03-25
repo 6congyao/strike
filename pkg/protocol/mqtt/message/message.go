@@ -35,6 +35,11 @@ const (
 	MsgTypeDisconnect
 	MsgTypeInvalid
 
+	ErrorInvalidRemainingLength = "Invalid remaining length "
+	ErrorInvalidMessage         = "Invalid message "
+)
+
+const (
 	RetCodeAccepted = ReturnCode(iota)
 	RetCodeUnacceptableProtocolVersion
 	RetCodeIdentifierRejected
@@ -42,9 +47,6 @@ const (
 	RetCodeBadUsernameOrPassword
 	RetCodeNotAuthorized
 	RetCodeInvalid
-
-	ErrorInvalidRemainingLength = "Invalid remaining length "
-	ErrorInvalidMessage         = "Invalid message "
 )
 
 func (mt Type) IsValid() bool {

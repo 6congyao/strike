@@ -24,6 +24,7 @@ import (
 	"strike/pkg/filter/stream/common/model"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	"sync"
 )
 
 func init() {
@@ -59,10 +60,12 @@ func parseCommonRuleConfig(config map[string]interface{}) *model.CommonRuleConfi
 	return commonRuleConfig
 }
 
-var factoryInstance *RuleEngineFactory
+//var factoryInstance *RuleEngineFactory
+var factoryInstanceMap sync.Map
 
 func NewFacatoryInstance(config *model.CommonRuleConfig) {
-	factoryInstance = NewRuleEngineFactory(config)
+	factoryInstanceMap.Store(config, NewRuleEngineFactory(config))
+	//factoryInstance = NewRuleEngineFactory(config)
 	//log.Println("newFacatoryInstance:", factoryInstance)
 }
 

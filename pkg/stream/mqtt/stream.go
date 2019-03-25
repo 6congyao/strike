@@ -17,6 +17,7 @@ package mqtt
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
@@ -24,6 +25,7 @@ import (
 	"strike/pkg/protocol/mqtt"
 	"strike/pkg/protocol/mqtt/message"
 	"strike/pkg/stream"
+	"strike/pkg/types"
 )
 
 func init() {
@@ -95,7 +97,17 @@ func (sc *streamConnection) OnDecodeTrailer(streamID uint64, trailers protocol.H
 
 func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) network.FilterStatus {
 	if msg, ok := result.(message.Message); ok {
-		sc.handleMessage(msg)
+		srvStream := &serverStream{
+			streamBase: streamBase{
+				id:      streamID,
+				msg:     msg,
+				context: context.WithValue(sc.context, types.ContextKeyStreamID, streamID),
+			},
+			connection: sc,
+		}
+
+		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, streamID, srvStream)
+		srvStream.handleMessage()
 	}
 
 	return network.Continue
@@ -121,11 +133,6 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	if event.IsClose() || event.ConnectFailure() {
 		// clear
 	}
-}
-
-func (sc *streamConnection) handleMessage(msg message.Message) {
-	//todo: doing business with processor
-	sc.processor.Process(sc.context, msg)
 }
 
 type streamBase struct {
@@ -170,10 +177,83 @@ func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
 // stream.Stream
 type serverStream struct {
 	streamBase
+	processor  *mqtt.Processor
+	connection *streamConnection
+}
 
-	connection       *streamConnection
+func (ss *serverStream) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
+	if endStream {
+		ss.endStream()
+	}
+	return nil
+}
+
+func (ss *serverStream) AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error {
+	panic("implement me")
+}
+
+func (ss *serverStream) AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) error {
+	ss.endStream()
+	return nil
+}
+
+func (ss *serverStream) GetStream() stream.Stream {
+	return ss
 }
 
 func (ss *serverStream) ReadDisable(disable bool) {
+	panic("unsupported")
+}
 
+func (ss *serverStream) handleMessage() {
+	if ss.msg == nil {
+		return
+	}
+
+	//todo: + msg.Header() & msg.Payload()
+	//@liuzhen
+	header := make(map[string]string, 2)
+	var payload buffer.IoBuffer
+
+	switch msg := ss.msg.(type) {
+	case *message.Connect:
+		fmt.Println("got connect msg")
+		header[protocol.StrikeHeaderMethod] = StrMsgTypeConnect
+		header[protocol.StrikeHeaderCredential] = msg.Password
+		payload = nil
+		break
+	case *message.Publish:
+		header[protocol.StrikeHeaderMethod] = StrMsgTypePublish
+		break
+	case *message.Subscribe:
+		header[protocol.StrikeHeaderMethod] = StrMsgTypeSubscribe
+		break
+	case *message.PingReq:
+		fmt.Println("got ping msg")
+		break
+	default:
+		fmt.Println("got others")
+		break
+	}
+
+	ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), payload == nil)
+
+	if payload != nil {
+		ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), true)
+	}
+}
+
+func (ss *serverStream) endStream() {
+	ss.doSend()
+}
+
+func (ss *serverStream) doSend() {
+	ack := message.NewConnAck()
+	ack.ReturnCode = message.RetCodeAccepted
+	buf, err := ack.Encode()
+	iobuf := buffer.NewIoBuffer(0)
+	iobuf.Write(buf)
+	if err == nil {
+		ss.connection.connection.Write(iobuf)
+	}
 }

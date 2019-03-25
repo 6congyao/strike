@@ -38,7 +38,10 @@ func NewCommonRuleFilter(context context.Context, config *model.CommonRuleConfig
 		context:          context,
 		commonRuleConfig: config,
 	}
-	f.RuleEngineFactory = factoryInstance
+	if v, exist := factoryInstanceMap.Load(config); exist {
+		f.RuleEngineFactory = v.(*RuleEngineFactory)
+	}
+
 	return f
 }
 

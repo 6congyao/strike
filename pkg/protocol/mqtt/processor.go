@@ -12,7 +12,10 @@ import (
 	//"time"
 	"context"
 	"fmt"
+	"strike/pkg/buffer"
+	"strike/pkg/network"
 	"strike/pkg/protocol/mqtt/message"
+	"strike/pkg/types"
 )
 
 const (
@@ -41,17 +44,17 @@ func NewProcessor() *Processor {
 	//
 	//p := &Processor{producer: producer, retryHandler: retryHandler}
 	//return p
-	return nil
+	return &Processor{}
 }
 
 func (this *Processor) Process(context context.Context, m message.Message) {
 	if m == nil {
 		return
 	}
-	fmt.Println("got msg:", m)
 	// got network.connection from context
-	//conn, _ := context.Value(types.ContextKeyConnectionRef).(network.Connection)
+	conn, _ := context.Value(types.ContextKeyConnectionRef).(network.Connection)
 
+	var resp message.Message
 	switch msg := m.(type) {
 	case *message.Connect:
 		// Check fields base on protocol
@@ -61,14 +64,17 @@ func (this *Processor) Process(context context.Context, m message.Message) {
 		// Authentication
 
 		// Retrieve conn or create
-		conn := this.connManager.GetConnection(msg.ClientId)
-		if conn == nil {
-			conn = &Connection{}
-			this.connManager.PutConnection(msg.ClientId, conn)
-		}
+		//conn := this.connManager.GetConnection(msg.ClientId)
+		//if conn == nil {
+		//	conn = &Connection{}
+		//	this.connManager.PutConnection(msg.ClientId, conn)
+		//}
 
+		fmt.Println("got msg:", msg)
 		// Send ack to client
-
+		ack := message.NewConnAck()
+		ack.ReturnCode = message.RetCodeAccepted
+		resp = ack
 		break
 	case *message.ConnAck:
 		break
@@ -154,18 +160,29 @@ func (this *Processor) Process(context context.Context, m message.Message) {
 	//	break
 	//case *message.UnsubAck:
 	//	break
-	//case *message.PingReq:
-	//	// Send pong to client, close conn if did not receive ping 3 times
-	//	//pingResp:=message.NewPingResp()
-	//	break
-	//case *message.PingResp:
-	//	break
+	case *message.PingReq:
+		// Send pong to client, close conn if did not receive ping 3 times
+		resp = message.NewPingResp()
+		break
+	case *message.PingResp:
+		break
 	//case *message.Disconnect:
 	//	// Close conn and clean resources
 	//
 	//	break
 	default:
 		break
+	}
+
+	if resp != nil {
+		buf, err := resp.Encode()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		iobuf := buffer.GetIoBuffer(0)
+		iobuf.Write(buf)
+		conn.Write(iobuf)
 	}
 }
 

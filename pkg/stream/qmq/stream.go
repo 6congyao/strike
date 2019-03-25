@@ -22,6 +22,7 @@ import (
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
+	"strike/pkg/protocol/mqtt"
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strings"
@@ -52,23 +53,27 @@ func (f *streamConnFactory) CreateBiDirectStreamConnection(context context.Conte
 
 func newStreamConnection(context context.Context, connection network.Connection, clientCallbacks stream.StreamConnectionEventListener,
 	serverCallbacks stream.ServerStreamConnectionEventListener) stream.ClientStreamConnection {
-	sc := &streamConnection{
-		context:    context,
-		connection: connection,
-		protocol:   protocol.MQ,
+	csc := &clientStreamConnection{
+		streamConnection: streamConnection{
+			context:    context,
+			connection: connection,
+			protocol:   protocol.MQ,
 
-		cscCallbacks: clientCallbacks,
-		sscCallbacks: serverCallbacks,
+			cscCallbacks: clientCallbacks,
+			sscCallbacks: serverCallbacks,
+		},
 	}
 	if connection != nil {
-		connection.AddConnectionEventListener(sc)
+		connection.AddConnectionEventListener(csc)
 	}
 
-	return sc
+	return csc
 }
 
-// stream.ClientStreamConnection
+// stream.ServerStreamConnection
 // stream.StreamConnection
+// network.ConnectionEventListener
+// proxy.DownstreamCallbacks
 type streamConnection struct {
 	context       context.Context
 	protocol      protocol.Protocol
@@ -80,25 +85,15 @@ type streamConnection struct {
 	sscCallbacks stream.ServerStreamConnectionEventListener
 }
 
-func (streamConnection) Dispatch(buf buffer.IoBuffer) {
+func (sc *streamConnection) Dispatch(buf buffer.IoBuffer) {
 	panic("implement me")
 }
 
-func (streamConnection) GoAway() {
+func (sc *streamConnection) GoAway() {
 	panic("implement me")
 }
 
-func (streamConnection) NewStream(ctx context.Context, receiver stream.StreamReceiver) stream.StreamSender {
-	s := &streamBase{
-		id:        protocol.GenerateID(),
-		processor: nil,
-		context:   ctx,
-		receiver:  receiver,
-	}
-	return s
-}
-
-func (streamConnection) Protocol() protocol.Protocol {
+func (sc *streamConnection) Protocol() protocol.Protocol {
 	return protocol.MQ
 }
 
@@ -106,6 +101,24 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	if event.IsClose() || event.ConnectFailure() {
 		// clear
 	}
+}
+
+// stream.ClientStreamConnection
+type clientStreamConnection struct {
+	streamConnection
+}
+
+func (csc *clientStreamConnection) NewStream(ctx context.Context, receiver stream.StreamReceiver) stream.StreamSender {
+	cs := &clientStream{
+		streamBase: streamBase{
+			id: protocol.GenerateID(),
+
+			context:  ctx,
+			receiver: receiver,
+		},
+		processor: mqtt.NewProcessor(),
+	}
+	return cs
 }
 
 // stream.Stream
@@ -122,18 +135,18 @@ type streamBase struct {
 	streamCbs []stream.StreamEventListener
 }
 
-func (s *streamBase) ID() uint64 {
-	return s.id
+func (sb *streamBase) ID() uint64 {
+	return sb.id
 }
 
-func (s *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
-	s.streamCbs = append(s.streamCbs, streamCb)
+func (sb *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
+	sb.streamCbs = append(sb.streamCbs, streamCb)
 }
 
-func (s *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
+func (sb *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
 	cbIdx := -1
 
-	for i, streamCb := range s.streamCbs {
+	for i, streamCb := range sb.streamCbs {
 		if streamCb == streamCb {
 			cbIdx = i
 			break
@@ -141,61 +154,77 @@ func (s *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
 	}
 
 	if cbIdx > -1 {
-		s.streamCbs = append(s.streamCbs[:cbIdx], s.streamCbs[cbIdx+1:]...)
+		sb.streamCbs = append(sb.streamCbs[:cbIdx], sb.streamCbs[cbIdx+1:]...)
 	}
 }
 
-func (s *streamBase) ResetStream(reason stream.StreamResetReason) {
-	for _, cb := range s.streamCbs {
+func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
+	for _, cb := range sb.streamCbs {
 		cb.OnResetStream(reason)
 	}
 }
 
-func (s *streamBase) ReadDisable(disable bool) {
+func (sb *streamBase) ReadDisable(disable bool) {
 	panic("unsupported")
 }
 
-func (s *streamBase) AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error {
-	s.msg = data.Bytes()
+// stream.Stream
+// stream.StreamSender
+type clientStream struct {
+	streamBase
+	processor *mqtt.Processor
+
+	topic string
+	msg   []byte
+}
+
+func (cs *clientStream) AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error {
+	cs.msg = data.Bytes()
 
 	if endStream {
-		s.endStream()
+		cs.endStream()
 	}
 	return nil
 }
 
-func (s *streamBase) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
-	path, _ := headers.Get(protocol.StrikeHeaderPathKey)
-	s.topic = strings.TrimLeft(path, "/")
+func (cs *clientStream) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
+	if path, ok := headers.Get(protocol.StrikeHeaderPathKey); ok {
+		cs.topic = strings.TrimLeft(path, "/")
+	}
+
+	if endStream {
+		cs.endStream()
+	}
+
 	return nil
 }
 
-func (s *streamBase) AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) error {
+func (cs *clientStream) AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) error {
 	panic("implement me")
 }
 
-func (s *streamBase) GetStream() stream.Stream {
-	return s
+func (cs *clientStream) GetStream() stream.Stream {
+	return cs
 }
 
-func (s *streamBase) endStream() {
-	if s.msg != nil {
+func (cs *clientStream) endStream() {
+	//if cs.msg != nil {
 		// todo: mq send and give response
-		fmt.Println("mq send msg on topic:", s.topic)
-		s.handleSuccess()
-	}
+		fmt.Println("mq send msg on topic:", cs.topic)
+		cs.handleSuccess()
+	//}
 }
 
-func (s *streamBase) handleSuccess() {
+func (cs *clientStream) handleSuccess() {
 	raw := make(map[string]string, 5)
 	headers := protocol.CommonHeader(raw)
 	headers.Set(types.HeaderStatus, strconv.Itoa(types.SuccessCode))
-	s.receiver.OnReceiveHeaders(s.context, headers, true)
+	cs.receiver.OnReceiveHeaders(cs.context, headers, true)
 }
 
-func (s *streamBase) handleFailure() {
+func (cs *clientStream) handleFailure() {
 	raw := make(map[string]string, 5)
 	headers := protocol.CommonHeader(raw)
 	headers.Set(types.HeaderStatus, strconv.Itoa(types.RouterUnavailableCode))
-	s.receiver.OnReceiveHeaders(s.context, headers, true)
+	cs.receiver.OnReceiveHeaders(cs.context, headers, true)
 }

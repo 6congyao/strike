@@ -46,7 +46,7 @@
                   {
                     "enable": true,
                     "id": 1,
-                    "index": 3,
+                    "index": 1,
                     "limit": {
                       "limit_strategy": "QPS",
                       "max_burst_ratio": 1.0,
@@ -84,7 +84,7 @@
                 "type": "proxy",
                 "config": {
                   "downstream_protocol": "Mqtt",
-                  "upstream_protocol": "Http1",
+                  "upstream_protocol": "MQ",
                   "router_config_name":"client_router"
                 }
               },
@@ -104,7 +104,40 @@
                   }]
                 }
               }]
-          }]
+          }],
+          "stream_filters": [
+            {
+              "type": "common",
+              "config": {
+                "rule_configs": [
+                  {
+                    "enable": true,
+                    "id": 2,
+                    "index": 2,
+                    "limit": {
+                      "limit_strategy": "QPS",
+                      "max_burst_ratio": 1.0,
+                      "period_ms": 100,
+                      "max_allows": 0
+                    },
+                    "name": "IoTAuth",
+                    "resources": [
+                      {
+                        "headers": [
+                          {
+                            "compare_type": "EQUALS",
+                            "key": "x-strike-method",
+                            "value": "Connect"
+                          }
+                        ]
+                      }
+                    ],
+                    "run_mode": "CONTROL"
+                  }
+                ]
+              }
+            }
+          ]
         },
         {
           "name":"mqttsListener",
@@ -124,7 +157,7 @@
                 "type": "proxy",
                 "config": {
                   "downstream_protocol": "Mqtt",
-                  "upstream_protocol": "Http1",
+                  "upstream_protocol": "MQ",
                   "router_config_name":"client_router"
                 }
               },

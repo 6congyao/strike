@@ -22,7 +22,6 @@ import (
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
-	"strike/pkg/protocol/mqtt"
 	"strike/pkg/protocol/mqtt/message"
 	"strike/pkg/stream"
 	"strike/pkg/types"
@@ -58,7 +57,6 @@ func newStreamConnection(context context.Context, connection network.Connection,
 		connection:   connection,
 		protocol:     protocol.MQTT,
 		codec:        message.NewCodec(),
-		processor:    mqtt.NewProcessor(),
 		cscCallbacks: clientCallbacks,
 		sscCallbacks: serverCallbacks,
 	}
@@ -74,7 +72,6 @@ type streamConnection struct {
 	context       context.Context
 	protocol      protocol.Protocol
 	codec         protocol.Codec
-	processor     *mqtt.Processor
 	connection    network.Connection
 	connCallbacks network.ConnectionEventListener
 	// Client Stream Conn Callbacks
@@ -178,7 +175,6 @@ func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
 // stream.Stream
 type serverStream struct {
 	streamBase
-	processor  *mqtt.Processor
 	connection *streamConnection
 }
 
@@ -217,7 +213,6 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 	default:
 		break
 	}
-
 
 	if endStream {
 		ss.endStream()

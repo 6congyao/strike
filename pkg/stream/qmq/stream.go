@@ -124,9 +124,9 @@ func (csc *clientStreamConnection) NewStream(ctx context.Context, receiver strea
 // stream.Stream
 // stream.StreamSender
 type streamBase struct {
-	id        uint64
-	processor interface{}
-	context   context.Context
+	id      uint64
+	context context.Context
+	header  protocol.HeaderMap
 
 	topic string
 	msg   []byte
@@ -173,9 +173,6 @@ func (sb *streamBase) ReadDisable(disable bool) {
 type clientStream struct {
 	streamBase
 	processor *mqtt.Processor
-
-	topic string
-	msg   []byte
 }
 
 func (cs *clientStream) AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error {
@@ -188,6 +185,7 @@ func (cs *clientStream) AppendData(ctx context.Context, data buffer.IoBuffer, en
 }
 
 func (cs *clientStream) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
+	cs.header = headers
 	if path, ok := headers.Get(protocol.StrikeHeaderPathKey); ok {
 		cs.topic = strings.TrimLeft(path, "/")
 	}
@@ -209,9 +207,9 @@ func (cs *clientStream) GetStream() stream.Stream {
 
 func (cs *clientStream) endStream() {
 	//if cs.msg != nil {
-		// todo: mq send and give response
-		fmt.Println("mq send msg on topic:", cs.topic)
-		cs.handleSuccess()
+	// todo: mq send and give response
+	fmt.Println("mq send msg on topic:", cs.topic)
+	cs.handleSuccess()
 	//}
 }
 
@@ -219,6 +217,9 @@ func (cs *clientStream) handleSuccess() {
 	raw := make(map[string]string, 5)
 	headers := protocol.CommonHeader(raw)
 	headers.Set(types.HeaderStatus, strconv.Itoa(types.SuccessCode))
+	if method, ok := cs.header.Get(types.HeaderMethod); ok {
+		headers.Set(types.HeaderMethod, method)
+	}
 	cs.receiver.OnReceiveHeaders(cs.context, headers, true)
 }
 
@@ -226,5 +227,8 @@ func (cs *clientStream) handleFailure() {
 	raw := make(map[string]string, 5)
 	headers := protocol.CommonHeader(raw)
 	headers.Set(types.HeaderStatus, strconv.Itoa(types.RouterUnavailableCode))
+	if method, ok := cs.header.Get(types.HeaderMethod); ok {
+		headers.Set(types.HeaderMethod, method)
+	}
 	cs.receiver.OnReceiveHeaders(cs.context, headers, true)
 }

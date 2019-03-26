@@ -16,7 +16,9 @@
 package mqtt
 
 const (
-	StrMsgTypeConnect   = "Connect"
-	StrMsgTypePublish   = "Publish"
-	StrMsgTypeSubscribe = "Subscribe"
+	StrMsgTypeConnect    = "Connect"
+	StrMsgTypeConnectAck = "ConnAck"
+	StrMsgTypePublish    = "Publish"
+	StrMsgTypeSubscribe  = "Subscribe"
+	StrMsgTypePing = "Ping"
 )

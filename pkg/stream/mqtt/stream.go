@@ -100,7 +100,7 @@ func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) ne
 		srvStream := &serverStream{
 			streamBase: streamBase{
 				id:      streamID,
-				msg:     msg,
+				req:     msg,
 				context: context.WithValue(sc.context, types.ContextKeyStreamID, streamID),
 			},
 			connection: sc,
@@ -137,7 +137,8 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 
 type streamBase struct {
 	id      uint64
-	msg     message.Message
+	req     message.Message
+	res     message.Message
 	context context.Context
 
 	receiver  stream.StreamReceiver
@@ -181,7 +182,43 @@ type serverStream struct {
 	connection *streamConnection
 }
 
-func (ss *serverStream) AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) error {
+func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.HeaderMap, endStream bool) error {
+	var msgType string
+	var status string
+	var ok bool
+
+	if status, ok = headerIn.Get(types.HeaderStatus); ok {
+		headerIn.Del(types.HeaderStatus)
+	}
+
+	if msgType, ok = headerIn.Get(types.HeaderMethod); ok {
+		headerIn.Del(types.HeaderMethod)
+	} else {
+		status = ""
+	}
+
+	// todo: handle other responses here
+	// @liuzhen
+	switch msgType {
+	case StrMsgTypeConnect:
+		ack := message.NewConnAck()
+		// todo:
+		if status == "200" {
+			ack.ReturnCode = message.RetCodeAccepted
+		} else {
+			ack.ReturnCode = message.RetCodeNotAuthorized
+		}
+		ss.res = ack
+
+		break
+	case StrMsgTypePing:
+		ack := message.NewPingResp()
+		ss.res = ack
+	default:
+		break
+	}
+
+
 	if endStream {
 		ss.endStream()
 	}
@@ -206,16 +243,16 @@ func (ss *serverStream) ReadDisable(disable bool) {
 }
 
 func (ss *serverStream) handleMessage() {
-	if ss.msg == nil {
+	if ss.req == nil {
 		return
 	}
 
-	//todo: + msg.Header() & msg.Payload()
-	//@liuzhen
+	// todo: + msg.Header() & msg.Payload()
+	// @liuzhen
 	header := make(map[string]string, 2)
 	var payload buffer.IoBuffer
 
-	switch msg := ss.msg.(type) {
+	switch msg := ss.req.(type) {
 	case *message.Connect:
 		fmt.Println("got connect msg")
 		header[protocol.StrikeHeaderMethod] = StrMsgTypeConnect
@@ -229,6 +266,7 @@ func (ss *serverStream) handleMessage() {
 		header[protocol.StrikeHeaderMethod] = StrMsgTypeSubscribe
 		break
 	case *message.PingReq:
+		header[protocol.StrikeHeaderMethod] = StrMsgTypePing
 		fmt.Println("got ping msg")
 		break
 	default:
@@ -248,12 +286,12 @@ func (ss *serverStream) endStream() {
 }
 
 func (ss *serverStream) doSend() {
-	ack := message.NewConnAck()
-	ack.ReturnCode = message.RetCodeAccepted
-	buf, err := ack.Encode()
+	// todo: remove after mqtt codec updated
+	// @liuzhen
+	buf, _ := ss.res.Encode()
 	iobuf := buffer.NewIoBuffer(0)
 	iobuf.Write(buf)
-	if err == nil {
-		ss.connection.connection.Write(iobuf)
-	}
+
+	ss.connection.connection.Write(iobuf)
+
 }

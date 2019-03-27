@@ -15,8 +15,8 @@ type Message interface {
 	DecodeVariableHeader(buf buffer.IoBuffer) bool
 	DecodePayload(buf buffer.IoBuffer) bool
 	Encode() (buffer.IoBuffer, error)
-	GetHeader() (header map[string]string)
-	GetPayload() (buf buffer.IoBuffer)
+	GetHeader() (map[string]string)
+	GetPayload() (buffer.IoBuffer)
 	//Equal(message Message) bool
 }
 

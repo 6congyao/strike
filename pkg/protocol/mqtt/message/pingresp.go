@@ -2,7 +2,10 @@
 //Email: zhbinary@gmail.com
 package message
 
-import "strike/pkg/buffer"
+import (
+	"strike/pkg/buffer"
+	"strike/pkg/protocol"
+)
 
 type PingResp struct {
 	Header
@@ -24,7 +27,16 @@ func (this *PingResp) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
-func (this *PingResp) Encode() ([]byte, error) {
+func (this *PingResp) Encode() (buffer.IoBuffer, error) {
 	buf := this.Header.encode()
-	return buf.Bytes(), nil
+	return buf, nil
+}
+func (this *PingResp) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 1)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypePingResp
+	return header
+}
+
+func (this *PingResp) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

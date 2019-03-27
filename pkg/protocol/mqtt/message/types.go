@@ -13,12 +13,21 @@
  * limitations under the License.
  */
 
-package mqtt
+package message
 
 const (
-	StrMsgTypeConnect    = "Connect"
-	StrMsgTypeConnectAck = "ConnAck"
-	StrMsgTypePublish    = "Publish"
-	StrMsgTypeSubscribe  = "Subscribe"
-	StrMsgTypePing = "Ping"
+	StrMsgTypeConnect     = "Connect"
+	StrMsgTypeConnectAck  = "ConnAck"
+	StrMsgTypePublish     = "Publish"
+	StrMsgTypeSubscribe   = "Subscribe"
+	StrMsgTypePing        = "Ping"
+	StrMsgTypeDisconnect  = "Disconnect"
+	StrMsgTypePingResp    = "PingResp"
+	StrMsgTypePubAck      = "PubAck"
+	StrMsgTypePubRec      = "PubRec"
+	StrMsgTypePubRel      = "PubRel"
+	StrMsgTypePubComp     = "PubComp"
+	StrMsgTypeSubAck      = "SubAck"
+	StrMsgTypeUnsubscribe = "Unsubscribe"
+	StrMsgTypeUnsubAck    = "UnsubAck"
 )

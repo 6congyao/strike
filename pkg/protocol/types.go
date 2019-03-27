@@ -49,6 +49,16 @@ const (
 	StrikeResponseStatusCode    = "x-strike-response-code"
 	StrikeHeaderCredential      = "x-strike-credential"
 	IstioHeaderHostKey          = "authority"
+	StrikeHeaderPacketID        = "x-strike-packet-id"
+	StrikeHeaderTopicName       = "x-strike-topic-name"
+	StrikeHeaderTopicFilter     = "x-strike-topic-filter"
+	StrikeHeaderMessageDup      = "x-strike-message-dup"
+	StrikeHeaderMessageQos      = "x-strike-message-qos"
+	StrikeHeaderMessageRetain   = "x-strike-message-retain"
+	StrikeHeaderClientID        = "x-strike-client-id"
+	StrikeHeaderWillTopic       = "x-strike-will-topic"
+	StrikeHeaderWillMessage     = "x-strike-will-message"
+	StrikeHeaderUsername        = "x-strike-username"
 )
 
 // CommonHeader wrapper for map[string]string

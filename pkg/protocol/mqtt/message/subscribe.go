@@ -3,8 +3,11 @@
 package message
 
 import (
+	"encoding/json"
 	"errors"
+	"strconv"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type Subscribe struct {
@@ -53,7 +56,7 @@ func (this *Subscribe) DecodePayload(buf buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *Subscribe) Encode() ([]byte, error) {
+func (this *Subscribe) Encode() (buffer.IoBuffer, error) {
 	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
@@ -70,5 +73,18 @@ func (this *Subscribe) Encode() ([]byte, error) {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+func (this *Subscribe) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 3)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypeSubscribe
+	header[protocol.StrikeHeaderPacketID] = strconv.Itoa(int(this.PacketIdentifier))
+	if b, err := json.Marshal(this.TopicFilters); err == nil {
+		header[protocol.StrikeHeaderTopicFilter] = string(b)
+	}
+	return header
+}
+
+func (this *Subscribe) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

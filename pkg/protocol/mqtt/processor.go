@@ -12,7 +12,6 @@ import (
 	//"time"
 	"context"
 	"fmt"
-	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol/mqtt/message"
 	"strike/pkg/types"
@@ -180,9 +179,7 @@ func (this *Processor) Process(context context.Context, m message.Message) {
 			fmt.Println(err)
 			return
 		}
-		iobuf := buffer.GetIoBuffer(0)
-		iobuf.Write(buf)
-		conn.Write(iobuf)
+		conn.Write(buf)
 	}
 }
 

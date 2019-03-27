@@ -2,7 +2,10 @@
 //Email: zhbinary@gmail.com
 package message
 
-import "strike/pkg/buffer"
+import (
+	"strike/pkg/buffer"
+	"strike/pkg/protocol"
+)
 
 type Disconnect struct {
 	Header
@@ -24,7 +27,16 @@ func (this *Disconnect) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
-func (this *Disconnect) Encode() ([]byte, error) {
+func (this *Disconnect) Encode() (buffer.IoBuffer, error) {
 	buf := this.Header.encode()
-	return buf.Bytes(), nil
+	return buf, nil
+}
+func (this *Disconnect) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 1)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypeDisconnect
+	return header
+}
+
+func (this *Disconnect) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

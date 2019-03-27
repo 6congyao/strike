@@ -14,7 +14,9 @@ type Message interface {
 	DecodeFixedHeader(buf buffer.IoBuffer) bool
 	DecodeVariableHeader(buf buffer.IoBuffer) bool
 	DecodePayload(buf buffer.IoBuffer) bool
-	Encode() ([]byte, error)
+	Encode() (buffer.IoBuffer, error)
+	GetHeader() (header map[string]string)
+	GetPayload() (buf buffer.IoBuffer)
 	//Equal(message Message) bool
 }
 
@@ -48,6 +50,34 @@ const (
 	RetCodeNotAuthorized
 	RetCodeInvalid
 )
+
+func (this Type) string() (str string) {
+	name := func(t Type, name string) {
+		if this&t == 0 {
+			return
+		}
+		str += "|"
+		str += name
+		return
+	}
+
+	name(MsgTypeConnect, "Connect")
+	name(MsgTypeConnAck, "ConnectAck")
+	name(MsgTypePublish, "Publish")
+	name(MsgTypePubAck, "PubAck")
+	name(MsgTypePubRec, "PubRec")
+	name(MsgTypePubRel, "PubRel")
+	name(MsgTypePubComp, "PubComp")
+	name(MsgTypeSubscribe, "Subscribe")
+	name(MsgTypeSubAck, "SubAck")
+	name(MsgTypeUnsubscribe, "Unsubscribe")
+	name(MsgTypeUnsubAck, "UnsubAck")
+	name(MsgTypePingReq, "PingReq")
+	name(MsgTypePingResp, "PingResp")
+	name(MsgTypeDisconnect, "Disconnect")
+
+	return
+}
 
 func (mt Type) IsValid() bool {
 	return mt >= MsgTypeConnect && mt < MsgTypeInvalid

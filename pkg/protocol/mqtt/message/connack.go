@@ -5,6 +5,7 @@ package message
 import (
 	"errors"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type ConnAck struct {
@@ -40,7 +41,7 @@ func (this *ConnAck) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
-func (this *ConnAck) Encode() ([]byte, error) {
+func (this *ConnAck) Encode() (buffer.IoBuffer, error) {
 	buf := buffer.NewIoBuffer(0)
 	err := buf.WriteByte(boolToByte(this.SessionPresentFlag))
 	if err != nil {
@@ -62,5 +63,14 @@ func (this *ConnAck) Encode() ([]byte, error) {
 		return nil, err
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+func (this *ConnAck) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 1)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypeConnectAck
+	return header
+}
+
+func (this *ConnAck) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

@@ -29,6 +29,7 @@ const (
 	HeaderStremEnd      = "x-strike-endstream"
 	HeaderRPCService    = "x-strike-rpc-service"
 	HeaderRPCMethod     = "x-strike-rpc-method"
+	HeaderPacketID      = "x-strike-packet-id"
 )
 
 // Error messages

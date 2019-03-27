@@ -5,6 +5,7 @@ package message
 import (
 	"errors"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type Connect struct {
@@ -79,7 +80,7 @@ func (this *Connect) DecodePayload(buf buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *Connect) Encode() ([]byte, error) {
+func (this *Connect) Encode() (buffer.IoBuffer, error) {
 	if !this.WillQos.IsValid() {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
@@ -123,5 +124,20 @@ func (this *Connect) Encode() ([]byte, error) {
 		return nil, err
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+
+func (this *Connect) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 6)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypeConnect
+	header[protocol.StrikeHeaderCredential] = this.Password
+	header[protocol.StrikeHeaderClientID] = this.ClientId
+	header[protocol.StrikeHeaderWillTopic] = this.WillTopic
+	header[protocol.StrikeHeaderWillMessage] = this.WillMessage
+	header[protocol.StrikeHeaderUsername] = this.Username
+	return header
+}
+
+func (this *Connect) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

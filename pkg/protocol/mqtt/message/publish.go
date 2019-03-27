@@ -4,7 +4,9 @@ package message
 
 import (
 	"errors"
+	"strconv"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type Publish struct {
@@ -58,7 +60,7 @@ func (this *Publish) DecodePayload(buf buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *Publish) Encode() ([]byte, error) {
+func (this *Publish) Encode() (buffer.IoBuffer, error) {
 	buf := buffer.NewIoBuffer(0)
 	putString(this.TopicName, buf)
 	if this.Qos.HasId() {
@@ -77,5 +79,25 @@ func (this *Publish) Encode() ([]byte, error) {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+
+func (this *Publish) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 6)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypePublish
+	header[protocol.StrikeHeaderPacketID] = strconv.Itoa(int(this.PacketIdentifier))
+	header[protocol.StrikeHeaderTopicName] = this.TopicName
+	header[protocol.StrikeHeaderMessageDup] = strconv.FormatBool(this.Dup)
+	header[protocol.StrikeHeaderMessageQos] = strconv.Itoa(int(this.Qos))
+	header[protocol.StrikeHeaderMessageRetain] = strconv.FormatBool(this.Retain)
+	return header
+}
+
+func (this *Publish) GetPayload() (buf buffer.IoBuffer) {
+	buf = buffer.NewIoBuffer(0)
+	_, err := buf.Write(this.Payload)
+	if err != nil {
+		return nil
+	}
+	return buf
 }

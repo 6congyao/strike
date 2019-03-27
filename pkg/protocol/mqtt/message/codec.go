@@ -101,7 +101,7 @@ func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 	return
 }
 
-func doEncode(m Message) ([]byte, error) {
+func doEncode(m Message) (buffer.IoBuffer, error) {
 	return m.Encode()
 }
 

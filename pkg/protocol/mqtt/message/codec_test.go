@@ -24,14 +24,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsLeft[i].Encode()
+			buffer, err := msgsLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*Connect); ok {
@@ -44,15 +44,15 @@ func TestCodec_Decode(t *testing.T) {
 		codec = NewCodec()
 		buf.Reset()
 
-		bytes, err := msgsLeft[0].Encode()
+		buffer, err := msgsLeft[0].Encode()
 		convey.So(err, convey.ShouldBeNil)
-		buf.Write(bytes)
+		buf.Write(buffer.Bytes())
 
-		bytes, err = msgsLeft[1].Encode()
+		buffer, err = msgsLeft[1].Encode()
 		convey.So(err, convey.ShouldBeNil)
-		buf.Write(bytes)
+		buf.Write(buffer.Bytes())
 
-		msgsRight, err := codec.Decode(buf)
+		msgsRight, err := codec.doDecode(buf)
 		convey.So(err, convey.ShouldBeNil)
 
 		convey.So(len(msgsRight), convey.ShouldEqual, 2)
@@ -69,25 +69,25 @@ func TestCodec_Decode(t *testing.T) {
 		codec = NewCodec()
 		buf.Reset()
 
-		bytes, err = msgsLeft[0].Encode()
+		buffer, err = msgsLeft[0].Encode()
 		convey.So(err, convey.ShouldBeNil)
-		buf.Write(bytes)
+		buf.Write(buffer.Bytes())
 
-		bytes, err = msgsLeft[1].Encode()
+		buffer, err = msgsLeft[1].Encode()
 		convey.So(err, convey.ShouldBeNil)
-		buf.Write(bytes)
+		buf.Write(buffer.Bytes())
 
-		bytes, err = msgsLeft[2].Encode()
+		buffer, err = msgsLeft[2].Encode()
 		convey.So(err, convey.ShouldBeNil)
-		buf.Write(bytes[:3])
+		buf.Write(buffer.Bytes()[:3])
 
-		msgsRight, err = codec.Decode(buf)
+		msgsRight, err = codec.doDecode(buf)
 		convey.So(err, convey.ShouldBeNil)
 
 		convey.So(len(msgsRight), convey.ShouldEqual, 2)
 
-		buf.Write(bytes[3:])
-		msgsRight1, err := codec.Decode(buf)
+		buf.Write(buffer.Bytes()[3:])
+		msgsRight1, err := codec.doDecode(buf)
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(len(msgsRight1), convey.ShouldEqual, 1)
 
@@ -111,14 +111,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsConnAckLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsConnAckLeft[i].Encode()
+			buffer, err := msgsConnAckLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsConnAckLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*ConnAck); ok {
@@ -137,14 +137,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsDisconnectLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsDisconnectLeft[i].Encode()
+			buffer, err := msgsDisconnectLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsDisconnectLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*Disconnect); ok {
@@ -163,14 +163,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsPingReqLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPingReqLeft[i].Encode()
+			buffer, err := msgsPingReqLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPingReqLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*PingReq); ok {
@@ -189,14 +189,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsPingRespLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPingRespLeft[i].Encode()
+			buffer, err := msgsPingRespLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPingRespLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*PingResp); ok {
@@ -215,14 +215,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsPubAckLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPubAckLeft[i].Encode()
+			buffer, err := msgsPubAckLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPubAckLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*PubAck); ok {
@@ -241,14 +241,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsPubCompLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPubCompLeft[i].Encode()
+			buffer, err := msgsPubCompLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPubCompLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*PubComp); ok {
@@ -262,19 +262,19 @@ func TestCodec_Decode(t *testing.T) {
 			{Header: Header{msgType: MsgTypePublish}, Dup: true, Qos: QosAtLeastOnce, Retain: true, TopicName: "arew", PacketIdentifier: 65535, Payload: []byte("hsdgfdehe")},
 			{Header: Header{msgType: MsgTypePublish}, Dup: false, Qos: QosAtMostOnce, Retain: false, TopicName: "b", PacketIdentifier: 0, Payload: []byte("hehegdf")},
 			{Header: Header{msgType: MsgTypePublish}, Dup: false, Qos: QosAtMostOnce, Retain: true, TopicName: "awefw", PacketIdentifier: 0, Payload: []byte("hehasdfsde")},
-			{Header: Header{msgType: MsgTypePublish}},
+			{Header: Header{msgType: MsgTypePublish}, TopicName: "test"},
 		}
 
 		for i := 0; i < len(msgsPublishLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPublishLeft[i].Encode()
+			buffer, err := msgsPublishLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPublishLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*Publish); ok {
@@ -293,14 +293,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsPubRecLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPubRecLeft[i].Encode()
+			buffer, err := msgsPubRecLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPubRecLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*PubRec); ok {
@@ -319,14 +319,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsPubRelLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsPubRelLeft[i].Encode()
+			buffer, err := msgsPubRelLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsPubRelLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*PubRel); ok {
@@ -345,14 +345,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsSubAckLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsSubAckLeft[i].Encode()
+			buffer, err := msgsSubAckLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsSubAckLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*SubAck); ok {
@@ -371,14 +371,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsSubscribeLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsSubscribeLeft[i].Encode()
+			buffer, err := msgsSubscribeLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsSubscribeLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*Subscribe); ok {
@@ -397,14 +397,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsUnsubscribeLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsUnsubscribeLeft[i].Encode()
+			buffer, err := msgsUnsubscribeLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsUnsubscribeLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*Unsubscribe); ok {
@@ -423,14 +423,14 @@ func TestCodec_Decode(t *testing.T) {
 
 		for i := 0; i < len(msgsUnsubAckLeft); i++ {
 			//msgLeft := msgsLeft[i]
-			bytes, err := msgsUnsubAckLeft[i].Encode()
+			buffer, err := msgsUnsubAckLeft[i].Encode()
 			convey.So(err, convey.ShouldBeNil)
 			msgsUnsubAckLeft[i].remainingLength = 0
 
-			_, err = buf.Write(bytes)
+			_, err = buf.Write(buffer.Bytes())
 			convey.So(err, convey.ShouldBeNil)
 
-			msgsRight, err := codec.Decode(buf)
+			msgsRight, err := codec.doDecode(buf)
 			convey.So(err, convey.ShouldBeNil)
 
 			if right, ok := msgsRight[0].(*UnsubAck); ok {

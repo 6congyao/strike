@@ -4,7 +4,9 @@ package message
 
 import (
 	"errors"
+	"strconv"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type PubComp struct {
@@ -34,7 +36,7 @@ func (this *PubComp) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
-func (this *PubComp) Encode() ([]byte, error) {
+func (this *PubComp) Encode() (buffer.IoBuffer, error) {
 	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
@@ -46,5 +48,15 @@ func (this *PubComp) Encode() ([]byte, error) {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+func (this *PubComp) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 2)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypePubComp
+	header[protocol.StrikeHeaderPacketID] = strconv.Itoa(int(this.PacketIdentifier))
+	return header
+}
+
+func (this *PubComp) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

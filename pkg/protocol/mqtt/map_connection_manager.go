@@ -6,14 +6,14 @@ import "sync"
 
 type MapConnectionManager struct {
 	mutex *sync.RWMutex
-	m     map[string]*Connection
+	m     map[interface{}]*Connection
 }
 
 func NewMapConnectionManager() ConnectionManager {
-	return &MapConnectionManager{m: make(map[string]*Connection), mutex: &sync.RWMutex{}}
+	return &MapConnectionManager{m: make(map[interface{}]*Connection), mutex: &sync.RWMutex{}}
 }
 
-func (this *MapConnectionManager) PutConnection(id string, Connection *Connection) {
+func (this *MapConnectionManager) PutConnection(id interface{}, Connection *Connection) {
 	if id == "" || Connection == nil {
 		return
 	}
@@ -22,7 +22,7 @@ func (this *MapConnectionManager) PutConnection(id string, Connection *Connectio
 	this.m[id] = Connection
 }
 
-func (this *MapConnectionManager) GetConnection(id string) *Connection {
+func (this *MapConnectionManager) GetConnection(id interface{}) *Connection {
 	if id == "" {
 		return nil
 	}
@@ -37,7 +37,7 @@ func (this *MapConnectionManager) GetConnectionCount() int {
 	return len(this.m)
 }
 
-func (this *MapConnectionManager) DeleteConnection(id string) {
+func (this *MapConnectionManager) DeleteConnection(id interface{}) {
 	if id == "" {
 		return
 	}
@@ -50,10 +50,10 @@ func (this *MapConnectionManager) DeleteAllConnection() {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.m = nil
-	this.m = make(map[string]*Connection)
+	this.m = make(map[interface{}]*Connection)
 }
 
-func (this *MapConnectionManager) CloseConnection(id string) {
+func (this *MapConnectionManager) CloseConnection(id interface{}) {
 	if id == "" {
 		return
 	}

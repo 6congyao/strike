@@ -17,8 +17,8 @@ package mqtt
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
@@ -182,6 +182,7 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 	var msgType string
 	var status string
 	var ok bool
+	var strPacketId string
 
 	if status, ok = headerIn.Get(types.HeaderStatus); ok {
 		headerIn.Del(types.HeaderStatus)
@@ -196,7 +197,7 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 	// todo: handle other responses here
 	// @liuzhen
 	switch msgType {
-	case StrMsgTypeConnect:
+	case message.StrMsgTypeConnect:
 		ack := message.NewConnAck()
 		// todo:
 		if status == "200" {
@@ -207,9 +208,58 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 		ss.res = ack
 
 		break
-	case StrMsgTypePing:
-		ack := message.NewPingResp()
+	case message.StrMsgTypeConnectAck:
+		break
+	case message.StrMsgTypePublish:
+		ack := message.NewPubAck()
+		if strPacketId, ok = headerIn.Get(types.HeaderPacketID); ok {
+			headerIn.Del(types.HeaderPacketID)
+		}
+		if packetId, err := strconv.Atoi(strPacketId); err == nil {
+			ack.PacketIdentifier = uint16(packetId)
+		}
+
 		ss.res = ack
+		break
+	case message.StrMsgTypePubAck:
+		break
+	case message.StrMsgTypePubRec:
+		break
+	case message.StrMsgTypePubRel:
+		break
+	case message.StrMsgTypePubComp:
+		break
+	case message.StrMsgTypeSubscribe:
+		ack := message.NewSubAck()
+		if strPacketId, ok = headerIn.Get(types.HeaderPacketID); ok {
+			headerIn.Del(types.HeaderPacketID)
+		}
+		if packetId, err := strconv.Atoi(strPacketId); err == nil {
+			ack.PacketIdentifier = uint16(packetId)
+		}
+
+		ss.res = ack
+	case message.StrMsgTypeSubAck:
+		break
+	case message.StrMsgTypeUnsubscribe:
+		ack := message.NewUnsubAck()
+		if strPacketId, ok = headerIn.Get(types.HeaderPacketID); ok {
+			headerIn.Del(types.HeaderPacketID)
+		}
+		if packetId, err := strconv.Atoi(strPacketId); err == nil {
+			ack.PacketIdentifier = uint16(packetId)
+		}
+		ss.res = ack
+		break
+	case message.StrMsgTypeUnsubAck:
+		break
+	case message.StrMsgTypePing:
+		ss.res = message.NewPingResp()
+	case message.StrMsgTypePingResp:
+		break
+	case message.StrMsgTypeDisconnect:
+		break
+
 	default:
 		break
 	}
@@ -247,27 +297,8 @@ func (ss *serverStream) handleMessage() {
 	header := make(map[string]string, 2)
 	var payload buffer.IoBuffer
 
-	switch msg := ss.req.(type) {
-	case *message.Connect:
-		fmt.Println("got connect msg")
-		header[protocol.StrikeHeaderMethod] = StrMsgTypeConnect
-		header[protocol.StrikeHeaderCredential] = msg.Password
-		payload = nil
-		break
-	case *message.Publish:
-		header[protocol.StrikeHeaderMethod] = StrMsgTypePublish
-		break
-	case *message.Subscribe:
-		header[protocol.StrikeHeaderMethod] = StrMsgTypeSubscribe
-		break
-	case *message.PingReq:
-		header[protocol.StrikeHeaderMethod] = StrMsgTypePing
-		fmt.Println("got ping msg")
-		break
-	default:
-		fmt.Println("got others")
-		break
-	}
+	header = ss.req.GetHeader()
+	payload = ss.req.GetPayload()
 
 	ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), payload == nil)
 
@@ -284,9 +315,7 @@ func (ss *serverStream) doSend() {
 	// todo: remove after mqtt codec updated
 	// @liuzhen
 	buf, _ := ss.res.Encode()
-	iobuf := buffer.NewIoBuffer(0)
-	iobuf.Write(buf)
 
-	ss.connection.connection.Write(iobuf)
+	ss.connection.connection.Write(buf)
 
 }

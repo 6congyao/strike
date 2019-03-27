@@ -5,6 +5,7 @@ package message
 import (
 	"errors"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type PubAck struct {
@@ -34,7 +35,7 @@ func (this *PubAck) DecodePayload(buf buffer.IoBuffer) bool {
 	panic("implement me")
 }
 
-func (this *PubAck) Encode() ([]byte, error) {
+func (this *PubAck) Encode() (buffer.IoBuffer, error) {
 	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
@@ -46,5 +47,15 @@ func (this *PubAck) Encode() ([]byte, error) {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+
+func (this *PubAck) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 1)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypePubAck
+	return header
+}
+
+func (this *PubAck) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

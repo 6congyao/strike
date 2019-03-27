@@ -3,11 +3,11 @@
 package mqtt
 
 type ConnectionManager interface {
-	PutConnection(id string, conn *Connection)
-	GetConnection(id string) *Connection
+	PutConnection(id interface{}, conn *Connection)
+	GetConnection(id interface{}) *Connection
 	GetConnectionCount() int
-	DeleteConnection(id string)
+	DeleteConnection(id interface{})
 	DeleteAllConnection()
-	CloseConnection(id string)
+	CloseConnection(id interface{})
 	CloseAllConnection()
 }

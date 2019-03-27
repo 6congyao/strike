@@ -3,8 +3,11 @@
 package message
 
 import (
+	"encoding/json"
 	"errors"
+	"strconv"
 	"strike/pkg/buffer"
+	"strike/pkg/protocol"
 )
 
 type Unsubscribe struct {
@@ -48,7 +51,7 @@ func (this *Unsubscribe) DecodePayload(buf buffer.IoBuffer) bool {
 	return true
 }
 
-func (this *Unsubscribe) Encode() ([]byte, error) {
+func (this *Unsubscribe) Encode() (buffer.IoBuffer, error) {
 	buf := buffer.NewIoBuffer(0)
 	putUint16(this.PacketIdentifier, buf)
 
@@ -60,5 +63,18 @@ func (this *Unsubscribe) Encode() ([]byte, error) {
 		return nil, errors.New(ErrorInvalidMessage)
 	}
 
-	return bufAll.Bytes(), nil
+	return bufAll, nil
+}
+func (this *Unsubscribe) GetHeader() (header map[string]string) {
+	header = make(map[string]string, 3)
+	header[protocol.StrikeHeaderMethod] = StrMsgTypeUnsubscribe
+	header[protocol.StrikeHeaderPacketID] = strconv.Itoa(int(this.PacketIdentifier))
+	if b, err := json.Marshal(this.TopicNames); err == nil {
+		header[protocol.StrikeHeaderTopicFilter] = string(b)
+	}
+	return header
+}
+
+func (this *Unsubscribe) GetPayload() (buf buffer.IoBuffer) {
+	return nil
 }

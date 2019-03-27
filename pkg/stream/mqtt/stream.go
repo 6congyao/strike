@@ -17,6 +17,7 @@ package mqtt
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"strike/pkg/buffer"
@@ -193,9 +194,7 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 	} else {
 		status = ""
 	}
-
-	// todo: handle other responses here
-	// @liuzhen
+	fmt.Println("got mqtt msg:", msgType)
 	switch msgType {
 	case message.StrMsgTypeConnect:
 		ack := message.NewConnAck()
@@ -206,7 +205,6 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 			ack.ReturnCode = message.RetCodeNotAuthorized
 		}
 		ss.res = ack
-
 		break
 	case message.StrMsgTypeConnectAck:
 		break
@@ -237,7 +235,6 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 		if packetId, err := strconv.Atoi(strPacketId); err == nil {
 			ack.PacketIdentifier = uint16(packetId)
 		}
-
 		ss.res = ack
 	case message.StrMsgTypeSubAck:
 		break
@@ -259,7 +256,6 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 		break
 	case message.StrMsgTypeDisconnect:
 		break
-
 	default:
 		break
 	}
@@ -271,7 +267,10 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 }
 
 func (ss *serverStream) AppendData(ctx context.Context, data buffer.IoBuffer, endStream bool) error {
-	panic("implement me")
+	if endStream {
+		ss.endStream()
+	}
+	return nil
 }
 
 func (ss *serverStream) AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) error {
@@ -292,8 +291,6 @@ func (ss *serverStream) handleMessage() {
 		return
 	}
 
-	// todo: + msg.Header() & msg.Payload()
-	// @liuzhen
 	header := make(map[string]string, 2)
 	var payload buffer.IoBuffer
 
@@ -312,10 +309,12 @@ func (ss *serverStream) endStream() {
 }
 
 func (ss *serverStream) doSend() {
-	// todo: remove after mqtt codec updated
-	// @liuzhen
-	buf, _ := ss.res.Encode()
+	buf, err := ss.res.Encode()
+
+	if err != nil {
+		log.Println("mqtt response encode err:", err.Error())
+		return
+	}
 
 	ss.connection.connection.Write(buf)
-
 }

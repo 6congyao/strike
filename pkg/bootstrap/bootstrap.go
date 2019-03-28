@@ -20,6 +20,7 @@ import (
 	"strike/pkg/config"
 	_ "strike/pkg/filter/network/delegation"
 	_ "strike/pkg/filter/network/proxy"
+	_ "strike/pkg/filter/stream/auth"
 	_ "strike/pkg/filter/stream/common"
 	"strike/pkg/server"
 	_ "strike/pkg/stream/http/v1"

@@ -136,6 +136,35 @@
                   }
                 ]
               }
+            },
+            {
+              "type": "auth",
+              "config": {
+                "rule_configs": [
+                  {
+                    "enable": true,
+                    "id": 1,
+                    "index": 1,
+                    "auth_config": {
+                      "public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1dGnJsZrPuaIQUJIvq56\nk+pfKTMMa8idd9LHUyKEKXXucxp63k05fyu0IsoNmBSiKsFFxs+4JGkuv2GYfDBx\n09IdNtX8w/LH0NKQ3ZZkkRdd9ATin+9mkq23FPhYh2HbLipAWSE/Bm6UJJ8MgU5/\nxWvSmLvoGsEXDBqr7RrgOZXxtYBhwQDSUM2pmw+2/7jXdVc7PJ7A+V1fKyRh8s1i\nNd+t30APu47c/iumGoX5xwriIKaIr/cO1+bZ8RnYqvt+5qOaMQ1Z5n76mWIDJHYL\n9MVllZ7T9Nzpuf2O0l+ZQ8leHl9uxt3NvaoeRnl4khcnNboPh8KKYsh36kniYun7\nQQIDAQAB\n-----END PUBLIC KEY-----",
+                      "token_key": "x-strike-credential"
+                    },
+                    "name": "Auth",
+                    "resources": [
+                      {
+                        "headers": [
+                          {
+                            "compare_type": "EQUALS",
+                            "key": "x-strike-method",
+                            "value": "Connect"
+                          }
+                        ]
+                      }
+                    ],
+                    "run_mode": "CONTROL"
+                  }
+                ]
+              }
             }
           ]
         },

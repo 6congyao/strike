@@ -223,6 +223,9 @@ func (cs *clientStream) handleSuccess() {
 	if strPacketId, ok := cs.header.Get(types.HeaderPacketID); ok {
 		headers.Set(types.HeaderPacketID, strPacketId)
 	}
+	if username, ok := cs.header.Get(types.HeaderUsername); ok {
+		headers.Set(types.HeaderUsername, username)
+	}
 	cs.receiver.OnReceiveHeaders(cs.context, headers, true)
 }
 

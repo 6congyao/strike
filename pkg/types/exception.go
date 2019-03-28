@@ -30,6 +30,7 @@ const (
 	HeaderRPCService    = "x-strike-rpc-service"
 	HeaderRPCMethod     = "x-strike-rpc-method"
 	HeaderPacketID      = "x-strike-packet-id"
+	HeaderUsername      = "x-strike-username"
 )
 
 // Error messages
@@ -45,6 +46,7 @@ const (
 	UnknownCode           = 2
 	DeserialExceptionCode = 3
 	SuccessCode           = 200
+	Unauthorized          = 401
 	RouterUnavailableCode = 404
 	NoHealthUpstreamCode  = 502
 	UpstreamOverFlowCode  = 503

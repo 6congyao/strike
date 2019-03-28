@@ -37,6 +37,7 @@ const (
 	COMMON                     = "common"
 	MIXER                      = "mixer"
 	FAULT_INJECT_STREAM_FILTER = "fault_inject"
+	AUTH                       = "auth"
 )
 
 // ClusterType

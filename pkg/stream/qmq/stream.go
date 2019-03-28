@@ -208,7 +208,7 @@ func (cs *clientStream) GetStream() stream.Stream {
 func (cs *clientStream) endStream() {
 	//if cs.msg != nil {
 	// todo: handle MDMP process here
-	fmt.Println("mq send msg on topic:", cs.topic)
+	fmt.Println("client stream handled:", cs.id)
 	cs.handleSuccess()
 	//}
 }

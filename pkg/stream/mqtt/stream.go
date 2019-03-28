@@ -194,7 +194,7 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 	} else {
 		status = ""
 	}
-	fmt.Println("got mqtt msg:", msgType)
+
 	switch msgType {
 	case message.StrMsgTypeConnect:
 		ack := message.NewConnAck()
@@ -291,13 +291,16 @@ func (ss *serverStream) handleMessage() {
 		return
 	}
 
-	header := make(map[string]string, 2)
 	var payload buffer.IoBuffer
 
-	header = ss.req.GetHeader()
+	header := protocol.CommonHeader(ss.req.GetHeader())
 	payload = ss.req.GetPayload()
 
-	ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), payload == nil)
+	if method, ok := header.Get(protocol.StrikeHeaderMethod); ok {
+		fmt.Println("got mqtt msg:", method, ss.connection.context.Value(types.ContextKeyConnectionID))
+	}
+
+	ss.receiver.OnReceiveHeaders(ss.context, header, payload == nil)
 
 	if payload != nil {
 		ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), true)

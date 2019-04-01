@@ -15,3 +15,7 @@
 
 ## 0.3.0
 + TLS 1.2 supported
+
+## 0.3.1
++ Stream filter (JWT Auth)
++ Dockerfile & travis

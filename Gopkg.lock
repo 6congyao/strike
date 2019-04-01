@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:76dc72490af7174349349838f2fe118996381b31ea83243812a97e5a0fd5ed55"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   digest = "1:eb8e331384779e87648f6dd6551e5d7f72fb48ff5372193f7ecbd75d8675c4a0"
   name = "github.com/kavu/go_reuseport"
   packages = ["."]
@@ -12,6 +20,9 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/kavu/go_reuseport"]
+  input-imports = [
+    "github.com/dgrijalva/jwt-go",
+    "github.com/kavu/go_reuseport",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

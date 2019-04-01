@@ -1,0 +1,21 @@
+sudo: required
+language: go
+services:
+- docker
+go:
+- 1.11
+go_import_path: strike
+before_install:
+- chmod +x release
+- chmod +x build
+install:
+- ./release
+script:
+- docker build --rm -t 6congyao/strike .
+after_success:
+- docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+  docker push 6congyao/strike;
+  else echo $TRAVIS_BRANCH; docker tag 6congyao/strike 6congyao/strike:$TRAVIS_BRANCH;
+  docker push 6congyao/strike:$TRAVIS_BRANCH;
+  fi

@@ -7,3 +7,4 @@ mkdir -p bin
 go get -u github.com/dgrijalva/jwt-go github.com/kavu/go_reuseport
 go build -o $OUTPUT cmd/strike/strike.go
 cp examples/configs/mqgateway.json $OUTPUT
+ls -lh $OUTPUT

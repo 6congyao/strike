@@ -7,9 +7,10 @@ RUN wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.27-r0/
 RUN apk add glibc-2.27-r0.apk
 
 ADD bin/alpine/strike /bin/
+ADD bin/alpine/mqgateway.json /bin/
 
 EXPOSE 8055 8056
 
 HEALTHCHECK CMD ["/bin/strike", "ping"]
 
-ENTRYPOINT ["/bin/strike"]
+ENTRYPOINT ["/bin/strike", "-c", "mqgateway.json"]

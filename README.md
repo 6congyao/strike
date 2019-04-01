@@ -1,5 +1,7 @@
 # strike
 
+[![Build Status](https://travis-ci.org/6congyao/strike.svg?branch=master)](https://travis-ci.org/6congyao/strike)
+
 ## Principle
 * Stable first
 * Flexibility prioritize

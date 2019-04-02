@@ -8,6 +8,7 @@ RUN apk add glibc-2.29-r0.apk
 
 ADD bin/alpine/strike /bin/
 ADD bin/alpine/mqgateway.json /bin/
+ADD bin/alpine/examples /bin/
 
 HEALTHCHECK CMD ["/bin/strike", "ping"]
 

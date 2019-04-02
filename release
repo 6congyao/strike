@@ -5,4 +5,5 @@ mkdir -p bin/alpine
 docker build -t go_alpine_builder -f Dockerfile.build.alpine .
 docker run -ti --rm -v $(pwd):/app go_alpine_builder ./build bin/alpine/
 ls -lh bin/*
+ls -lh bin/alpine/examples/*
 tar -C bin/alpine/ -czf bin/alpine/strike-alpine-amd64.tar.gz strike mqgateway.json examples/

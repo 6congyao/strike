@@ -12,6 +12,5 @@ ADD bin/alpine/mqgateway.json /bin/
 EXPOSE 8055 8056
 
 HEALTHCHECK CMD ["/bin/strike", "ping"]
-HEALTHCHECK CMD ["/bin/mqgateway.json", "ping"]
 
-ENTRYPOINT ["/bin/strike", "-c", "mqgateway.json"]
+ENTRYPOINT ["/bin/strike", "-c", "/bin/mqgateway.json"]

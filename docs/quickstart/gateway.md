@@ -22,20 +22,20 @@ mv strike ${targetpath}/
 ## gateway配置文件：
 
 ```
-strike/examples/configs/mqgateway.json
+strike/examples/configs/iotgateway.json
 ```
 
 ### 启动strike
 
-+ 使用mqgateway.json 运行mq边界代理
++ 使用iotgateway.json 运行iot边界代理
 
 ```
-./strike -c mqgateway.json
+./strike -c iotgateway.json
 ```
 
 ### 调试strike
-+ 使用mqgateway.json 运行调试,编辑program arguments:
++ 使用iotgateway.json 运行调试,编辑program arguments:
 
 ```
--c /<your_working_dir>/examples/configs/mqgateway.json
+-c /<your_working_dir>/examples/configs/iotgateway.json
 ```

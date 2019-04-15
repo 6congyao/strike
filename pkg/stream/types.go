@@ -33,6 +33,9 @@ const (
 	StreamLocalReset            StreamResetReason = "StreamLocalReset"
 	StreamOverflow              StreamResetReason = "StreamOverflow"
 	StreamRemoteReset           StreamResetReason = "StreamRemoteReset"
+	UpstreamReset               StreamResetReason = "UpstreamReset"
+	UpstreamGlobalTimeout       StreamResetReason = "UpstreamGlobalTimeout"
+	UpstreamPerTryTimeout       StreamResetReason = "UpstreamPerTryTimeout"
 )
 
 // Stream is a generic protocol stream, it is the core model in stream layer
@@ -50,14 +53,18 @@ type Stream interface {
 	// Any registered StreamEventListener.OnResetStream should be called.
 	ResetStream(reason StreamResetReason)
 
-	// ReadDisable enable/disable further stream data
-	ReadDisable(disable bool)
+	// DestroyStream destroys stream, called after stream process in client/server cases.
+	// Any registered StreamEventListener.OnDestroyStream will be called.
+	DestroyStream()
 }
 
 // StreamEventListener is a stream event listener
 type StreamEventListener interface {
 	// OnResetStream is called on a stream is been reset
 	OnResetStream(reason StreamResetReason)
+
+	// OnDestroyStream is called on stream destroy
+	OnDestroyStream()
 }
 
 // StreamConnection is a connection runs multiple streams
@@ -72,6 +79,12 @@ type StreamConnection interface {
 
 	// GoAway sends go away to remote for graceful shutdown
 	GoAway()
+
+	// Active streams count
+	ActiveStreamsNum() int
+
+	// Reset underlying streams
+	Reset(reason StreamResetReason)
 }
 
 // StreamConnectionEventListener is a stream connection event listener
@@ -80,9 +93,10 @@ type StreamConnectionEventListener interface {
 	OnGoAway()
 }
 
-// StreamReceiver handles request on server scenario, handles response on client scenario.
-// Listeners called on decode stream event
-type StreamReceiver interface {
+// StreamReceiveListener is called on data received and decoded
+// On server scenario, StreamReceiveListener is called to handle request
+// On client scenario, StreamReceiveListener is called to handle response
+type StreamReceiveListener interface {
 	// OnReceiveHeaders is called with decoded headers
 	// endStream supplies whether this is a header only request/response
 	OnReceiveHeaders(ctx context.Context, headers protocol.HeaderMap, endOfStream bool)
@@ -121,10 +135,10 @@ type StreamSender interface {
 type ClientStreamConnection interface {
 	StreamConnection
 
-	// NewStream creates a new outgoing request stream
-	// receiver supplies the decoder listeners on decode event
-	// StreamSender supplies the encoder to write the request
-	NewStream(ctx context.Context, receiver StreamReceiver) StreamSender
+	// NewStream starts to create a new outgoing request stream and returns a sender to write data
+	// responseReceiveListener supplies the response listener on decode event
+	// StreamSender supplies the sender to write request data
+	NewStream(ctx context.Context, responseReceiveListener StreamReceiveListener) StreamSender
 }
 
 // ServerStreamConnection is a server side stream connection.
@@ -137,7 +151,7 @@ type ServerStreamConnectionEventListener interface {
 	StreamConnectionEventListener
 
 	// NewStreamDetect returns stream event receiver
-	NewStreamDetect(context context.Context, streamID uint64, responseEncoder StreamSender) StreamReceiver
+	NewStreamDetect(context context.Context, streamID uint64, responseEncoder StreamSender) StreamReceiveListener
 }
 
 type ProtocolStreamFactory interface {
@@ -333,7 +347,7 @@ const (
 type ConnectionPool interface {
 	Protocol() protocol.Protocol
 
-	NewStream(ctx context.Context, receiver StreamReceiver, cb PoolEventListener) Cancellable
+	NewStream(ctx context.Context, receiver StreamReceiveListener, listener PoolEventListener)
 
 	Close()
 }
@@ -344,9 +358,9 @@ type PoolEventListener interface {
 	OnReady(sender StreamSender, host upstream.Host)
 }
 
-type Cancellable interface {
-	Cancel()
-}
+//type Cancellable interface {
+//	Cancel()
+//}
 
 type CodecClientCallbacks interface {
 	OnStreamDestroy()
@@ -354,23 +368,21 @@ type CodecClientCallbacks interface {
 	OnStreamReset(reason StreamResetReason)
 }
 
-type CodecClient interface {
+type Client interface {
 	network.ConnectionEventListener
 	network.ReadFilter
 
-	ID() uint64
+	ConnID() uint64
 
-	AddConnectionCallbacks(cb network.ConnectionEventListener)
+	Connect(ioEnabled bool) error
 
 	ActiveRequestsNum() int
 
-	NewStream(context context.Context, respDecoder StreamReceiver) StreamSender
+	NewStream(context context.Context, respReceiver StreamReceiveListener) StreamSender
 
-	SetCodecClientCallbacks(cb CodecClientCallbacks)
+	AddConnectionEventListener(listener network.ConnectionEventListener)
 
-	SetCodecConnectionCallbacks(cb StreamConnectionEventListener)
+	SetStreamConnectionEventListener(listener StreamConnectionEventListener)
 
 	Close()
-
-	RemoteClose() bool
 }

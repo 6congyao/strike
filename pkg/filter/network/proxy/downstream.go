@@ -25,7 +25,6 @@ import (
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/pkg/upstream"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -74,13 +73,11 @@ type downStream struct {
 	downstreamReset   uint32
 	downstreamCleaned uint32
 	upstreamReset     uint32
+	reuseBuffer       uint32
 
 	// filters
 	senderFilters   []*activeStreamSenderFilter
 	receiverFilters []*activeStreamReceiverFilter
-
-	// mux for downstream-upstream flow
-	mux sync.Mutex
 
 	context context.Context
 }
@@ -97,6 +94,7 @@ func newActiveStream(ctx context.Context, streamID uint64, proxy *proxy, respons
 	s.responseSender = responseSender
 	s.responseSender.GetStream().AddEventListener(s)
 	s.context = newCtx
+	s.reuseBuffer = 1
 
 	//todo: set proxy states
 
@@ -163,6 +161,8 @@ func (s *downStream) GiveStream() {
 func (s *downStream) ResetStream(reason stream.StreamResetReason) {
 	s.cleanStream()
 }
+
+func (s *downStream) OnDestroyStream() {}
 
 func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) {
 	s.downstreamRecvDone = endStream

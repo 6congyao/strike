@@ -83,6 +83,8 @@ func (r *upstreamRequest) OnResetStream(reason stream.StreamResetReason) {
 	})
 }
 
+func (r *upstreamRequest) OnDestroyStream() {}
+
 func (r *upstreamRequest) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) {
 	r.upstreamRespHeaders = headers
 	r.downStream.onUpstreamHeaders(headers, endStream)

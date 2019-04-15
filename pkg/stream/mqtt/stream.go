@@ -26,6 +26,7 @@ import (
 	"strike/pkg/protocol/mqtt/message"
 	"strike/pkg/stream"
 	"strike/pkg/types"
+	"sync"
 )
 
 func init() {
@@ -74,6 +75,8 @@ type streamConnection struct {
 	protocol      protocol.Protocol
 	codec         protocol.Codec
 	connection    network.Connection
+	mutex         sync.RWMutex
+	streams       map[uint64]*streamBase
 	connCallbacks network.ConnectionEventListener
 	// Client Stream Conn Callbacks
 	cscCallbacks stream.StreamConnectionEventListener
@@ -127,6 +130,22 @@ func (sc *streamConnection) GoAway() {
 	panic("implement me")
 }
 
+func (sc *streamConnection) ActiveStreamsNum() int {
+	sc.mutex.RLock()
+	defer sc.mutex.RUnlock()
+
+	return len(sc.streams)
+}
+
+func (sc *streamConnection) Reset(reason stream.StreamResetReason) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+
+	for _, stream := range sc.streams {
+		stream.ResetStream(reason)
+	}
+}
+
 func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	if event.IsClose() || event.ConnectFailure() {
 		// clear
@@ -134,42 +153,18 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 }
 
 type streamBase struct {
+	stream.BaseStream
+
 	id      uint64
 	req     message.Message
 	res     message.Message
 	context context.Context
 
-	receiver  stream.StreamReceiver
-	streamCbs []stream.StreamEventListener
+	receiver stream.StreamReceiveListener
 }
 
 func (sb *streamBase) ID() uint64 {
 	return sb.id
-}
-
-func (sb *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
-	sb.streamCbs = append(sb.streamCbs, streamCb)
-}
-
-func (sb *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
-	cbIdx := -1
-
-	for i, streamCb := range sb.streamCbs {
-		if streamCb == streamCb {
-			cbIdx = i
-			break
-		}
-	}
-
-	if cbIdx > -1 {
-		sb.streamCbs = append(sb.streamCbs[:cbIdx], sb.streamCbs[cbIdx+1:]...)
-	}
-}
-
-func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
-	for _, cb := range sb.streamCbs {
-		cb.OnResetStream(reason)
-	}
 }
 
 // stream.StreamSender
@@ -280,10 +275,6 @@ func (ss *serverStream) AppendTrailers(ctx context.Context, trailers protocol.He
 
 func (ss *serverStream) GetStream() stream.Stream {
 	return ss
-}
-
-func (ss *serverStream) ReadDisable(disable bool) {
-	panic("unsupported")
 }
 
 func (ss *serverStream) handleMessage() {

@@ -43,13 +43,13 @@ func (p *connPool) Close() {
 	panic("implement me")
 }
 
-func (p *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
+func (p *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiveListener, cb stream.PoolEventListener) {
 	ac, reason := p.getAvailableClient(ctx)
 	if ac == nil {
 		cb.OnFailure(reason, nil)
 	}
 
-	return nil
+	return
 }
 
 func (p *connPool) Protocol() protocol.Protocol {

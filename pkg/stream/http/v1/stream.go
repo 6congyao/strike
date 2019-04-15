@@ -26,6 +26,7 @@ import (
 	"strike/pkg/protocol/http/v1"
 	"strike/pkg/stream"
 	"strike/pkg/types"
+	"sync"
 	"sync/atomic"
 )
 
@@ -83,6 +84,8 @@ type streamConnection struct {
 	cscCallbacks stream.StreamConnectionEventListener
 	// Server Stream Conn Callbacks
 	sscCallbacks stream.ServerStreamConnectionEventListener
+	stream       *serverStream
+	mutex        sync.RWMutex
 }
 
 func (sc *streamConnection) OnDecodeHeader(streamID uint64, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
@@ -111,6 +114,9 @@ func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) ne
 		}
 		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, streamID, srvStream)
 
+		sc.mutex.Lock()
+		sc.stream = srvStream
+		sc.mutex.Unlock()
 		if atomic.LoadInt32(&srvStream.readDisableCount) <= 0 {
 			srvStream.handleRequest()
 		}
@@ -170,44 +176,35 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	}
 }
 
+func (sc *streamConnection) ActiveStreamsNum() int {
+	sc.mutex.RLock()
+	defer sc.mutex.RUnlock()
+
+	if sc.stream == nil {
+		return 0
+	} else {
+		return 1
+	}
+}
+
+func (sc *streamConnection) Reset(reason stream.StreamResetReason) {
+
+}
+
 type streamBase struct {
+	stream.BaseStream
+
 	id               uint64
 	req              *v1.Request
 	res              *v1.Response
 	context          context.Context
 	readDisableCount int32
-	receiver         stream.StreamReceiver
-	streamCbs        []stream.StreamEventListener
+	receiver         stream.StreamReceiveListener
 }
 
 // stream.Stream
 func (sb *streamBase) ID() uint64 {
 	return sb.id
-}
-
-func (sb *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
-	sb.streamCbs = append(sb.streamCbs, streamCb)
-}
-
-func (sb *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
-	cbIdx := -1
-
-	for i, streamCb := range sb.streamCbs {
-		if streamCb == streamCb {
-			cbIdx = i
-			break
-		}
-	}
-
-	if cbIdx > -1 {
-		sb.streamCbs = append(sb.streamCbs[:cbIdx], sb.streamCbs[cbIdx+1:]...)
-	}
-}
-
-func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
-	for _, cb := range sb.streamCbs {
-		cb.OnResetStream(reason)
-	}
 }
 
 // stream.StreamSender

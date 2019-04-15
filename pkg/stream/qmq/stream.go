@@ -103,12 +103,20 @@ func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	}
 }
 
+func (sc *streamConnection) ActiveStreamsNum() int {
+	return 0
+}
+
+func (sc *streamConnection) Reset(reason stream.StreamResetReason) {
+
+}
+
 // stream.ClientStreamConnection
 type clientStreamConnection struct {
 	streamConnection
 }
 
-func (csc *clientStreamConnection) NewStream(ctx context.Context, receiver stream.StreamReceiver) stream.StreamSender {
+func (csc *clientStreamConnection) NewStream(ctx context.Context, receiver stream.StreamReceiveListener) stream.StreamSender {
 	cs := &clientStream{
 		streamBase: streamBase{
 			id: protocol.GenerateID(),
@@ -124,6 +132,7 @@ func (csc *clientStreamConnection) NewStream(ctx context.Context, receiver strea
 // stream.Stream
 // stream.StreamSender
 type streamBase struct {
+	stream.BaseStream
 	id      uint64
 	context context.Context
 	header  protocol.HeaderMap
@@ -131,41 +140,11 @@ type streamBase struct {
 	topic string
 	msg   []byte
 
-	receiver  stream.StreamReceiver
-	streamCbs []stream.StreamEventListener
+	receiver stream.StreamReceiveListener
 }
 
 func (sb *streamBase) ID() uint64 {
 	return sb.id
-}
-
-func (sb *streamBase) AddEventListener(streamCb stream.StreamEventListener) {
-	sb.streamCbs = append(sb.streamCbs, streamCb)
-}
-
-func (sb *streamBase) RemoveEventListener(streamCb stream.StreamEventListener) {
-	cbIdx := -1
-
-	for i, streamCb := range sb.streamCbs {
-		if streamCb == streamCb {
-			cbIdx = i
-			break
-		}
-	}
-
-	if cbIdx > -1 {
-		sb.streamCbs = append(sb.streamCbs[:cbIdx], sb.streamCbs[cbIdx+1:]...)
-	}
-}
-
-func (sb *streamBase) ResetStream(reason stream.StreamResetReason) {
-	for _, cb := range sb.streamCbs {
-		cb.OnResetStream(reason)
-	}
-}
-
-func (sb *streamBase) ReadDisable(disable bool) {
-	panic("unsupported")
 }
 
 // stream.Stream

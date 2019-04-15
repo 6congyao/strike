@@ -46,7 +46,7 @@ func (cp *connPool) Protocol() protocol.Protocol {
 	return protocol.MQ
 }
 
-func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiver, cb stream.PoolEventListener) stream.Cancellable {
+func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiveListener, cb stream.PoolEventListener) {
 	//cp.mux.Lock()
 	if cp.activeClient == nil {
 		cp.activeClient = newActiveClient(ctx, cp)
@@ -56,24 +56,24 @@ func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceive
 	ac := cp.activeClient
 	if ac == nil {
 		cb.OnFailure(stream.ConnectionFailure, nil)
-		return nil
+		return
 	}
 
 	streamEncoder := ac.codecClient.NewStream(ctx, receiver)
 	cb.OnReady(streamEncoder, cp.host)
-	return nil
+	return
 }
 
 func (cp *connPool) Close() {
 }
 
-func (cp *connPool) createCodecClient(context context.Context) stream.CodecClient {
-	return stream.NewCodecClient(context, protocol.MQ, nil, nil)
+func (cp *connPool) createCodecClient(context context.Context) stream.Client {
+	return stream.NewStreamClient(context, protocol.MQ, nil, nil)
 }
 
 type activeClient struct {
 	pool               *connPool
-	codecClient        stream.CodecClient
+	codecClient        stream.Client
 	closeWithActiveReq bool
 	totalStream        uint64
 }

@@ -15,7 +15,9 @@
 
 package buffer
 
-import "io"
+import (
+	"io"
+)
 
 // BufferPoolCtx is the bufferpool's context
 type BufferPoolCtx interface {
@@ -100,7 +102,13 @@ type IoBuffer interface {
 	Free()
 
 	// Count sets and returns reference count
-	Count(int) int
+	Count(int32) int32
+
+	// EOF returns whether Io is EOF on the connection
+	EOF() bool
+
+	//SetEOF sets the IoBuffer EOF
+	SetEOF(eof bool)
 
 	// Write byte
 	WriteByte(p byte) (err error)

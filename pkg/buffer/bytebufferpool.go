@@ -20,9 +20,11 @@ import (
 	"sync"
 )
 
-const minShift = 6
-const maxShift = 15
-const errSlot = -1
+const (
+	minShift = 6
+	maxShift = 15
+	errSlot  = -1
+)
 
 var byteBufferPools [maxPoolSize]*byteBufferPool
 

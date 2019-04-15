@@ -19,17 +19,26 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
-const MinRead = 1 << 9
-const MaxRead = 1 << 17
-const ResetOffMark = -1
-const DefaultSize = 1 << 4
+const (
+	FirstConnReadTimeout = 5 * time.Second
+	ConnReadTimeout      = 10 * time.Millisecond
+)
+
+const (
+	MinRead      = 1 << 9
+	MaxRead      = 1 << 17
+	ResetOffMark = -1
+	DefaultSize  = 1 << 4
+)
 
 var nullByte []byte
 
 var (
+	EOF                  = errors.New("EOF")
 	ErrTooLarge          = errors.New("io buffer: too large")
 	ErrNegativeCount     = errors.New("io buffer: negative count")
 	ErrInvalidWriteCount = errors.New("io buffer: invalid write count")
@@ -40,7 +49,8 @@ type ioBuffer struct {
 	buf     []byte // contents: buf[off : len(buf)]
 	off     int    // read from &buf[off], write to &buf[len(buf)]
 	offMark int
-	count   int
+	count   int32
+	eof     bool
 
 	b *[]byte
 }
@@ -101,9 +111,10 @@ func (b *ioBuffer) ReadOnce(r io.Reader) (n int64, err error) {
 
 		if conn != nil {
 			if first {
-				conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+				// TODO: support configure
+				conn.SetReadDeadline(time.Now().Add(FirstConnReadTimeout))
 			} else {
-				conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+				conn.SetReadDeadline(time.Now().Add(ConnReadTimeout))
 			}
 
 			m, e = r.Read(b.buf[len(b.buf):cap(b.buf)])
@@ -115,12 +126,17 @@ func (b *ioBuffer) ReadOnce(r io.Reader) (n int64, err error) {
 			m, e = r.Read(b.buf[len(b.buf):cap(b.buf)])
 		}
 
-		if e != nil {
-			return n, e
+		if m > 0 {
+			b.buf = b.buf[0 : len(b.buf)+m]
+			n += int64(m)
 		}
 
-		b.buf = b.buf[0 : len(b.buf)+m]
-		n += int64(m)
+		if e != nil {
+			if te, ok := err.(net.Error); ok && te.Timeout() && !first {
+				return n, nil
+			}
+			return n, e
+		}
 
 		if l != m {
 			loop = false
@@ -346,6 +362,7 @@ func (b *ioBuffer) Reset() {
 	b.buf = b.buf[:0]
 	b.off = 0
 	b.offMark = ResetOffMark
+	b.eof = false
 }
 
 func (b *ioBuffer) available() int {
@@ -355,6 +372,8 @@ func (b *ioBuffer) available() int {
 func (b *ioBuffer) Clone() IoBuffer {
 	buf := GetIoBuffer(b.Len())
 	buf.Write(b.Bytes())
+
+	buf.SetEOF(b.EOF())
 
 	return buf
 }
@@ -376,9 +395,16 @@ func (b *ioBuffer) Alloc(size int) {
 	b.buf = b.buf[:0]
 }
 
-func (b *ioBuffer) Count(count int) int {
-	b.count += count
-	return b.count
+func (b *ioBuffer) Count(count int32) int32 {
+	return atomic.AddInt32(&b.count, count)
+}
+
+func (b *ioBuffer) EOF() bool {
+	return b.eof
+}
+
+func (b *ioBuffer) SetEOF(eof bool) {
+	b.eof = eof
 }
 
 func (b *ioBuffer) copy(expand int) {
@@ -411,17 +437,6 @@ func (b *ioBuffer) giveSlice() {
 	}
 }
 
-func makeSlice(n int) []byte {
-	// TODO: handle large buffer
-	defer func() {
-		if recover() != nil {
-			panic(ErrTooLarge)
-		}
-	}()
-
-	return make([]byte, n)
-}
-
 func NewIoBuffer(capacity int) IoBuffer {
 	buffer := &ioBuffer{
 		offMark: ResetOffMark,
@@ -436,6 +451,9 @@ func NewIoBuffer(capacity int) IoBuffer {
 }
 
 func NewIoBufferString(s string) IoBuffer {
+	if s == "" {
+		return NewIoBuffer(0)
+	}
 	return &ioBuffer{
 		buf:     []byte(s),
 		offMark: ResetOffMark,
@@ -444,11 +462,20 @@ func NewIoBufferString(s string) IoBuffer {
 }
 
 func NewIoBufferBytes(bytes []byte) IoBuffer {
+	if bytes == nil {
+		return NewIoBuffer(0)
+	}
 	return &ioBuffer{
 		buf:     bytes,
 		offMark: ResetOffMark,
 		count:   1,
 	}
+}
+
+func NewIoBufferEOF() IoBuffer {
+	buf := NewIoBuffer(0)
+	buf.SetEOF(true)
+	return buf
 }
 
 func (b *ioBuffer) ReadByte() (bt byte, err error) {

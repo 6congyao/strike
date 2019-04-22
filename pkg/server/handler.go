@@ -375,7 +375,6 @@ func (al *activeListener) newConnection(ctx context.Context, rawc interface{}) {
 		conn.SetContext(session)
 	}
 	newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, session.ID())
-	newCtx = context.WithValue(newCtx, types.ContextKeyConnectionRef, session)
 
 	// notify
 	al.OnNewConnection(newCtx, session)

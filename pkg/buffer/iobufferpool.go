@@ -16,20 +16,15 @@
 package buffer
 
 import (
+	"errors"
 	"sync"
 )
 
-var ioBufferPools [maxPoolSize]IoBufferPool
+var ibPool IoBufferPool
 
 // IoBufferPool is Iobuffer Pool
 type IoBufferPool struct {
 	pool sync.Pool
-}
-
-// getIoBufferPool returns IoBufferPool
-func getIoBufferPool() *IoBufferPool {
-	i := bufferPoolIndex()
-	return &ioBufferPools[i]
 }
 
 // take returns IoBuffer from IoBufferPool
@@ -53,15 +48,17 @@ func (p *IoBufferPool) give(buf IoBuffer) {
 
 // GetIoBuffer returns IoBuffer from pool
 func GetIoBuffer(size int) IoBuffer {
-	pool := getIoBufferPool()
-	return pool.take(size)
+	return ibPool.take(size)
 }
 
 // PutIoBuffer returns IoBuffer to pool
-func PutIoBuffer(buf IoBuffer) {
-	if buf.Count(-1) != 0 {
-		return
+func PutIoBuffer(buf IoBuffer) error {
+	count := buf.Count(-1)
+	if count > 0 {
+		return nil
+	} else if count < 0 {
+		return errors.New("PutIoBuffer duplicate")
 	}
-	pool := getIoBufferPool()
-	pool.give(buf)
+	ibPool.give(buf)
+	return nil
 }

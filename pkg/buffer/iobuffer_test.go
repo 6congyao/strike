@@ -273,13 +273,70 @@ func TestIoBufferAllocAndFree(t *testing.T) {
 	}
 }
 
+func TestIoBufferZero(t *testing.T) {
+	writer := bytes.NewBuffer(nil)
+	b := NewIoBuffer(0)
+	_, err := b.WriteTo(writer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(writer.Bytes()) != 0 {
+		t.Errorf("Expect 0, but got %s", string(writer.Bytes()))
+	}
+
+	b = NewIoBufferBytes(nil)
+	_, err = b.WriteTo(writer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(writer.Bytes()) != 0 {
+		t.Errorf("Expect 0, but got %s", string(writer.Bytes()))
+	}
+
+	b = NewIoBufferString("")
+	_, err = b.WriteTo(writer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(writer.Bytes()) != 0 {
+		t.Errorf("Expect 0, but got %s", string(writer.Bytes()))
+	}
+
+	b = NewIoBufferEOF()
+	_, err = b.WriteTo(writer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(writer.Bytes()) != 0 {
+		t.Errorf("Expect 0, but got %s", string(writer.Bytes()))
+	}
+
+	b = NewIoBuffer(0)
+
+	if b.String() != "" {
+		t.Errorf("Expect \"\", but got %s", string(b.String()))
+	}
+
+	if len(b.Bytes()) != 0 {
+		t.Errorf("Expect 0, but got %d", len(b.Bytes()))
+	}
+
+	if len(b.Peek(0)) != 0 {
+		t.Errorf("Expect 0, but got %d", len(b.Bytes()))
+	}
+}
+
 func TestIoBufferWriteByte(t *testing.T) {
 	b := NewIoBuffer(0)
 	b.WriteByte('0')
 	b.WriteByte('0')
 	b.WriteByte('1')
 
-	shouldBe := []byte{'0','0','1'}
+	shouldBe := []byte{'0', '0', '1'}
 	if !bytes.Equal(b.Bytes(), shouldBe) {
 		t.Errorf("Expect %s but got %s", shouldBe, string(b.Bytes()))
 	}

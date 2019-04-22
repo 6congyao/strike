@@ -98,22 +98,19 @@ func newActiveStream(ctx context.Context, streamID uint64, proxy *proxy, respons
 
 	//todo: set proxy states
 
-	// start event process
-	s.startEventProcess()
 	return s
 }
 
 // stream.StreamReceiver
 func (s *downStream) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
-	workerPool.Offer(&receiveHeadersEvent{
-		streamEvent: streamEvent{
-			direction: Downstream,
-			streamID:  s.ID,
-			stream:    s,
+	workerPool.Offer(&event{
+		id:  s.ID,
+		dir: diDownstream,
+		evt: recvHeader,
+		handle: func() {
+			s.ReceiveHeaders(headers, endStream)
 		},
-		headers:   headers,
-		endStream: endStream,
-	})
+	}, true)
 }
 
 func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
@@ -121,26 +118,25 @@ func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer
 	s.downstreamReqDataBuf.Count(1)
 	data.Drain(data.Len())
 
-	workerPool.Offer(&receiveDataEvent{
-		streamEvent: streamEvent{
-			direction: Downstream,
-			streamID:  s.ID,
-			stream:    s,
+	workerPool.Offer(&event{
+		id:  s.ID,
+		dir: diDownstream,
+		evt: recvData,
+		handle: func() {
+			s.ReceiveData(s.downstreamReqDataBuf, endStream)
 		},
-		data:      s.downstreamReqDataBuf,
-		endStream: endStream,
-	})
+	}, true)
 }
 
 func (s *downStream) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
-	workerPool.Offer(&receiveTrailerEvent{
-		streamEvent: streamEvent{
-			direction: Downstream,
-			streamID:  s.ID,
-			stream:    s,
+	workerPool.Offer(&event{
+		id:  s.ID,
+		dir: diDownstream,
+		evt: recvTrailer,
+		handle: func() {
+			s.ReceiveTrailers(trailers)
 		},
-		trailers: trailers,
-	})
+	}, true)
 }
 
 func (s *downStream) GiveStream() {
@@ -238,10 +234,10 @@ func (s *downStream) initializeUpstreamConnectionPool() (connPool stream.Connect
 	var upProtocol protocol.Protocol
 
 	if s.proxy.config.UpstreamProtocol == string(protocol.AUTO) {
-		if s.proxy.serverCodec == nil {
+		if s.proxy.serverStreamConn == nil {
 			upProtocol = protocol.Protocol(s.proxy.config.DownstreamProtocol)
 		} else {
-			upProtocol = s.proxy.serverCodec.Protocol()
+			upProtocol = s.proxy.serverStreamConn.Protocol()
 		}
 	} else {
 		upProtocol = protocol.Protocol(s.proxy.config.UpstreamProtocol)
@@ -387,14 +383,14 @@ func (s *downStream) OnResetStream(reason stream.StreamResetReason) {
 		return
 	}
 
-	workerPool.Offer(&resetEvent{
-		streamEvent: streamEvent{
-			direction: Downstream,
-			streamID:  s.ID,
-			stream:    s,
+	workerPool.Offer(&event{
+		id:  s.ID,
+		dir: diDownstream,
+		evt: reset,
+		handle: func() {
+			s.ResetStream(reason)
 		},
-		reason: reason,
-	})
+	}, false)
 }
 
 // Clean up on the very end of the stream: end stream or reset stream
@@ -426,10 +422,11 @@ func (s *downStream) cleanStream() {
 		ef.filter.OnDestroy()
 	}
 
-	// stop event process
-	s.stopEventProcess()
 	// delete stream
 	s.proxy.deleteActiveStream(s)
+
+	// recycle if no reset events
+	s.giveStream()
 }
 
 // case 1: downstream's lifecycle ends normally
@@ -566,28 +563,6 @@ func (s *downStream) onResponseTimeout() {
 func (s *downStream) onPerReqTimeout() {
 }
 
-func (s *downStream) startEventProcess() {
-	// offer start event so that there is no lock contention on the streamProcessMap[shard]
-	// all read/write operation should be able to trace back to the ShardWorkerPool goroutine
-	workerPool.Offer(&startEvent{
-		streamEvent: streamEvent{
-			direction: Downstream,
-			streamID:  s.ID,
-			stream:    s,
-		},
-	})
-}
-
-func (s *downStream) stopEventProcess() {
-	workerPool.Offer(&stopEvent{
-		streamEvent: streamEvent{
-			direction: Downstream,
-			streamID:  s.ID,
-			stream:    s,
-		},
-	})
-}
-
 func (s *downStream) addEncodedData(filter *activeStreamSenderFilter, data buffer.IoBuffer, streaming bool) {
 	if s.filterStage == 0 || s.filterStage&EncodeHeaders > 0 ||
 		s.filterStage&EncodeData > 0 {
@@ -714,4 +689,24 @@ func (s *downStream) reset() {
 	s.downstreamRespTrailers = nil
 	s.senderFilters = s.senderFilters[:0]
 	s.receiverFilters = s.receiverFilters[:0]
+}
+
+func (s *downStream) giveStream() {
+	if atomic.LoadUint32(&s.reuseBuffer) != 1 {
+		return
+	}
+	if atomic.LoadUint32(&s.upstreamReset) == 1 || atomic.LoadUint32(&s.downstreamReset) == 1 {
+		return
+	}
+	// reset downstreamReqBuf
+	if s.downstreamReqDataBuf != nil {
+		if e := buffer.PutIoBuffer(s.downstreamReqDataBuf); e != nil {
+			log.Println("PutIoBuffer error:", e)
+		}
+	}
+
+	// Give buffers to bufferPool
+	if ctx := buffer.PoolContext(s.context); ctx != nil {
+		ctx.Give()
+	}
 }

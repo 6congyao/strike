@@ -20,12 +20,14 @@ import (
 	"strike/pkg/buffer"
 )
 
+func init() {
+	buffer.RegisterBuffer(&ins)
+}
+
 var ins = proxyBufferCtx{}
 
-type proxyBufferCtx struct{}
-
-func (ctx proxyBufferCtx) Name() int {
-	return buffer.Proxy
+type proxyBufferCtx struct {
+	buffer.TempBufferCtx
 }
 
 func (ctx proxyBufferCtx) New() interface{} {
@@ -44,5 +46,5 @@ type proxyBuffers struct {
 
 func proxyBuffersByContext(ctx context.Context) *proxyBuffers {
 	poolCtx := buffer.PoolContext(ctx)
-	return poolCtx.Find(ins, nil).(*proxyBuffers)
+	return poolCtx.Find(&ins, nil).(*proxyBuffers)
 }

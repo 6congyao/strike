@@ -57,10 +57,10 @@ type proxy struct {
 	downstreamCallbacks DownstreamCallbacks
 	clusterName         string
 	//routersWrapper      types.RouterWrapper // wrapper used to point to the routers instance
-	serverCodec  stream.ServerStreamConnection
-	context      context.Context
-	activeSteams *list.List // downstream requests
-	asMux        sync.RWMutex
+	serverStreamConn stream.ServerStreamConnection
+	context          context.Context
+	activeSteams     *list.List // downstream requests
+	asMux            sync.RWMutex
 }
 
 // NewProxy create proxy instance for given v2.Proxy config
@@ -93,15 +93,15 @@ func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamCallbacks)
 
 	if p.config.DownstreamProtocol != string(protocol.AUTO) {
-		p.serverCodec = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
+		p.serverStreamConn = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
 	}
 }
 
 func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {
-	if p.serverCodec == nil {
-		p.serverCodec = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
+	if p.serverStreamConn == nil {
+		p.serverStreamConn = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
 	}
-	p.serverCodec.Dispatch(buf)
+	p.serverStreamConn.Dispatch(buf)
 
 	return network.Stop
 }
@@ -168,10 +168,10 @@ func (p *proxy) deleteActiveStream(s *downStream) {
 }
 
 func (p *proxy) convertProtocol() (dp, up protocol.Protocol) {
-	if p.serverCodec == nil {
+	if p.serverStreamConn == nil {
 		dp = protocol.Protocol(p.config.DownstreamProtocol)
 	} else {
-		dp = p.serverCodec.Protocol()
+		dp = p.serverStreamConn.Protocol()
 	}
 	up = protocol.Protocol(p.config.UpstreamProtocol)
 	if up == protocol.AUTO {

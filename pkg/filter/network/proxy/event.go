@@ -17,156 +17,46 @@ package proxy
 
 import (
 	"log"
-	"strike/pkg/buffer"
-	"strike/pkg/protocol"
-	"strike/pkg/stream"
 )
+
+type direction uint8
+type eventType uint8
 
 // stream direction
 const (
-	Downstream = 1
-	Upstream   = 2
+	// direction
+	diDownstream direction = 1
+	diUpstream   direction = 2
+
+	// event type
+	recvHeader  eventType = 1
+	recvData    eventType = 2
+	recvTrailer eventType = 3
+	reset       eventType = 4
 )
 
-type streamEvent struct {
-	direction int
-	streamID  uint32
-	stream    *downStream
+type event struct {
+	id  uint32
+	dir direction
+	evt eventType
+
+	handle func()
 }
 
-type startEvent struct {
-	streamEvent
-}
-
-type stopEvent struct {
-	streamEvent
-}
-
-type resetEvent struct {
-	streamEvent
-
-	reason stream.StreamResetReason
-}
-
-type receiveHeadersEvent struct {
-	streamEvent
-
-	headers   protocol.HeaderMap
-	endStream bool
-}
-
-type receiveDataEvent struct {
-	streamEvent
-
-	data      buffer.IoBuffer
-	endStream bool
-}
-
-type receiveTrailerEvent struct {
-	streamEvent
-
-	trailers protocol.HeaderMap
-}
-
-func (s *streamEvent) Source() uint32 {
-	return s.streamID
+func (e *event) Source() uint32 {
+	return e.id
 }
 
 func eventDispatch(shard int, jobChan <-chan interface{}) {
-	// stream process status map with shard, we use this to indicate a given stream is processing or not
-	streamMap := make(map[uint32]bool, 1<<10)
-
-	for event := range jobChan {
-		eventProcess(shard, streamMap, event)
+	for job := range jobChan {
+		eventProcess(shard, job)
 	}
 }
 
-func eventProcess(shard int, streamMap map[uint32]bool, event interface{}) {
-	// TODO: event handles by itself. just call event.handle() here
-	switch event.(type) {
-	case *startEvent:
-		e := event.(*startEvent)
-		//log.DefaultLogger.Errorf("[start] %d %d %s", shard, e.direction, e.streamID)
+func eventProcess(shard int, job interface{}) {
+	if ev, ok := job.(*event); ok {
+		log.Println("enter event process with proxyID/dir/type", ev.id, ev.dir, ev.evt)
 
-		streamMap[e.streamID] = false
-	case *stopEvent:
-		e := event.(*stopEvent)
-		//log.DefaultLogger.Errorf("[stop] %d %d %s", shard, e.direction, e.streamID)
-		e.stream.GiveStream()
-		delete(streamMap, e.streamID)
-	case *resetEvent:
-		e := event.(*resetEvent)
-		//log.DefaultLogger.Errorf("[reset] %d %d %s", shard, e.direction, e.streamID)
-
-		if _, ok := streamMap[e.streamID]; ok {
-			switch e.direction {
-			case Downstream:
-				e.stream.ResetStream(e.reason)
-			case Upstream:
-				e.stream.upstreamRequest.ResetStream(e.reason)
-			default:
-				log.Println("Unknown receiveTrailerEvent direction:", e.direction)
-			}
-			//	streamMap[e.streamID] = streamMap[e.streamID] || streamProcessDone(e.stream)
-		}
-	case *receiveHeadersEvent:
-		e := event.(*receiveHeadersEvent)
-		//log.DefaultLogger.Errorf("[header] %d %d %s", shard, e.direction, e.streamID)
-
-		if done, ok := streamMap[e.streamID]; ok && !(done || streamProcessDone(e.stream)) {
-			switch e.direction {
-			case Downstream:
-				e.stream.ReceiveHeaders(e.headers, e.endStream)
-			case Upstream:
-				e.stream.upstreamRequest.ReceiveHeaders(e.headers, e.endStream)
-			default:
-				log.Println("Unknown receiveHeadersEvent direction:", e.direction)
-			}
-			streamMap[e.streamID] = streamMap[e.streamID] || streamProcessDone(e.stream)
-		}
-	case *receiveDataEvent:
-		e := event.(*receiveDataEvent)
-		//log.DefaultLogger.Errorf("[data] %d %d %s", shard, e.direction, e.streamID)
-
-		if done, ok := streamMap[e.streamID]; ok && !(done || streamProcessDone(e.stream)) {
-			switch e.direction {
-			case Downstream:
-				if e.stream.upstreamRequest == nil {
-					// Sometimes runReceiveHeaderFilters will return doReceiveHeaders early,
-					// but will not block OnReceiveData, at this scene the upstreamRequest is nil.
-					// even if the upstreamRequest is nil, the ReceiveData->doReceiveData will return by runReceiveDataFilters
-					// it is ok.
-					log.Println("data error:", shard, e.stream)
-				}
-				e.stream.ReceiveData(e.data, e.endStream)
-			case Upstream:
-				e.stream.upstreamRequest.ReceiveData(e.data, e.endStream)
-			default:
-				log.Println("Unknown receiveDataEvent direction:", e.direction)
-			}
-			streamMap[e.streamID] = streamMap[e.streamID] || streamProcessDone(e.stream)
-		}
-	case *receiveTrailerEvent:
-		e := event.(*receiveTrailerEvent)
-		//log.DefaultLogger.Errorf("[trailer] %d %d %s", shard, e.direction, e.stream.streamID)
-
-		if done, ok := streamMap[e.streamID]; ok && !(done || streamProcessDone(e.stream)) {
-			switch e.direction {
-			case Downstream:
-				e.stream.ReceiveTrailers(e.trailers)
-			case Upstream:
-				e.stream.upstreamRequest.ReceiveTrailers(e.trailers)
-			default:
-				log.Println("Unknown receiveTrailerEvent direction:", e.direction)
-			}
-			streamMap[e.streamID] = streamMap[e.streamID] || streamProcessDone(e.stream)
-		}
-
-	default:
-		log.Println("Unknown event type:", event)
+		ev.handle()
 	}
-}
-
-func streamProcessDone(s *downStream) bool {
-	return s.upstreamProcessDone || s.downstreamReset == 1
 }

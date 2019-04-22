@@ -20,7 +20,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 type TestJob struct {
@@ -72,17 +71,12 @@ func TestJobOrder(t *testing.T) {
 		counter := uint32(i)
 		go func() {
 			for j := 0; j < shardEvents; j++ {
-				pool.Offer(&TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))})
+				pool.Offer(&TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))}, true)
 			}
 		}()
 	}
 
 	wg.Wait()
-
-	// wait flush end for codecov
-	for atomic.LoadUint32(&pool.(*shardWorkerPool).schedule) != 0 {
-		time.Sleep(time.Millisecond * 10)
-	}
 }
 
 func eventProcess(b *testing.B) {
@@ -125,7 +119,7 @@ func eventProcess(b *testing.B) {
 		counter := uint32(i)
 		go func() {
 			for j := 0; j < shardEvents; j++ {
-				pool.Offer(&TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))})
+				pool.Offer(&TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))}, true)
 			}
 		}()
 	}

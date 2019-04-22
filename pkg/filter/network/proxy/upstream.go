@@ -73,17 +73,21 @@ func (r *upstreamRequest) ResetStream(reason stream.StreamResetReason) {
 // stream.StreamEventListener
 // Called by stream layer normally
 func (r *upstreamRequest) OnResetStream(reason stream.StreamResetReason) {
-	workerPool.Offer(&resetEvent{
-		streamEvent: streamEvent{
-			direction: Upstream,
-			streamID:  r.downStream.ID,
-			stream:    r.downStream,
+	workerPool.Offer(&event{
+		id:  r.downStream.ID,
+		dir: diUpstream,
+		evt: reset,
+		handle: func() {
+			r.ResetStream(reason)
 		},
-		reason: reason,
-	})
+	}, false)
 }
 
 func (r *upstreamRequest) OnDestroyStream() {}
+
+func (r *upstreamRequest) endStream() {
+	// todo: record upstream process time in request info
+}
 
 func (r *upstreamRequest) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) {
 	r.upstreamRespHeaders = headers
@@ -131,41 +135,41 @@ func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers prot
 	//	headers.Del(protocol.StrikeResponseStatusCode)
 	//}
 
-	workerPool.Offer(&receiveHeadersEvent{
-		streamEvent: streamEvent{
-			direction: Upstream,
-			streamID:  r.downStream.ID,
-			stream:    r.downStream,
+	workerPool.Offer(&event{
+		id:  r.downStream.ID,
+		dir: diUpstream,
+		evt: recvHeader,
+		handle: func() {
+			r.ReceiveHeaders(headers, endStream)
 		},
-		headers:   headers,
-		endStream: endStream,
-	})
+	}, true)
 }
 
 func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
 	r.downStream.downstreamRespDataBuf = data.Clone()
 	data.Drain(data.Len())
 
-	workerPool.Offer(&receiveDataEvent{
-		streamEvent: streamEvent{
-			direction: Upstream,
-			streamID:  r.downStream.ID,
-			stream:    r.downStream,
+	workerPool.Offer(&event{
+		id:  r.downStream.ID,
+		dir: diUpstream,
+		evt: recvData,
+		handle: func() {
+			r.ReceiveData(r.downStream.downstreamRespDataBuf, endStream)
 		},
-		data:      r.downStream.downstreamRespDataBuf,
-		endStream: endStream,
-	})
+	}, true)
 }
 
 func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
-	workerPool.Offer(&receiveTrailerEvent{
-		streamEvent: streamEvent{
-			direction: Upstream,
-			streamID:  r.downStream.ID,
-			stream:    r.downStream,
+	r.endStream()
+
+	workerPool.Offer(&event{
+		id:  r.downStream.ID,
+		dir: diUpstream,
+		evt: recvTrailer,
+		handle: func() {
+			r.ReceiveTrailers(trailers)
 		},
-		trailers: trailers,
-	})
+	}, true)
 }
 
 func (r *upstreamRequest) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {

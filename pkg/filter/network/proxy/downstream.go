@@ -18,6 +18,7 @@ package proxy
 import (
 	"container/list"
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"strike/pkg/buffer"
@@ -177,6 +178,9 @@ func (s *downStream) doReceiveHeaders(filter *activeStreamReceiverFilter, header
 
 	if err != nil {
 		log.Println("initialize Upstream Connection Pool error:", err)
+		if connPool == nil {
+			s.sendHijackReply(types.NoHealthUpstreamCode, s.downstreamReqHeaders, false)
+		}
 		return
 	}
 
@@ -195,7 +199,7 @@ func (s *downStream) doReceiveHeaders(filter *activeStreamReceiverFilter, header
 
 func (s *downStream) ReceiveData(data buffer.IoBuffer, endStream bool) {
 	// if active stream finished before receive data, just ignore further data
-	if s.upstreamProcessDone {
+	if s.processDone() {
 		return
 	}
 
@@ -217,7 +221,7 @@ func (s *downStream) doReceiveData(filter *activeStreamReceiverFilter, data buff
 
 func (s *downStream) ReceiveTrailers(trailers protocol.HeaderMap) {
 	// if active stream finished the lifecycle, just ignore further data
-	if s.upstreamProcessDone {
+	if s.processDone() {
 		return
 	}
 
@@ -231,21 +235,32 @@ func (s *downStream) doReceiveTrailers(filter *activeStreamReceiverFilter, trail
 }
 
 func (s *downStream) initializeUpstreamConnectionPool() (connPool stream.ConnectionPool, err error) {
-	var upProtocol protocol.Protocol
-
-	if s.proxy.config.UpstreamProtocol == string(protocol.AUTO) {
-		if s.proxy.serverStreamConn == nil {
-			upProtocol = protocol.Protocol(s.proxy.config.DownstreamProtocol)
-		} else {
-			upProtocol = s.proxy.serverStreamConn.Protocol()
-		}
-	} else {
-		upProtocol = protocol.Protocol(s.proxy.config.UpstreamProtocol)
-	}
-
+	upProtocol := s.getUpstreamProtocol()
 	connPool = s.getUpstreamConnPool(upProtocol)
 	if connPool == nil {
-		s.sendHijackReply(types.NoHealthUpstreamCode, s.downstreamReqHeaders, false)
+		err = errors.New("no health upstream connection found")
+	}
+
+	return
+}
+
+func (s *downStream) getDownstreamProtocol() (prot protocol.Protocol) {
+	if s.proxy.serverStreamConn == nil {
+		prot = protocol.Protocol(s.proxy.config.DownstreamProtocol)
+	} else {
+		prot = s.proxy.serverStreamConn.Protocol()
+	}
+	return
+}
+
+func (s *downStream) getUpstreamProtocol() (prot protocol.Protocol) {
+	configProt := s.proxy.config.UpstreamProtocol
+
+	// Auto means same as downstream protocol
+	if configProt == string(protocol.Auto) {
+		prot = s.getDownstreamProtocol()
+	} else {
+		prot = protocol.Protocol(configProt)
 	}
 
 	return
@@ -709,4 +724,8 @@ func (s *downStream) giveStream() {
 	if ctx := buffer.PoolContext(s.context); ctx != nil {
 		ctx.Give()
 	}
+}
+
+func (s *downStream) processDone() bool {
+	return s.upstreamProcessDone || atomic.LoadUint32(&s.downstreamReset) == 1
 }

@@ -47,11 +47,11 @@ func (cp *connPool) Protocol() protocol.Protocol {
 }
 
 func (cp *connPool) NewStream(ctx context.Context, receiver stream.StreamReceiveListener, cb stream.PoolEventListener) {
-	//cp.mux.Lock()
+	cp.mux.Lock()
 	if cp.activeClient == nil {
 		cp.activeClient = newActiveClient(ctx, cp)
 	}
-	//cp.mux.Unlock()
+	cp.mux.Unlock()
 
 	ac := cp.activeClient
 	if ac == nil {

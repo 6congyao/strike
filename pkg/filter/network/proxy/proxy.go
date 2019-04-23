@@ -92,7 +92,7 @@ func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.readCallbacks = cb
 	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamCallbacks)
 
-	if p.config.DownstreamProtocol != string(protocol.AUTO) {
+	if p.config.DownstreamProtocol != string(protocol.Auto) {
 		p.serverStreamConn = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
 	}
 }
@@ -132,16 +132,12 @@ func (p *proxy) onDownstreamEvent(event network.ConnectionEvent) {
 		var urEleNext *list.Element
 
 		p.asMux.RLock()
-		downStreams := make([]*downStream, 0, p.activeSteams.Len())
+		defer p.asMux.RUnlock()
+
 		for urEle := p.activeSteams.Front(); urEle != nil; urEle = urEleNext {
 			urEleNext = urEle.Next()
 
 			ds := urEle.Value.(*downStream)
-			downStreams = append(downStreams, ds)
-		}
-		p.asMux.RUnlock()
-
-		for _, ds := range downStreams {
 			ds.OnResetStream(stream.StreamConnectionTermination)
 		}
 	}
@@ -174,7 +170,7 @@ func (p *proxy) convertProtocol() (dp, up protocol.Protocol) {
 		dp = p.serverStreamConn.Protocol()
 	}
 	up = protocol.Protocol(p.config.UpstreamProtocol)
-	if up == protocol.AUTO {
+	if up == protocol.Auto {
 		up = dp
 	}
 	return

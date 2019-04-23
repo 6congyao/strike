@@ -31,7 +31,6 @@ import (
 // stream.PoolEventListener
 type upstreamRequest struct {
 	proxy      *proxy
-	element    *list.Element
 	downStream *downStream
 	//host          types.Host
 	requestSender stream.StreamSender
@@ -45,6 +44,8 @@ type upstreamRequest struct {
 	dataSent     bool
 	trailerSent  bool
 	setupRetry   bool
+
+	element *list.Element
 }
 
 // reset upstream request in proxy context
@@ -95,23 +96,39 @@ func (r *upstreamRequest) ReceiveHeaders(headers protocol.HeaderMap, endStream b
 }
 
 func (r *upstreamRequest) ReceiveData(data buffer.IoBuffer, endStream bool) {
+	if r.downStream.processDone() {
+		return
+	}
+
 	if !r.setupRetry {
 		r.downStream.onUpstreamData(data, endStream)
 	}
 }
 
 func (r *upstreamRequest) ReceiveTrailers(trailers protocol.HeaderMap) {
+	if r.downStream.processDone() {
+		return
+	}
+
 	if !r.setupRetry {
 		r.downStream.onUpstreamTrailers(trailers)
 	}
 }
 
 func (r *upstreamRequest) appendHeaders(headers protocol.HeaderMap, endStream bool) {
+	if r.downStream.processDone() {
+		return
+	}
+
 	r.sendComplete = endStream
 	r.connPool.NewStream(r.downStream.context, r, r)
 }
 
 func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
+	if r.downStream.processDone() {
+		return
+	}
+
 	r.sendComplete = endStream
 	r.dataSent = true
 	if r.requestSender == nil {
@@ -124,6 +141,16 @@ func (r *upstreamRequest) appendData(data buffer.IoBuffer, endStream bool) {
 	r.requestSender.AppendData(r.downStream.context, data, endStream)
 }
 
+func (r *upstreamRequest) appendTrailers(trailers protocol.HeaderMap) {
+	if r.downStream.processDone() {
+		return
+	}
+
+	r.sendComplete = true
+	r.trailerSent = true
+	r.requestSender.AppendTrailers(r.downStream.context, trailers)
+}
+
 // stream.StreamReceiver
 // Method to decode upstream's response message
 func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
@@ -134,6 +161,10 @@ func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers prot
 	//	}
 	//	headers.Del(protocol.StrikeResponseStatusCode)
 	//}
+
+	if endStream {
+		r.endStream()
+	}
 
 	workerPool.Offer(&event{
 		id:  r.downStream.ID,
@@ -148,6 +179,10 @@ func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers prot
 func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
 	r.downStream.downstreamRespDataBuf = data.Clone()
 	data.Drain(data.Len())
+
+	if endStream {
+		r.endStream()
+	}
 
 	workerPool.Offer(&event{
 		id:  r.downStream.ID,

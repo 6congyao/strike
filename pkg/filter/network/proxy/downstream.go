@@ -83,7 +83,7 @@ type downStream struct {
 	context context.Context
 }
 
-func newActiveStream(ctx context.Context, streamID uint64, proxy *proxy, responseSender stream.StreamSender) *downStream {
+func newActiveStream(ctx context.Context, proxy *proxy, responseSender stream.StreamSender) *downStream {
 	newCtx := buffer.NewBufferPoolContext(ctx)
 
 	proxyBuffers := proxyBuffersByContext(newCtx)
@@ -138,21 +138,6 @@ func (s *downStream) OnReceiveTrailers(context context.Context, trailers protoco
 			s.ReceiveTrailers(trailers)
 		},
 	}, true)
-}
-
-func (s *downStream) GiveStream() {
-	if s.upstreamReset == 1 || s.downstreamReset == 1 {
-		return
-	}
-	// reset downstreamReqBuf
-	if s.downstreamReqDataBuf != nil {
-		buffer.PutIoBuffer(s.downstreamReqDataBuf)
-	}
-
-	// Give buffers to bufferPool
-	if ctx := buffer.PoolContext(s.context); ctx != nil {
-		ctx.Give()
-	}
 }
 
 func (s *downStream) ResetStream(reason stream.StreamResetReason) {
@@ -231,7 +216,18 @@ func (s *downStream) ReceiveTrailers(trailers protocol.HeaderMap) {
 }
 
 func (s *downStream) doReceiveTrailers(filter *activeStreamReceiverFilter, trailers protocol.HeaderMap) {
+	if s.runReceiveTrailersFilters(filter, trailers) {
+		return
+	}
 
+	s.downstreamReqTrailers = trailers
+	s.onUpstreamRequestSent()
+	s.upstreamRequest.appendTrailers(trailers)
+
+	// if upstream process done in the middle of receiving trailers, just end stream
+	if s.upstreamProcessDone {
+		s.cleanStream()
+	}
 }
 
 func (s *downStream) initializeUpstreamConnectionPool() (connPool stream.ConnectionPool, err error) {
@@ -420,7 +416,8 @@ func (s *downStream) cleanStream() {
 	}
 
 	// reset corresponding upstream stream
-	if s.upstreamRequest != nil {
+	if s.upstreamRequest != nil && !s.upstreamProcessDone {
+		s.upstreamProcessDone = true
 		s.upstreamRequest.resetStream()
 	}
 
@@ -447,22 +444,11 @@ func (s *downStream) cleanStream() {
 // case 1: downstream's lifecycle ends normally
 // case 2: downstream got reset. See downStream.resetStream for more detail
 func (s *downStream) endStream() {
-	var isReset bool
-	if s.responseSender != nil {
-		if !s.downstreamRecvDone || !s.upstreamProcessDone {
-			// if downstream req received not done, or local proxy process not done by handle upstream response,
-			// just mark it as done and reset stream as a failed case
-			s.upstreamProcessDone = true
-
-			// reset downstream will trigger a clean up, see OnResetStream
-			s.responseSender.GetStream().ResetStream(stream.StreamLocalReset)
-			isReset = true
-		}
+	if s.responseSender != nil && !s.downstreamRecvDone {
+		// not reuse buffer
+		atomic.StoreUint32(&s.reuseBuffer, 0)
 	}
-
-	if !isReset {
-		s.cleanStream()
-	}
+	s.cleanStream()
 
 	// note: if proxy logic resets the stream, there maybe some underlying data in the conn.
 	// we ignore this for now, fix as a todo
@@ -519,7 +505,14 @@ func (s *downStream) OnDecodeError(context context.Context, err error, headers p
 }
 
 func (s *downStream) resetStream() {
-	s.endStream()
+	if s.responseSender != nil && !s.upstreamProcessDone {
+		// if downstream req received not done, or local proxy process not done by handle upstream response,
+		// just mark it as done and reset stream as a failed case
+		s.upstreamProcessDone = true
+
+		// reset downstream will trigger a clean up, see OnResetStream
+		s.responseSender.GetStream().ResetStream(stream.StreamLocalReset)
+	}
 }
 
 func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doConv bool) {
@@ -600,7 +593,7 @@ func (s *downStream) runAppendDataFilters(filter *activeStreamSenderFilter, data
 		f = s.senderFilters[index]
 
 		s.filterStage |= EncodeData
-		status := f.filter.AppendData(data, endStream)
+		status := f.filter.AppendData(s.context, data, endStream)
 		s.filterStage &= ^EncodeData
 		if f.handleDataStatus(status, data) {
 			return true
@@ -636,7 +629,7 @@ func (s *downStream) runReceiveHeadersFilters(filter *activeStreamReceiverFilter
 		f = s.receiverFilters[index]
 
 		s.filterStage |= DecodeHeaders
-		status := f.filter.OnDecodeHeaders(headers, endStream)
+		status := f.filter.OnReceiveHeaders(s.context, headers, endStream)
 		s.filterStage &= ^DecodeHeaders
 		if f.handleHeaderStatus(status) {
 			// TODO: If it is the last filter, continue with
@@ -666,12 +659,38 @@ func (s *downStream) runReceiveDataFilters(filter *activeStreamReceiverFilter, d
 		f = s.receiverFilters[index]
 
 		s.filterStage |= DecodeData
-		status := f.filter.OnDecodeData(data, endStream)
+		status := f.filter.OnReceiveData(s.context, data, endStream)
 		s.filterStage &= ^DecodeData
 		if f.handleDataStatus(status, data) {
 			// TODO: If it is the last filter, continue with
 			// processing since we need to handle the case where a terminal filter wants to buffer, but
 			// a previous filter has added body.
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *downStream) runReceiveTrailersFilters(filter *activeStreamReceiverFilter, trailers protocol.HeaderMap) bool {
+	if s.upstreamProcessDone {
+		return false
+	}
+
+	var index int
+	var f *activeStreamReceiverFilter
+
+	if filter != nil {
+		index = filter.index + 1
+	}
+
+	for ; index < len(s.receiverFilters); index++ {
+		f = s.receiverFilters[index]
+
+		s.filterStage |= DecodeTrailers
+		status := f.filter.OnReceiveTrailers(s.context, trailers)
+		s.filterStage &= ^DecodeTrailers
+		if f.handleTrailerStatus(status) {
 			return true
 		}
 	}

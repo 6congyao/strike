@@ -151,7 +151,7 @@ type ServerStreamConnectionEventListener interface {
 	StreamConnectionEventListener
 
 	// NewStreamDetect returns stream event receiver
-	NewStreamDetect(context context.Context, streamID uint64, responseEncoder StreamSender) StreamReceiveListener
+	NewStreamDetect(context context.Context, responseEncoder StreamSender) StreamReceiveListener
 }
 
 type ProtocolStreamFactory interface {
@@ -224,92 +224,73 @@ type StreamSenderFilter interface {
 
 	// AppendHeaders encodes headers
 	// endStream supplies whether this is a header only request/response
-	AppendHeaders(headers protocol.HeaderMap, endStream bool) StreamHeadersFilterStatus
+	AppendHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) StreamHeadersFilterStatus
 
 	// AppendData encodes data
 	// endStream supplies whether this is the last data
-	AppendData(buf buffer.IoBuffer, endStream bool) StreamDataFilterStatus
+	AppendData(ctx context.Context, buf buffer.IoBuffer, endStream bool) StreamDataFilterStatus
 
 	// AppendTrailers encodes trailers, implicitly ending the stream
-	AppendTrailers(trailers protocol.HeaderMap) StreamTrailersFilterStatus
+	AppendTrailers(ctx context.Context, trailers protocol.HeaderMap) StreamTrailersFilterStatus
 
-	// SetEncoderFilterCallbacks sets the StreamSenderFilterCallbacks
-	SetEncoderFilterCallbacks(cb StreamSenderFilterCallbacks)
+	// SetSenderFilterHandler sets the StreamSenderFilterCallbacks
+	SetSenderFilterHandler(handler StreamSenderFilterHandler)
 }
 
 // StreamReceiverFilter is a StreamFilterBase wrapper
 type StreamReceiverFilter interface {
 	StreamFilterBase
 
-	// OnDecodeHeaders is called with decoded headers
+	// OnReceiveHeaders is called with decoded headers
 	// endStream supplies whether this is a header only request/response
-	OnDecodeHeaders(headers protocol.HeaderMap, endStream bool) StreamHeadersFilterStatus
+	OnReceiveHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) StreamHeadersFilterStatus
 
-	// OnDecodeData is called with a decoded data
+	// OnReceiveData is called with a decoded data
 	// endStream supplies whether this is the last data
-	OnDecodeData(buf buffer.IoBuffer, endStream bool) StreamDataFilterStatus
+	OnReceiveData(ctx context.Context, buf buffer.IoBuffer, endStream bool) StreamDataFilterStatus
 
-	// OnDecodeTrailers is called with decoded trailers, implicitly ending the stream
-	OnDecodeTrailers(trailers protocol.HeaderMap) StreamTrailersFilterStatus
+	// OnReceiveTrailers is called with decoded trailers, implicitly ending the stream
+	OnReceiveTrailers(ctx context.Context, trailers protocol.HeaderMap) StreamTrailersFilterStatus
 
-	// SetDecoderFilterCallbacks sets decoder filter callbacks
-	SetDecoderFilterCallbacks(cb StreamReceiverFilterCallbacks)
+	// SetReceiveFilterHandler sets decoder filter callbacks
+	SetReceiveFilterHandler(handler StreamReceiverFilterHandler)
 }
 
-// StreamFilterCallbacks is called by stream filter to interact with underlying stream
-type StreamFilterCallbacks interface {
+// StreamFilterHandler is called by stream filter to interact with underlying stream
+type StreamFilterHandler interface {
 	// Connection returns the originating connection
 	Connection() network.Connection
 
 	// ResetStream resets the underlying stream
-	ResetStream()
+	//ResetStream()
 
 	// Route returns a route for current stream
 	//Route() Route
 
 	// StreamID returns stream id
-	StreamID() string
+	//StreamID() string
 
 	// RequestInfo returns request info related to the stream
 	//RequestInfo() RequestInfo
 }
 
-// StreamSenderFilterCallbacks is a StreamFilterCallbacks wrapper
-type StreamSenderFilterCallbacks interface {
-	StreamFilterCallbacks
+// StreamSenderFilterHandler is a StreamFilterCallbacks wrapper
+type StreamSenderFilterHandler interface {
+	StreamFilterHandler
 
 	// ContinueEncoding continue iterating through the filter chain with buffered headers and body data
-	ContinueEncoding()
-
-	// EncodingBuffer returns data buffered by this filter or previous ones in the filter chain
-	EncodingBuffer() buffer.IoBuffer
-
-	// AddEncodedData adds buffered body data
-	AddEncodedData(buf buffer.IoBuffer, streamingFilter bool)
-
-	// SetEncoderBufferLimit sets the buffer limit
-	SetEncoderBufferLimit(limit uint32)
-
-	// EncoderBufferLimit returns buffer limit
-	EncoderBufferLimit() uint32
+	ContinueSending()
 }
 
-// StreamReceiverFilterCallbacks add additional callbacks that allow a decoding filter to restart
+// StreamReceiverFilterHandler add additional callbacks that allow a decoding filter to restart
 // decoding if they decide to hold data
-type StreamReceiverFilterCallbacks interface {
-	StreamFilterCallbacks
+type StreamReceiverFilterHandler interface {
+	StreamFilterHandler
 
 	// ContinueDecoding continue iterating through the filter chain with buffered headers and body data
 	// It can only be called if decode process has been stopped by current filter, using StopIteration from decodeHeaders() or StopIterationAndBuffer or StopIterationNoBuffer from decodeData()
 	// The controller will dispatch headers and any buffered body data to the next filter in the chain.
-	ContinueDecoding()
-
-	// DecodingBuffer returns data buffered by this filter or previous ones in the filter chain,
-	// if nothing has been buffered, returns nil
-	DecodingBuffer() buffer.IoBuffer
-
-	// AddDecodedData add s buffered body data
-	AddDecodedData(buf buffer.IoBuffer, streamingFilter bool)
+	ContinueReceiving()
 
 	// AppendHeaders is called with headers to be encoded, optionally indicating end of stream
 	// Filter uses this function to send out request/response headers of the stream
@@ -325,11 +306,6 @@ type StreamReceiverFilterCallbacks interface {
 	// Filter uses this function to send out request/response trailers of the stream
 	AppendTrailers(trailers protocol.HeaderMap)
 
-	// SetDecoderBufferLimit sets the buffer limit for decoder filters
-	SetDecoderBufferLimit(limit uint32)
-
-	// DecoderBufferLimit returns the decoder buffer limit
-	DecoderBufferLimit() uint32
 	// SendHijackReply is called when the filter will response directly
 	SendHijackReply(code int, headers protocol.HeaderMap, doConv bool)
 }
@@ -356,16 +332,6 @@ type PoolEventListener interface {
 	OnFailure(reason PoolFailureReason, host upstream.Host)
 
 	OnReady(sender StreamSender, host upstream.Host)
-}
-
-//type Cancellable interface {
-//	Cancel()
-//}
-
-type CodecClientCallbacks interface {
-	OnStreamDestroy()
-
-	OnStreamReset(reason StreamResetReason)
 }
 
 type Client interface {

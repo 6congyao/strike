@@ -27,7 +27,7 @@ import (
 
 type commmonRuleFilter struct {
 	context           context.Context
-	cb                stream.StreamReceiverFilterCallbacks
+	handler           stream.StreamReceiverFilterHandler
 	commonRuleConfig  *model.CommonRuleConfig
 	RuleEngineFactory *RuleEngineFactory
 }
@@ -46,28 +46,28 @@ func NewCommonRuleFilter(context context.Context, config *model.CommonRuleConfig
 }
 
 //implement StreamReceiverFilter
-func (f *commmonRuleFilter) OnDecodeHeaders(headers protocol.HeaderMap, endStream bool) stream.StreamHeadersFilterStatus {
+func (f *commmonRuleFilter) OnReceiveHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) stream.StreamHeadersFilterStatus {
 	// do filter
 	if f.RuleEngineFactory.invoke(headers) {
 		return stream.StreamHeadersFilterContinue
 	}
 	headers.Set(types.HeaderStatus, strconv.Itoa(types.LimitExceededCode))
-	f.cb.AppendHeaders(headers, true)
+	f.handler.AppendHeaders(headers, true)
 	return stream.StreamHeadersFilterStop
 }
 
-func (f *commmonRuleFilter) OnDecodeData(buf buffer.IoBuffer, endStream bool) stream.StreamDataFilterStatus {
+func (f *commmonRuleFilter) OnReceiveData(ctx context.Context, buf buffer.IoBuffer, endStream bool) stream.StreamDataFilterStatus {
 	//do filter
 	return stream.StreamDataFilterContinue
 }
 
-func (f *commmonRuleFilter) OnDecodeTrailers(trailers protocol.HeaderMap) stream.StreamTrailersFilterStatus {
+func (f *commmonRuleFilter) OnReceiveTrailers(ctx context.Context, trailers protocol.HeaderMap) stream.StreamTrailersFilterStatus {
 	//do filter
 	return stream.StreamTrailersFilterContinue
 }
 
-func (f *commmonRuleFilter) SetDecoderFilterCallbacks(cb stream.StreamReceiverFilterCallbacks) {
-	f.cb = cb
+func (f *commmonRuleFilter) SetReceiveFilterHandler(handler stream.StreamReceiverFilterHandler) {
+	f.handler = handler
 }
 
 func (f *commmonRuleFilter) OnDestroy() {}

@@ -108,8 +108,8 @@ func (p *proxy) OnData(buf buffer.IoBuffer) network.FilterStatus {
 
 func (p *proxy) OnGoAway() {}
 
-func (p *proxy) NewStreamDetect(ctx context.Context, streamID uint64, responseSender stream.StreamSender) stream.StreamReceiveListener {
-	s := newActiveStream(ctx, streamID, p, responseSender)
+func (p *proxy) NewStreamDetect(ctx context.Context, responseSender stream.StreamSender) stream.StreamReceiveListener {
+	s := newActiveStream(ctx, p, responseSender)
 
 	//todo: stream filter
 	if ff := p.context.Value(types.ContextKeyStreamFilterChainFactories); ff != nil {

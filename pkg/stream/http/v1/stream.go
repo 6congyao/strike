@@ -112,7 +112,7 @@ func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) ne
 			connection:       sc,
 			responseDoneChan: make(chan struct{}),
 		}
-		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, streamID, srvStream)
+		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, srvStream)
 
 		sc.mutex.Lock()
 		sc.stream = srvStream

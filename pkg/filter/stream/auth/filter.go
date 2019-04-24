@@ -27,7 +27,7 @@ import (
 
 type authRuleFilter struct {
 	context           context.Context
-	cb                stream.StreamReceiverFilterCallbacks
+	handler           stream.StreamReceiverFilterHandler
 	authRuleConfig    *model.AuthRuleConfig
 	RuleEngineFactory *RuleEngineFactory
 }
@@ -46,28 +46,28 @@ func NewAuthRuleFilter(context context.Context, config *model.AuthRuleConfig) st
 }
 
 //implement StreamReceiverFilter
-func (f *authRuleFilter) OnDecodeHeaders(headers protocol.HeaderMap, endStream bool) stream.StreamHeadersFilterStatus {
+func (f *authRuleFilter) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) stream.StreamHeadersFilterStatus {
 	// do filter
 	if f.RuleEngineFactory.invoke(headers) {
 		return stream.StreamHeadersFilterContinue
 	}
 	headers.Set(types.HeaderStatus, strconv.Itoa(types.Unauthorized))
-	f.cb.AppendHeaders(headers, true)
+	f.handler.AppendHeaders(headers, true)
 	return stream.StreamHeadersFilterStop
 }
 
-func (f *authRuleFilter) OnDecodeData(buf buffer.IoBuffer, endStream bool) stream.StreamDataFilterStatus {
+func (f *authRuleFilter) OnReceiveData(context context.Context, buf buffer.IoBuffer, endStream bool) stream.StreamDataFilterStatus {
 	//do filter
 	return stream.StreamDataFilterContinue
 }
 
-func (f *authRuleFilter) OnDecodeTrailers(trailers protocol.HeaderMap) stream.StreamTrailersFilterStatus {
+func (f *authRuleFilter) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) stream.StreamTrailersFilterStatus {
 	//do filter
 	return stream.StreamTrailersFilterContinue
 }
 
-func (f *authRuleFilter) SetDecoderFilterCallbacks(cb stream.StreamReceiverFilterCallbacks) {
-	f.cb = cb
+func (f *authRuleFilter) SetReceiveFilterHandler(handler stream.StreamReceiverFilterHandler) {
+	f.handler = handler
 }
 
 func (f *authRuleFilter) OnDestroy() {}

@@ -107,7 +107,7 @@ func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) ne
 			connection: sc,
 		}
 
-		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, streamID, srvStream)
+		srvStream.receiver = sc.sscCallbacks.NewStreamDetect(sc.context, srvStream)
 		srvStream.handleMessage()
 	}
 

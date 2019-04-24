@@ -78,6 +78,6 @@ Stream:
 * TLS v1.2
 
 ## 示例请参考：
-+ [mq-gateway](/docs/quickstart/gateway.md)
++ [iot-gateway](/docs/quickstart/gateway.md)
 
 

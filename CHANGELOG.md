@@ -19,3 +19,6 @@
 ## 0.3.1
 + Stream filter (JWT Auth)
 + Dockerfile & travis
+
+## 0.4.0
++ Refactoring

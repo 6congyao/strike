@@ -72,7 +72,7 @@ func (b *ioBuffer) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (b *ioBuffer) ReadOnce(r io.Reader) (n int64, err error) {
+func (b *ioBuffer) ReadOnce(r io.Reader, d int64) (n int64, err error) {
 	var (
 		m               int
 		e               error
@@ -111,8 +111,10 @@ func (b *ioBuffer) ReadOnce(r io.Reader) (n int64, err error) {
 
 		if conn != nil {
 			if first {
-				// TODO: support configure
-				conn.SetReadDeadline(time.Now().Add(FirstConnReadTimeout))
+				if d == 0 {
+					d = FirstConnReadTimeout.Nanoseconds()
+				}
+				conn.SetReadDeadline(time.Now().Add(time.Duration(d)))
 			} else {
 				conn.SetReadDeadline(time.Now().Add(ConnReadTimeout))
 			}

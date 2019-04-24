@@ -71,6 +71,7 @@ Stream:
 ## Stream Filters
 * QPS
 * Rate
+* Auth (jwt)
 
 ## Supported protocols
 * HTTP v1.1

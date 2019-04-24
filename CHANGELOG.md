@@ -22,3 +22,4 @@
 
 ## 0.4.0
 + Refactoring
++ Session read timeout

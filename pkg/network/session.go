@@ -52,6 +52,7 @@ type Session struct {
 	rawc            interface{}
 	connCallbacks   []ConnectionEventListener
 	readBuffer      buffer.IoBuffer
+	readTimeout     int64
 	bufferLimit     uint32
 	stopChan        chan struct{}
 	writeBuffers    net.Buffers
@@ -238,6 +239,10 @@ func (s *Session) RawConn() interface{} {
 	return s.rawc
 }
 
+func (s *Session) SetReadTimeout(duration int64) {
+	s.readTimeout = duration
+}
+
 func (s *Session) doReadConn() (err error) {
 	if conn, ok := s.rawc.(net.Conn); ok {
 		if s.readBuffer == nil {
@@ -245,14 +250,18 @@ func (s *Session) doReadConn() (err error) {
 		}
 
 		var bytesRead int64
-		bytesRead, err = s.readBuffer.ReadOnce(conn)
+		bytesRead, err = s.readBuffer.ReadOnce(conn, s.readTimeout)
 
 		if err != nil {
 			if te, ok := err.(net.Error); ok && te.Timeout() {
+				// run read timeout callback, for keep alive if configured
+				for _, cb := range s.connCallbacks {
+					cb.OnEvent(OnReadTimeout)
+				}
 				if bytesRead == 0 {
 					return err
 				}
-			} else {
+			} else if err != io.EOF {
 				return err
 			}
 		}
@@ -332,6 +341,7 @@ func (s *Session) startReadLoop() {
 			err := s.doReadConn()
 			if err != nil {
 				if te, ok := err.(net.Error); ok && te.Timeout() {
+					fmt.Println("timeout")
 					if s.readBuffer != nil && s.readBuffer.Len() == 0 {
 						s.readBuffer.Free()
 						s.readBuffer.Alloc(DefaultBufferReadCapacity)
@@ -392,7 +402,7 @@ func (s *Session) startWriteLoop() {
 			//todo: dynamic set loop nums
 			for i := 0; i < 10; i++ {
 				select {
-				case buf, ok:= <-s.writeBufferChan:
+				case buf, ok := <-s.writeBufferChan:
 					// check if chan closed
 					if ok == false {
 						s.resetBuffer()

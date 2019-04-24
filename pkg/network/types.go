@@ -131,6 +131,7 @@ const (
 	Connected       ConnectionEvent = "ConnectedFlag"
 	ConnectTimeout  ConnectionEvent = "ConnectTimeout"
 	ConnectFailed   ConnectionEvent = "ConnectFailed"
+	OnReadTimeout   ConnectionEvent = "OnReadTimeout"
 )
 
 // IsClose represents whether the event is triggered by connection close
@@ -198,8 +199,11 @@ type Connection interface {
 	// SetNoDelay enable/disable tcp no delay
 	SetNoDelay(enable bool)
 
-	// RawConn returns the original connections.
+	// RawConn returns the original connections
 	RawConn() interface{}
+
+	// Set conn read timeout
+	SetReadTimeout(duration int64)
 }
 
 // ConnectionStats is a group of connection metrics

@@ -262,9 +262,9 @@ func (s *downStream) getUpstreamProtocol() (prot protocol.Protocol) {
 	return
 }
 
-func (s *downStream) getUpstreamConnPool(protocol protocol.Protocol) stream.ConnectionPool {
+func (s *downStream) getUpstreamConnPool(prot protocol.Protocol) stream.ConnectionPool {
 	var host upstream.Host
-	if factory, ok := stream.ConnPoolFactories[protocol]; ok {
+	if factory, ok := stream.ConnPoolFactories[prot]; ok {
 		return factory(host)
 	}
 	return nil

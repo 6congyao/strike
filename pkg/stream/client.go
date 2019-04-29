@@ -51,8 +51,10 @@ func NewStreamClient(ctx context.Context, prot protocol.Protocol, connection net
 
 	if connection != nil {
 		connection.AddConnectionEventListener(client)
-		connection.FilterManager().AddReadFilter(client)
 		connection.SetNoDelay(true)
+		if fm := connection.FilterManager(); fm != nil {
+			fm.AddReadFilter(client)
+		}
 	}
 
 	return client

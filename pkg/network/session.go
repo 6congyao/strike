@@ -341,7 +341,6 @@ func (s *Session) startReadLoop() {
 			err := s.doReadConn()
 			if err != nil {
 				if te, ok := err.(net.Error); ok && te.Timeout() {
-					fmt.Println("timeout")
 					if s.readBuffer != nil && s.readBuffer.Len() == 0 {
 						s.readBuffer.Free()
 						s.readBuffer.Alloc(DefaultBufferReadCapacity)

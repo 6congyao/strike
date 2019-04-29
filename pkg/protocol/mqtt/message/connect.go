@@ -4,6 +4,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 )
@@ -135,6 +136,7 @@ func (this *Connect) GetHeader() (header map[string]string) {
 	header[protocol.StrikeHeaderWillTopic] = this.WillTopic
 	header[protocol.StrikeHeaderWillMessage] = this.WillMessage
 	header[protocol.StrikeHeaderUsername] = this.Username
+	header[protocol.StrikeHeaderKeepAlive] = fmt.Sprintf("%d", this.KeepAlive)
 	return header
 }
 

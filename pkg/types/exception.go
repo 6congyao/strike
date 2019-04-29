@@ -31,6 +31,7 @@ const (
 	HeaderRPCMethod     = "x-strike-rpc-method"
 	HeaderPacketID      = "x-strike-packet-id"
 	HeaderUsername      = "x-strike-username"
+	HeaderKeepAlive     = "x-strike-keep-alive"
 )
 
 // Error messages

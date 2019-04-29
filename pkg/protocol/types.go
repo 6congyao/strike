@@ -59,6 +59,7 @@ const (
 	StrikeHeaderWillTopic       = "x-strike-will-topic"
 	StrikeHeaderWillMessage     = "x-strike-will-message"
 	StrikeHeaderUsername        = "x-strike-username"
+	StrikeHeaderKeepAlive       = "x-strike-keep-alive"
 )
 
 // CommonHeader wrapper for map[string]string

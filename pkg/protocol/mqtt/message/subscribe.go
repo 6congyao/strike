@@ -21,8 +21,8 @@ type Subscribe struct {
 }
 
 type TopicFilter struct {
-	TopicName    string
-	RequestedQos Qos
+	TopicName    string `json:"topic_name"`
+	RequestedQos Qos    `json:"qos""`
 }
 
 func NewSubscribe() *Subscribe {

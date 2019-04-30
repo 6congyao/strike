@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	maxRespwanTimes = 1 << 6
+	maxRespawnTimes = 1 << 6
 )
 
 type shard struct {
@@ -92,7 +92,7 @@ func (pool *shardWorkerPool) spawnWorker(shard *shard) {
 				log.Println("worker panic %v", p)
 				debug.PrintStack()
 				//try respawn worker
-				if shard.respawnTimes < maxRespwanTimes {
+				if shard.respawnTimes < maxRespawnTimes {
 					shard.respawnTimes++
 					pool.spawnWorker(shard)
 				}

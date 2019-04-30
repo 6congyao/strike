@@ -20,6 +20,7 @@ import (
 	"os"
 	"runtime"
 	"strike/pkg/api/v2"
+	"strike/pkg/config"
 	"strike/pkg/network"
 	"strike/pkg/stream"
 	"strike/pkg/upstream"
@@ -32,6 +33,18 @@ type server struct {
 	logger     log.Logger
 	stopChan   chan struct{}
 	handler    ConnectionHandler
+}
+
+func NewConfig(c *v2.ServerConfig) *Config {
+	return &Config{
+		ServerName: c.ServerName,
+		LogPath:    c.DefaultLogPath,
+		LogLevel:   config.ParseLogLevel(c.DefaultLogLevel),
+
+		GracefulTimeout: c.GracefulTimeout.Duration,
+		Processor:       c.Processor,
+		UseEdgeMode:     c.UseEdgeMode,
+	}
 }
 
 // currently, only one server supported

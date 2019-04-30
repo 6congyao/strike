@@ -277,10 +277,10 @@ type activeListener struct {
 	listenPort              int
 	sMap                    sync.Map
 	//connsMux                sync.RWMutex
-	handler                 *connHandler
-	stopChan                chan struct{}
-	updatedLabel            bool
-	tlsMgr                  network.TLSContextManager
+	handler      *connHandler
+	stopChan     chan struct{}
+	updatedLabel bool
+	tlsMgr       network.TLSContextManager
 }
 
 func newActiveListener(listener network.Listener, lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
@@ -357,6 +357,12 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 
 func (al *activeListener) OnClose() {
 
+}
+
+func (al *activeListener) removeConnection(conn network.Connection) {
+	al.sMap.Delete(conn.ID())
+
+	atomic.AddInt64(&al.handler.numConnections, -1)
 }
 
 func (al *activeListener) newConnection(ctx context.Context, rawc interface{}) {

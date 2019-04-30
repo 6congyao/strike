@@ -19,12 +19,14 @@ import (
 	"encoding/json"
 	stdlog "log"
 	"net"
+	"os"
+	"runtime"
+	"strconv"
 	"strike/pkg/api/v2"
 	"strike/pkg/filter"
 	"strike/pkg/log"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
-	"strike/pkg/server"
 	"strike/pkg/stream"
 )
 
@@ -55,6 +57,7 @@ var configParsedCBMaps = make(map[ContentKey][]ParsedCallback)
 const (
 	ParseCallbackKeyCluster        ContentKey = "clusters"
 	ParseCallbackKeyServiceRgtInfo ContentKey = "service_registry"
+	ParseCallbackKeyProcessor      ContentKey = "processor"
 )
 
 // RegisterConfigParsedListener
@@ -62,6 +65,7 @@ const (
 func RegisterConfigParsedListener(key ContentKey, cb ParsedCallback) {
 	if cbs, ok := configParsedCBMaps[key]; ok {
 		cbs = append(cbs, cb)
+		configParsedCBMaps[key] = cbs
 	} else {
 		stdlog.Println("added to configParsedCBMaps:", key)
 		cpc := []ParsedCallback{cb}
@@ -70,20 +74,23 @@ func RegisterConfigParsedListener(key ContentKey, cb ParsedCallback) {
 }
 
 // ParseServerConfig
-func ParseServerConfig(c *ServerConfig) *server.Config {
-	sc := &server.Config{
-		ServerName:      c.ServerName,
-		LogPath:         c.DefaultLogPath,
-		LogLevel:        parseLogLevel(c.DefaultLogLevel),
-		GracefulTimeout: c.GracefulTimeout.Duration,
-		Processor:       c.Processor,
-		UseEdgeMode:     c.UseEdgeMode,
+func ParseServerConfig(c *v2.ServerConfig) *v2.ServerConfig {
+	if n, _ := strconv.Atoi(os.Getenv("GOMAXPROCS")); n > 0 && n <= runtime.NumCPU() {
+		c.Processor = n
+	} else if c.Processor == 0 {
+		c.Processor = runtime.NumCPU()
 	}
 
-	return sc
+	// trigger processor callbacks
+	if cbs, ok := configParsedCBMaps[ParseCallbackKeyProcessor]; ok {
+		for _, cb := range cbs {
+			cb(c.Processor, true)
+		}
+	}
+	return c
 }
 
-func parseLogLevel(level string) log.Level {
+func ParseLogLevel(level string) log.Level {
 	if logLevel, ok := logLevelMap[level]; ok {
 		return logLevel
 	}
@@ -111,7 +118,7 @@ func ParseListenerConfig(lc *v2.Listener) *v2.Listener {
 
 	lc.Addr = addr
 	lc.PerConnBufferLimitBytes = 1 << 15
-	lc.LogLevel = uint8(parseLogLevel(lc.LogLevelConfig))
+	lc.LogLevel = uint8(ParseLogLevel(lc.LogLevelConfig))
 	return lc
 }
 

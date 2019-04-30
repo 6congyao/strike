@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
+	"strike/pkg/config"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
@@ -38,13 +39,23 @@ var (
 )
 
 func init() {
+	config.RegisterConfigParsedListener(config.ParseCallbackKeyProcessor, initWorkePpool)
+}
+
+func initWorkePpool(data interface{}, endParsing bool) error {
 	// default shardsNum is equal to the cpu num
 	shardsNum := runtime.NumCPU()
-	// use 4096 as chan buffer length
+	// use 32768 as chan buffer length
 	poolSize := shardsNum * 4096
+
+	// set shardsNum equal to processor if it was specified
+	if pNum, ok := data.(int); ok && pNum > 0 {
+		shardsNum = pNum
+	}
 
 	workerPool, _ = strikesync.NewShardWorkerPool(poolSize, shardsNum, eventDispatch)
 	workerPool.Init()
+	return nil
 }
 
 // network.ReadFilter

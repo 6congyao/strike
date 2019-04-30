@@ -53,10 +53,13 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 	for _, srvConfig := range sc.Servers {
 		c := config.ParseServerConfig(&srvConfig)
 
+		// new server config
+		sc := server.NewConfig(c)
+
 		var srv server.Server
 
 		if mode == config.File {
-			srv = server.NewServer(c, sk.cm)
+			srv = server.NewServer(sc, sk.cm)
 
 			if srvConfig.Listeners == nil || len(srvConfig.Listeners) == 0 {
 				log.Fatalln("no listener found")

@@ -15,6 +15,23 @@
 
 package v2
 
+// ServerConfig for making up server for Strike
+type ServerConfig struct {
+	//default logger
+	ServerName      string `json:"server_name"`
+	DefaultLogPath  string `json:"default_log_path,omitempty"`
+	DefaultLogLevel string `json:"default_log_level,omitempty"`
+
+	UseEdgeMode bool `json:"use_edge_mode,omitempty"`
+	//graceful shutdown config
+	GracefulTimeout DurationConfig `json:"graceful_timeout"`
+
+	//go processor number
+	Processor int `json:"processor"`
+
+	Listeners []Listener `json:"listeners,omitempty"`
+}
+
 type HealthCheckConfig struct {
 	Protocol             string         `json:"protocol"`
 	TimeoutConfig        DurationConfig `json:"timeout"`

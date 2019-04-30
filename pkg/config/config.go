@@ -17,11 +17,10 @@ package config
 
 import (
 	"encoding/json"
-	"strike/pkg/api/v2"
-
 	"io/ioutil"
 	"log"
 	"path/filepath"
+	"strike/pkg/api/v2"
 )
 
 type CfgMode uint8
@@ -37,23 +36,6 @@ var (
 	config     StrikeConfig
 )
 
-// ServerConfig for making up server for Strike
-type ServerConfig struct {
-	//default logger
-	ServerName      string `json:"server_name"`
-	DefaultLogPath  string `json:"default_log_path,omitempty"`
-	DefaultLogLevel string `json:"default_log_level,omitempty"`
-
-	UseEdgeMode bool `json:"use_edge_mode,omitempty"`
-	//graceful shutdown config
-	GracefulTimeout v2.DurationConfig `json:"graceful_timeout"`
-
-	//go processor number
-	Processor int `json:"processor"`
-
-	Listeners []v2.Listener `json:"listeners,omitempty"`
-}
-
 // ClusterManagerConfig for making up cluster manager
 // Cluster is the global cluster of Strike
 type ClusterManagerConfig struct {
@@ -65,7 +47,7 @@ type ClusterManagerConfig struct {
 }
 
 type StrikeConfig struct {
-	Servers        []ServerConfig       `json:"servers,omitempty"`         //server config
+	Servers        []v2.ServerConfig    `json:"servers,omitempty"`         //server config
 	ClusterManager ClusterManagerConfig `json:"cluster_manager,omitempty"` //cluster config
 }
 

@@ -32,6 +32,9 @@ const (
 	HeaderPacketID      = "x-strike-packet-id"
 	HeaderUsername      = "x-strike-username"
 	HeaderKeepAlive     = "x-strike-keep-alive"
+	HeaderTopicName     = "x-strike-topic-name"
+	HeaderTopicFilter   = "x-strike-topic-filter"
+	HeaderMessageQos    = "x-strike-message-qos"
 )
 
 // Error messages

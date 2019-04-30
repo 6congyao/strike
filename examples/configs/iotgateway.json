@@ -240,6 +240,56 @@
               }
             }
           ]
+        },{
+          "name":"controllerListener",
+          "address": ":8080",
+          "bind_port": true,
+          "log_path": "stdout",
+          "filter_chains": [{
+            "tls_context":{
+            },
+            "filters": [
+              {
+                "type": "controller",
+                "config": {
+                  "name": "pushController",
+                  "source_protocol": "Http1"
+                }
+              }]
+          }],
+          "stream_filters": [
+            {
+              "type": "common",
+              "config": {
+                "rule_configs": [
+                  {
+                    "enable": true,
+                    "id": 1,
+                    "index": 1,
+                    "limit": {
+                      "limit_strategy": "QPS",
+                      "max_burst_ratio": 1.0,
+                      "period_ms": 100,
+                      "max_allows": 0
+                    },
+                    "name": "RuleAllowPost",
+                    "resources": [
+                      {
+                        "headers": [
+                          {
+                            "compare_type": "NOTEQUALS",
+                            "key": "x-strike-method",
+                            "value": "POST"
+                          }
+                        ]
+                      }
+                    ],
+                    "run_mode": "CONTROL"
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }

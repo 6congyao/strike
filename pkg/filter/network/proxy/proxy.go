@@ -61,12 +61,12 @@ func initWorkePpool(data interface{}, endParsing bool) error {
 // network.ReadFilter
 // stream.ServerStreamConnectionEventListener
 type proxy struct {
-	config              *v2.Proxy
-	cm                  upstream.ClusterManager
-	readCallbacks       network.ReadFilterCallbacks
-	upstreamConnection  network.ClientConnection
-	downstreamCallbacks DownstreamCallbacks
-	clusterName         string
+	config             *v2.Proxy
+	cm                 upstream.ClusterManager
+	readCallbacks      network.ReadFilterCallbacks
+	upstreamConnection network.ClientConnection
+	downstreamListener network.ConnectionEventListener
+	clusterName        string
 	//routersWrapper      types.RouterWrapper // wrapper used to point to the routers instance
 	serverStreamConn stream.ServerStreamConnection
 	context          context.Context
@@ -92,7 +92,7 @@ func NewProxy(ctx context.Context, config *v2.Proxy, clusterManager interface{})
 		log.Println("get proxy extend config fail:", err)
 	}
 
-	proxy.downstreamCallbacks = &downstreamCallbacks{
+	proxy.downstreamListener = &downstreamCallbacks{
 		proxy: proxy,
 	}
 
@@ -101,7 +101,7 @@ func NewProxy(ctx context.Context, config *v2.Proxy, clusterManager interface{})
 
 func (p *proxy) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	p.readCallbacks = cb
-	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamCallbacks)
+	p.readCallbacks.Connection().AddConnectionEventListener(p.downstreamListener)
 
 	if p.config.DownstreamProtocol != string(protocol.Auto) {
 		p.serverStreamConn = stream.CreateServerStreamConnection(p.context, protocol.Protocol(p.config.DownstreamProtocol), p.readCallbacks.Connection(), p)
@@ -122,7 +122,6 @@ func (p *proxy) OnGoAway() {}
 func (p *proxy) NewStreamDetect(ctx context.Context, responseSender stream.StreamSender) stream.StreamReceiveListener {
 	s := newActiveStream(ctx, p, responseSender)
 
-	//todo: stream filter
 	if ff := p.context.Value(types.ContextKeyStreamFilterChainFactories); ff != nil {
 		ffs := ff.([]stream.StreamFilterChainFactory)
 		for _, f := range ffs {

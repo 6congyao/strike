@@ -27,9 +27,10 @@ type Metadata map[string]string
 
 // Network Filter's Type
 const (
-	CONNECTION_MANAGER     = "connection_manager"
-	DEFAULT_NETWORK_FILTER = "proxy"
-	DELEGATION             = "delegation"
+	CONNECTION_MANAGER        = "connection_manager"
+	DEFAULT_NETWORK_FILTER    = "proxy"
+	CONTROLLER_NETWORK_FILTER = "controller"
+	DELEGATION                = "delegation"
 )
 
 // Stream Filter's Type
@@ -422,4 +423,10 @@ type PublishContent struct {
 type Delegation struct {
 	AgentName string `json:"agent_name,omitempty"`
 	AgentType string `json:"agent_type,omitempty"`
+}
+
+// Controller
+type Controller struct {
+	Name           string `json:"name"`
+	SourceProtocol string `json:"source_protocol"`
 }

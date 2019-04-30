@@ -288,3 +288,21 @@ func transHostWeight(weight uint32) uint32 {
 	}
 	return weight
 }
+
+// ParseControllerFilter
+func ParseControllerFilter(cfg map[string]interface{}) *v2.Controller {
+	controllerConfig := &v2.Controller{}
+	if data, err := json.Marshal(cfg); err == nil {
+		json.Unmarshal(data, controllerConfig)
+	} else {
+		stdlog.Fatalln("Parsing Proxy Network Filter Error")
+	}
+
+	if controllerConfig.SourceProtocol == "" {
+		stdlog.Fatalln("Protocol in String Needed in Controller Network Filter")
+	} else if _, ok := protocolsSupported[controllerConfig.SourceProtocol]; !ok {
+		stdlog.Fatalln("Invalid Source Protocol = ", controllerConfig.SourceProtocol)
+	}
+
+	return controllerConfig
+}

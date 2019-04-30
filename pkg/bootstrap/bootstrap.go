@@ -18,6 +18,7 @@ package bootstrap
 import (
 	"log"
 	"strike/pkg/config"
+	_ "strike/pkg/filter/network/controller"
 	_ "strike/pkg/filter/network/delegation"
 	_ "strike/pkg/filter/network/proxy"
 	_ "strike/pkg/filter/stream/auth"
@@ -65,8 +66,8 @@ func NewStrike(sc *config.StrikeConfig) *Strike {
 				log.Fatalln("no listener found")
 			}
 
-			for _, listenerConfig := range srvConfig.Listeners {
-				lc := config.ParseListenerConfig(&listenerConfig)
+			for i, _ := range srvConfig.Listeners {
+				lc := config.ParseListenerConfig(&srvConfig.Listeners[i])
 				lc.DisableConnIo = config.GetListenerDisableIO(&lc.FilterChains[0])
 
 				// NetworkFilterChainFactory

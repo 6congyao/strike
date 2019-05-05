@@ -22,6 +22,11 @@ import (
 	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	"strike/pkg/types"
+)
+
+var (
+	currControllerID uint32
 )
 
 type controller struct {
@@ -77,18 +82,14 @@ func (c *controller) OnNewConnection() network.FilterStatus {
 func (c *controller) OnGoAway() {}
 
 func (c *controller) NewStreamDetect(ctx context.Context, responseSender stream.StreamSender) stream.StreamReceiveListener {
-	//s := newActiveStream(ctx, c, responseSender)
-	//
-	//if ff := c.context.Value(types.ContextKeyStreamFilterChainFactories); ff != nil {
-	//	ffs := ff.([]stream.StreamFilterChainFactory)
-	//	for _, f := range ffs {
-	//		f.CreateFilterChain(c.context, s)
-	//	}
-	//}
-	//
-	//c.asMux.Lock()
-	//s.element = c.activeSteams.PushBack(s)
-	//c.asMux.Unlock()
+	s := newActiveStream(ctx, c, responseSender)
+
+	if ff := c.context.Value(types.ContextKeyStreamFilterChainFactories); ff != nil {
+		ffs := ff.([]stream.StreamFilterChainFactory)
+		for _, f := range ffs {
+			f.CreateFilterChain(c.context, s)
+		}
+	}
 
 	return nil
 }

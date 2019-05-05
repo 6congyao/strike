@@ -17,6 +17,7 @@ package proxy
 
 import (
 	"strike/pkg/network"
+	"time"
 )
 
 // Proxy
@@ -61,3 +62,9 @@ const (
 	UpstreamGlobalTimeout UpstreamResetType = "UpstreamGlobalTimeout"
 	UpstreamPerTryTimeout UpstreamResetType = "UpstreamPerTryTimeout"
 )
+
+// Timeout
+type Timeout struct {
+	GlobalTimeout time.Duration
+	TryTimeout    time.Duration
+}

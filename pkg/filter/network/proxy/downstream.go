@@ -26,6 +26,7 @@ import (
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/pkg/upstream"
+	"strike/utils"
 	"sync/atomic"
 	"time"
 )
@@ -46,8 +47,8 @@ type downStream struct {
 	timeout         *Timeout
 	responseSender  stream.StreamSender
 	upstreamRequest *upstreamRequest
-	perRetryTimer   *timer
-	responseTimer   *timer
+	perRetryTimer   *utils.Timer
+	responseTimer   *utils.Timer
 
 	// downstream request buf
 	downstreamReqHeaders  protocol.HeaderMap
@@ -389,7 +390,6 @@ func (s *downStream) convertTrailer(trailers protocol.HeaderMap) protocol.Header
 // stream.StreamEventListener
 // Called by stream layer normally
 func (s *downStream) OnResetStream(reason stream.StreamResetReason) {
-	// set downstreamReset flag before real reset logic
 	if !atomic.CompareAndSwapUint32(&s.downstreamReset, 0, 1) {
 		return
 	}
@@ -463,13 +463,13 @@ func (s *downStream) cleanUp() {
 
 	// reset pertry timer
 	if s.perRetryTimer != nil {
-		s.perRetryTimer.stop()
+		s.perRetryTimer.Stop()
 		s.perRetryTimer = nil
 	}
 
 	// reset response timer
 	if s.responseTimer != nil {
-		s.responseTimer.stop()
+		s.responseTimer.Stop()
 		s.responseTimer = nil
 	}
 }
@@ -535,18 +535,27 @@ func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doCon
 func (s *downStream) onUpstreamRequestSent() {
 	s.upstreamRequestSent = true
 
-	if s.upstreamRequest != nil && s.timeout != nil {
+	if s.upstreamRequest != nil {
 		// setup per req timeout timer
 		s.setupPerReqTimeout()
 
 		// setup global timeout timer
 		if s.timeout.GlobalTimeout > 0 {
 			if s.responseTimer != nil {
-				s.responseTimer.stop()
+				s.responseTimer.Stop()
 			}
 
-			s.responseTimer = newTimer(s.onResponseTimeout, s.timeout.GlobalTimeout)
-			s.responseTimer.start()
+			id := s.ID
+			s.responseTimer = utils.NewTimer(s.timeout.GlobalTimeout,
+				func() {
+					if atomic.LoadUint32(&s.downstreamCleaned) == 1 {
+						return
+					}
+					if id != s.ID {
+						return
+					}
+					s.onResponseTimeout()
+				})
 		}
 	}
 }
@@ -556,19 +565,66 @@ func (s *downStream) setupPerReqTimeout() {
 
 	if timeout.TryTimeout > 0 {
 		if s.perRetryTimer != nil {
-			s.perRetryTimer.stop()
+			s.perRetryTimer.Stop()
 		}
 
-		s.perRetryTimer = newTimer(s.onPerReqTimeout, timeout.TryTimeout*time.Second)
-		s.perRetryTimer.start()
+		ID := s.ID
+		s.perRetryTimer = utils.NewTimer(timeout.TryTimeout*time.Second,
+			func() {
+				if atomic.LoadUint32(&s.downstreamCleaned) == 1 {
+					return
+				}
+				if ID != s.ID {
+					return
+				}
+				s.onPerReqTimeout()
+			})
 	}
 }
 
 func (s *downStream) onResponseTimeout() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("onResponseTimeout() panic:", r)
+		}
+	}()
+	s.responseTimer = nil
 
+	if s.upstreamRequest != nil {
+		//if s.upstreamRequest.host != nil {
+		//	s.upstreamRequest.host.HostStats().UpstreamRequestTimeout.Inc(1)
+		//}
+
+		atomic.StoreUint32(&s.reuseBuffer, 0)
+		s.upstreamRequest.resetStream()
+		s.upstreamRequest.OnResetStream(stream.UpstreamGlobalTimeout)
+	}
 }
 
 func (s *downStream) onPerReqTimeout() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("onPerReqTimeout() panic", r)
+		}
+	}()
+
+	if !s.downstreamResponseStarted {
+		// handle timeout on response not
+
+		s.perRetryTimer = nil
+		//s.cluster.Stats().UpstreamRequestTimeout.Inc(1)
+		//
+		//if s.upstreamRequest.host != nil {
+		//	s.upstreamRequest.host.HostStats().UpstreamRequestTimeout.Inc(1)
+		//}
+
+		atomic.StoreUint32(&s.reuseBuffer, 0)
+		s.upstreamRequest.resetStream()
+		//s.requestInfo.SetResponseFlag(types.UpstreamRequestTimeout)
+		s.upstreamRequest.OnResetStream(stream.UpstreamPerTryTimeout)
+	} else {
+		log.Println("Skip request timeout on getting upstream response")
+	}
 }
 
 func (s *downStream) addEncodedData(filter *activeStreamSenderFilter, data buffer.IoBuffer, streaming bool) {

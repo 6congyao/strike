@@ -20,8 +20,8 @@ import (
 )
 
 type filterManager struct {
-	upstreamFilters   []*activeReadFilter
-	downstreamFilters []WriteFilter
+	downstreamFilters []*activeReadFilter
+	upstreamFilters   []WriteFilter
 	conn              Connection
 }
 
@@ -32,17 +32,17 @@ func (fm *filterManager) AddReadFilter(rf ReadFilter) {
 	}
 
 	rf.InitializeReadFilterCallbacks(newArf)
-	fm.upstreamFilters = append(fm.upstreamFilters, newArf)
+	fm.downstreamFilters = append(fm.downstreamFilters, newArf)
 }
 
 func (fm *filterManager) AddWriteFilter(wf WriteFilter) {
-	panic("implement me")
+	fm.upstreamFilters = append(fm.upstreamFilters, wf)
 }
 
 func (fm *filterManager) ListReadFilter() []ReadFilter {
 	var readFilters []ReadFilter
 
-	for _, uf := range fm.upstreamFilters {
+	for _, uf := range fm.downstreamFilters {
 		readFilters = append(readFilters, uf.filter)
 	}
 
@@ -50,11 +50,11 @@ func (fm *filterManager) ListReadFilter() []ReadFilter {
 }
 
 func (fm *filterManager) ListWriteFilters() []WriteFilter {
-	return fm.downstreamFilters
+	return fm.upstreamFilters
 }
 
 func (fm *filterManager) InitializeReadFilters() bool {
-	if len(fm.upstreamFilters) == 0 {
+	if len(fm.downstreamFilters) == 0 {
 		return false
 	}
 
@@ -70,8 +70,8 @@ func (fm *filterManager) onContinueReading(filter *activeReadFilter) {
 		index = filter.index + 1
 	}
 
-	for ; index < len(fm.upstreamFilters); index++ {
-		uf = fm.upstreamFilters[index]
+	for ; index < len(fm.downstreamFilters); index++ {
+		uf = fm.downstreamFilters[index]
 		uf.index = index
 
 		if !uf.initialized {
@@ -101,7 +101,7 @@ func (fm *filterManager) OnRead() {
 }
 
 func (fm *filterManager) OnWrite(buf []buffer.IoBuffer) FilterStatus {
-	for _, df := range fm.downstreamFilters {
+	for _, df := range fm.upstreamFilters {
 		status := df.OnWrite(buf)
 
 		if status == Stop {
@@ -131,7 +131,7 @@ func (arf *activeReadFilter) ContinueReading() {
 func newFilterManager(conn Connection) FilterManager {
 	return &filterManager{
 		conn:              conn,
-		upstreamFilters:   make([]*activeReadFilter, 0, 32),
-		downstreamFilters: make([]WriteFilter, 0, 32),
+		downstreamFilters:   make([]*activeReadFilter, 0, 32),
+		upstreamFilters: make([]WriteFilter, 0, 32),
 	}
 }

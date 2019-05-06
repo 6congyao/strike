@@ -18,9 +18,13 @@ package controller
 import (
 	"container/list"
 	"context"
+	"fmt"
+	"log"
+	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
+	"strike/pkg/types"
 	"strike/utils"
 	"sync/atomic"
 	"time"
@@ -113,4 +117,49 @@ func (s *sourceStream) AddStreamSenderFilter(filter stream.StreamSenderFilter) {
 
 func (s *sourceStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilter) {
 
+}
+
+// stream.StreamReceiver
+func (s *sourceStream) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
+	s.sourceStreamRecvDone = endStream
+	s.sourceStreamReqHeaders = headers
+
+	al := s.controller
+	fmt.Println(al)
+}
+
+func (s *sourceStream) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
+	s.sourceStreamReqDataBuf = data.Clone()
+	s.sourceStreamReqDataBuf.Count(1)
+	data.Drain(data.Len())
+}
+
+func (s *sourceStream) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
+
+}
+
+func (s *sourceStream) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
+	// Check headers' info to do hijack
+	switch err.Error() {
+	case types.CodecException:
+		s.sendHijackReply(types.CodecExceptionCode, headers, true)
+	case types.DeserializeException:
+		s.sendHijackReply(types.DeserialExceptionCode, headers, true)
+	default:
+		s.sendHijackReply(types.UnknownCode, headers, true)
+	}
+
+	s.OnResetStream(stream.StreamLocalReset)
+}
+
+func (s *sourceStream) sendHijackReply(code int, headers protocol.HeaderMap, doConv bool) {
+	if headers == nil {
+		log.Println("hijack with no headers, stream id:", s.ID)
+		raw := make(map[string]string, 5)
+		headers = protocol.CommonHeader(raw)
+	}
+
+	headers.Set(types.HeaderStatus, strconv.Itoa(code))
+
+	//s.appendHeaders(headers, true)
 }

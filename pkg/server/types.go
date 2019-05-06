@@ -91,8 +91,8 @@ type ConnectionHandler interface {
 	// The close indicates whether the listening sockets will be closed.
 	StopListeners(lctx context.Context, close bool) error
 
-	// ListListenersFD reports all listeners' fd
-	ListListenersFD(lctx context.Context) []uintptr
+	// ListListenersFile reports all listeners' fd
+	ListListenersFile(lctx context.Context) []*os.File
 
 	// StopConnection Stop Connection
 	StopConnection()

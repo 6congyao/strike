@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"runtime/debug"
 	"strconv"
 	"strike/pkg/api/v2"
@@ -127,14 +128,9 @@ func (l *listener) SetListenerTag(tag uint64) {
 	l.listenerTag = tag
 }
 
-func (l *listener) ListenerFD() (uintptr, error) {
-	file, err := l.rawl.File()
-	if err != nil {
-		log.Fatalln("listener fd not found:", l.name, err)
-		return 0, err
-	}
-	//defer file.Close()
-	return file.Fd(), nil
+// ListenerFile returns a copy a listener file
+func (l *listener) ListenerFile() (*os.File, error) {
+	return l.rawl.File()
 }
 
 func (l *listener) SetListenerCallbacks(cb ListenerEventListener) {
@@ -343,7 +339,7 @@ func (el *edgeListener) SetListenerTag(tag uint64) {
 	el.listenerTag = tag
 }
 
-func (el *edgeListener) ListenerFD() (uintptr, error) {
+func (el *edgeListener) ListenerFile() (*os.File, error) {
 	panic("implement me")
 }
 

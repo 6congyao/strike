@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"os"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 )
@@ -50,8 +51,8 @@ type Listener interface {
 	// Set listener tag
 	SetListenerTag(tag uint64)
 
-	// ListenerFD returns a copy a listener fd
-	ListenerFD() (uintptr, error)
+	// ListenerFile returns a copy a listener file
+	ListenerFile() (*os.File, error)
 
 	// SetListenerCallbacks set a listener event listener
 	SetListenerCallbacks(cb ListenerEventListener)

@@ -215,8 +215,18 @@ func (ch *connHandler) StopListeners(lctx context.Context, close bool) error {
 	return errGlobal
 }
 
-func (ch *connHandler) ListListenersFD(lctx context.Context) []uintptr {
-	return nil
+func (ch *connHandler) ListListenersFile(lctx context.Context) []*os.File {
+	files := make([]*os.File, len(ch.listeners))
+
+	for idx, l := range ch.listeners {
+		file, err := l.listener.ListenerFile()
+		if err != nil {
+			log.Println("fail to get listener file descriptor:", l.listener.Name(), err)
+			return nil //stop reconfigure
+		}
+		files[idx] = file
+	}
+	return files
 }
 
 func (ch *connHandler) StopConnection() {

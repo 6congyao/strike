@@ -91,7 +91,7 @@ func (c *controller) NewStreamDetect(ctx context.Context, responseSender stream.
 		}
 	}
 
-	return nil
+	return s
 }
 
 // ConnectionEventListener
@@ -102,3 +102,4 @@ type downstreamCallbacks struct {
 func (dc *downstreamCallbacks) OnEvent(event network.ConnectionEvent) {
 	dc.controller.onDownstreamEvent(event)
 }
+

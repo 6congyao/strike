@@ -141,6 +141,26 @@ func (s *downStream) OnReceiveTrailers(context context.Context, trailers protoco
 	}, true)
 }
 
+func (s *downStream) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
+	// if active stream finished the lifecycle, just ignore further data
+	if s.upstreamProcessDone {
+		return
+	}
+
+	// todo: enrich headers' information to do some hijack
+	// Check headers' info to do hijack
+	switch err.Error() {
+	case types.CodecException:
+		s.sendHijackReply(types.CodecExceptionCode, headers, true)
+	case types.DeserializeException:
+		s.sendHijackReply(types.DeserialExceptionCode, headers, true)
+	default:
+		s.sendHijackReply(types.UnknownCode, headers, true)
+	}
+
+	s.OnResetStream(stream.StreamLocalReset)
+}
+
 func (s *downStream) ResetStream(reason stream.StreamResetReason) {
 	s.cleanStream()
 }
@@ -344,13 +364,13 @@ func (s *downStream) doAppendTrailers(filter interface{}, trailers protocol.Head
 }
 
 func (s *downStream) convertHeader(headers protocol.HeaderMap) protocol.HeaderMap {
-	dp, up := s.proxy.convertProtocol()
+	//dp, up := s.proxy.convertProtocol()
 
 	//if dp != up {
 	//	if convHeader, err := protocol.ConvertHeader(s.context, up, dp, headers); err == nil {
 	//		return convHeader
 	//	} else {
-	log.Println("convert header for:", up, dp)
+	//log.Println("convert header for:", up, dp)
 	//	}
 	//}
 
@@ -484,26 +504,6 @@ func (s *downStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilter)
 	s.receiverFilters = append(s.receiverFilters, sf)
 }
 
-func (s *downStream) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
-	// if active stream finished the lifecycle, just ignore further data
-	if s.upstreamProcessDone {
-		return
-	}
-
-	// todo: enrich headers' information to do some hijack
-	// Check headers' info to do hijack
-	switch err.Error() {
-	case types.CodecException:
-		s.sendHijackReply(types.CodecExceptionCode, headers, true)
-	case types.DeserializeException:
-		s.sendHijackReply(types.DeserialExceptionCode, headers, true)
-	default:
-		s.sendHijackReply(types.UnknownCode, headers, true)
-	}
-
-	s.OnResetStream(stream.StreamLocalReset)
-}
-
 func (s *downStream) resetStream() {
 	if s.responseSender != nil && !s.upstreamProcessDone {
 		// if downstream req received not done, or local proxy process not done by handle upstream response,
@@ -535,7 +535,8 @@ func (s *downStream) sendHijackReply(code int, headers protocol.HeaderMap, doCon
 func (s *downStream) onUpstreamRequestSent() {
 	s.upstreamRequestSent = true
 
-	if s.upstreamRequest != nil {
+	// todo: implement timeout for upstream req
+	if s.upstreamRequest != nil && s.timeout != nil {
 		// setup per req timeout timer
 		s.setupPerReqTimeout()
 

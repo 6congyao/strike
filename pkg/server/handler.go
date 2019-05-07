@@ -18,7 +18,6 @@ package server
 import (
 	"container/list"
 	"context"
-	"crypto/rand"
 	"fmt"
 	"log"
 	"net"
@@ -32,6 +31,7 @@ import (
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/pkg/upstream"
+	"strike/utils"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -55,25 +55,12 @@ func NewHandler(cm upstream.ClusterManager) ConnectionHandler {
 	return ch
 }
 
-func (ch *connHandler) GenerateListenerID() string {
-	uuid := make([]byte, 16)
-	_, err := rand.Read(uuid)
-	if err != nil {
-		log.Fatalln("generate an uuid failed, error:", err)
-	}
-	// see section 4.1.1
-	uuid[8] = uuid[8]&^0xc0 | 0x80
-	// see section 4.1.3
-	uuid[6] = uuid[6]&^0xf0 | 0x40
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
-}
-
 // ConnectionHandler
 func (ch *connHandler) AddOrUpdateListener(lc *v2.Listener, networkFiltersFactories []network.NetworkFilterChainFactory,
 	streamFiltersFactories []stream.StreamFilterChainFactory) (network.ListenerEventListener, error) {
 	var listenerName string
 	if lc.Name == "" {
-		listenerName = ch.GenerateListenerID()
+		listenerName = utils.GenerateUUID()
 		lc.Name = listenerName
 	} else {
 		listenerName = lc.Name
@@ -340,6 +327,7 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 	ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
 	ctx = context.WithValue(ctx, types.ContextKeyNetworkFilterChainFactories, al.networkFiltersFactories)
 	ctx = context.WithValue(ctx, types.ContextKeyStreamFilterChainFactories, al.streamFiltersFactories)
+	ctx = context.WithValue(ctx, types.ContextKeyConnHandlerRef, al.handler)
 
 	arc.ContinueFilterChain(ctx, true)
 }
@@ -359,7 +347,8 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 		return
 	}
 
-	al.sMap.Store(conn.ID(), conn)
+	ac := newActiveConnection(al, conn)
+	al.sMap.Store(conn.ID(), ac)
 	atomic.AddInt64(&al.handler.numConnections, 1)
 
 	conn.Start(ctx)
@@ -369,8 +358,8 @@ func (al *activeListener) OnClose() {
 
 }
 
-func (al *activeListener) removeConnection(conn network.Connection) {
-	al.sMap.Delete(conn.ID())
+func (al *activeListener) removeConnection(ac *activeConnection) {
+	al.sMap.Delete(ac.conn.ID())
 
 	atomic.AddInt64(&al.handler.numConnections, -1)
 }
@@ -439,4 +428,29 @@ func (arc *activeRawConn) SetOriginalAddr(ip string, port int) {
 	arc.originalDstPort = port
 	arc.oriRemoteAddr, _ = net.ResolveTCPAddr("", ip+":"+strconv.Itoa(port))
 	log.Println("conn set origin addr: ", ip, port)
+}
+
+// network.ConnectionEventListener
+type activeConnection struct {
+	listener *activeListener
+	conn     network.Connection
+}
+
+func newActiveConnection(listener *activeListener, conn network.Connection) *activeConnection {
+	ac := &activeConnection{
+		conn:     conn,
+		listener: listener,
+	}
+
+	ac.conn.SetNoDelay(true)
+	ac.conn.AddConnectionEventListener(ac)
+
+	return ac
+}
+
+// ConnectionEventListener
+func (ac *activeConnection) OnEvent(event network.ConnectionEvent) {
+	if event.IsClose() {
+		ac.listener.removeConnection(ac)
+	}
 }

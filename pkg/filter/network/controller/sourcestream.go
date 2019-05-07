@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
+	"strike/pkg/server"
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/utils"
@@ -124,8 +125,13 @@ func (s *sourceStream) OnReceiveHeaders(context context.Context, headers protoco
 	s.sourceStreamRecvDone = endStream
 	s.sourceStreamReqHeaders = headers
 
-	al := s.controller
-	fmt.Println(al)
+	ch := context.Value(types.ContextKeyConnHandlerRef).(server.ConnectionHandler)
+
+	if ch != nil {
+		fmt.Println(ch.NumConnections())
+	}
+
+	s.sendHijackReply(200, headers, false)
 }
 
 func (s *sourceStream) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
@@ -161,5 +167,84 @@ func (s *sourceStream) sendHijackReply(code int, headers protocol.HeaderMap, doC
 
 	headers.Set(types.HeaderStatus, strconv.Itoa(code))
 
-	//s.appendHeaders(headers, true)
+	s.appendHeaders(headers, true)
+}
+
+// active stream sender wrapper
+func (s *sourceStream) appendHeaders(headers protocol.HeaderMap, endStream bool) {
+	s.controlProcessDone = endStream
+	s.doAppendHeaders(nil, headers, endStream)
+}
+
+func (s *sourceStream) doAppendHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
+	//Currently, just log the error
+	if err := s.responseSender.AppendHeaders(s.context, headers, endStream); err != nil {
+		log.Println("downstream append headers error:", err)
+	}
+
+	if endStream {
+		s.endStream()
+	}
+}
+
+func (s *sourceStream) endStream() {
+	if s.responseSender != nil && !s.sourceStreamRecvDone {
+		// not reuse buffer
+		atomic.StoreUint32(&s.reuseBuffer, 0)
+	}
+	s.cleanStream()
+
+	// note: if proxy logic resets the stream, there maybe some underlying data in the conn.
+	// we ignore this for now, fix as a todo
+}
+
+func (s *sourceStream) cleanStream() {
+	if !atomic.CompareAndSwapUint32(&s.sourceStreamCleaned, 0, 1) {
+		return
+	}
+
+	// clean up timers
+	s.cleanUp()
+
+	// todo:
+	// tell filters it's time to destroy
+	//for _, ef := range s.senderFilters {
+	//	ef.filter.OnDestroy()
+	//}
+
+
+
+	// recycle if no reset events
+	s.giveStream()
+}
+
+func (s *sourceStream) cleanUp() {
+	// reset pertry timer
+	if s.perRetryTimer != nil {
+		s.perRetryTimer.Stop()
+		s.perRetryTimer = nil
+	}
+
+	// reset response timer
+	if s.responseTimer != nil {
+		s.responseTimer.Stop()
+		s.responseTimer = nil
+	}
+}
+
+func (s *sourceStream) giveStream() {
+	if atomic.LoadUint32(&s.reuseBuffer) != 1 {
+		return
+	}
+	// reset downstreamReqBuf
+	if s.sourceStreamReqDataBuf != nil {
+		if e := buffer.PutIoBuffer(s.sourceStreamReqDataBuf); e != nil {
+			log.Println("PutIoBuffer error:", e)
+		}
+	}
+
+	// Give buffers to bufferPool
+	if ctx := buffer.PoolContext(s.context); ctx != nil {
+		ctx.Give()
+	}
 }

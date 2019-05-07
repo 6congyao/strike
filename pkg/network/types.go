@@ -141,10 +141,10 @@ func (ce ConnectionEvent) IsClose() bool {
 		ce == OnReadErrClose || ce == OnWriteErrClose
 }
 
-// IsClose represents whether the event is triggered by connection close
+// IsCloseExceptLocal represents whether the event is triggered by connection close except local close
 func (ce ConnectionEvent) IsCloseExceptLocal() bool {
-	return ce == RemoteClose ||
-		ce == OnReadErrClose || ce == OnWriteErrClose
+	return ce == RemoteClose || ce == OnReadErrClose ||
+		ce == OnWriteErrClose
 }
 
 // ConnectFailure represents whether the event is triggered by connection failure

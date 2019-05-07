@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"net"
 	"os"
+	"strike/pkg/admin"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 )
@@ -62,6 +63,8 @@ type Listener interface {
 
 	// Close closes listener, not closing connections
 	Close(lctx context.Context) error
+
+	admin.Store
 }
 
 // ConnectionEventListener is a network level callbacks that happen on a connection.
@@ -211,6 +214,10 @@ type Connection interface {
 
 	// Set conn read timeout
 	SetReadTimeout(duration int64)
+
+	admin.Emitter
+
+	admin.EmitterManager
 }
 
 // ConnectionStats is a group of connection metrics

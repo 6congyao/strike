@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strike/pkg/api/v2"
 	"strike/pkg/evio"
+	"sync"
 	"time"
 )
 
@@ -39,6 +40,23 @@ type listener struct {
 	cb           ListenerEventListener
 	rawl         *net.TCPListener
 	config       *v2.Listener
+	store        sync.Map
+}
+
+func (l *listener) Store(k, v interface{}) {
+	l.store.Store(k, v)
+}
+
+func (l *listener) Delete(k interface{}) {
+	l.store.Delete(k)
+}
+
+func (l *listener) Load(k interface{}) (interface{}, bool) {
+	return l.store.Load(k)
+}
+
+func (l *listener) LoadOrStore(k, v interface{}) (interface{}, bool) {
+	return l.store.LoadOrStore(k, v)
 }
 
 func NewListener(lc *v2.Listener) Listener {
@@ -194,6 +212,22 @@ type edgeListener struct {
 
 	cb     ListenerEventListener
 	config *v2.Listener
+}
+
+func (el *edgeListener) Store(k, v interface{}) {
+	panic("implement me")
+}
+
+func (el *edgeListener) Delete(k interface{}) {
+	panic("implement me")
+}
+
+func (el *edgeListener) Load(k interface{}) (interface{}, bool) {
+	panic("implement me")
+}
+
+func (el *edgeListener) LoadOrStore(k, v interface{}) (interface{}, bool) {
+	panic("implement me")
 }
 
 func (el *edgeListener) serve(lctx context.Context) error {

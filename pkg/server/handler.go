@@ -33,7 +33,6 @@ import (
 	"strike/pkg/upstream"
 	"strike/utils"
 	"strings"
-	"sync"
 	"sync/atomic"
 )
 
@@ -272,7 +271,7 @@ type activeListener struct {
 	streamFiltersFactories  []stream.StreamFilterChainFactory
 	listenIP                string
 	listenPort              int
-	sMap                    sync.Map
+	//sMap                    sync.Map
 	//connsMux                sync.RWMutex
 	handler      *connHandler
 	stopChan     chan struct{}
@@ -328,6 +327,7 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 	ctx = context.WithValue(ctx, types.ContextKeyNetworkFilterChainFactories, al.networkFiltersFactories)
 	ctx = context.WithValue(ctx, types.ContextKeyStreamFilterChainFactories, al.streamFiltersFactories)
 	ctx = context.WithValue(ctx, types.ContextKeyConnHandlerRef, al.handler)
+	ctx = context.WithValue(ctx, types.ContextKeyListenerRef, al.listener)
 
 	arc.ContinueFilterChain(ctx, true)
 }
@@ -347,8 +347,8 @@ func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Conn
 		return
 	}
 
-	ac := newActiveConnection(al, conn)
-	al.sMap.Store(conn.ID(), ac)
+	newActiveConnection(al, conn)
+	//al.sMap.Store(conn.ID(), ac)
 	atomic.AddInt64(&al.handler.numConnections, 1)
 
 	conn.Start(ctx)
@@ -359,7 +359,7 @@ func (al *activeListener) OnClose() {
 }
 
 func (al *activeListener) removeConnection(ac *activeConnection) {
-	al.sMap.Delete(ac.conn.ID())
+	//al.sMap.Delete(ac.conn.ID())
 
 	atomic.AddInt64(&al.handler.numConnections, -1)
 }

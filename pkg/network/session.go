@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"runtime"
 	"runtime/debug"
+	"strike/pkg/admin"
 	"strike/pkg/buffer"
 	"strike/pkg/evio"
 	"strings"
@@ -43,14 +44,16 @@ type Session struct {
 	remoteAddr net.Addr
 	closeFlag  int32
 
-	closeWithFlush  bool
-	In              evio.InputStream
-	Out             []byte
-	Pr              *PipelineReader
-	Mu              sync.Mutex
-	filterManager   FilterManager
-	rawc            interface{}
-	connCallbacks   []ConnectionEventListener
+	closeWithFlush bool
+	In             evio.InputStream
+	Out            []byte
+	Pr             *PipelineReader
+	Mu             sync.Mutex
+	filterManager  FilterManager
+	rawc           interface{}
+	connCallbacks  []ConnectionEventListener
+	emitters       []admin.Emitter
+
 	readBuffer      buffer.IoBuffer
 	readTimeout     int64
 	bufferLimit     uint32
@@ -241,6 +244,20 @@ func (s *Session) RawConn() interface{} {
 
 func (s *Session) SetReadTimeout(duration int64) {
 	s.readTimeout = duration
+}
+
+func (s *Session) Emit(topic string, args ...interface{}) {
+	for _, cb := range s.emitters {
+		cb.Emit(topic, args)
+	}
+}
+
+func (s *Session) AddEmitter(e admin.Emitter) {
+	s.emitters = append(s.emitters, e)
+}
+
+func (s *Session) RemoveEmitter(e admin.Emitter) {
+
 }
 
 func (s *Session) doReadConn() (err error) {

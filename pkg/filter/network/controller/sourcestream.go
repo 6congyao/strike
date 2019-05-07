@@ -165,6 +165,7 @@ func (s *sourceStream) sendHijackReply(code int, headers protocol.HeaderMap, doC
 		headers = protocol.CommonHeader(raw)
 	}
 
+
 	headers.Set(types.HeaderStatus, strconv.Itoa(code))
 
 	s.appendHeaders(headers, true)

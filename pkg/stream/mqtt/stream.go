@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strike/pkg/admin"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
@@ -64,6 +65,7 @@ func newStreamConnection(context context.Context, connection network.Connection,
 	}
 
 	connection.AddConnectionEventListener(sc)
+	connection.AddEmitter(sc)
 	return sc
 }
 
@@ -82,6 +84,14 @@ type streamConnection struct {
 	cscCallbacks stream.StreamConnectionEventListener
 	// Server Stream Conn Callbacks
 	sscCallbacks stream.ServerStreamConnectionEventListener
+}
+
+// topic should be the instance id
+// args[0] should be the action
+// args[1] should be the message
+func (sc *streamConnection) Emit(topic string, args ...interface{}) error {
+	fmt.Println(topic, args)
+	return nil
 }
 
 func (sc *streamConnection) OnDecodeHeader(streamID uint64, headers protocol.HeaderMap, endStream bool) network.FilterStatus {
@@ -200,6 +210,9 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 			ack.ReturnCode = message.RetCodeNotAuthorized
 		}
 		ss.res = ack
+		// todo: store the instance id here for key, Connection for value
+		store := ss.context.Value(types.ContextKeyListenerRef).(admin.Store)
+		store.Store("a", ss.connection.connection)
 		break
 	case message.StrMsgTypeConnectAck:
 		break

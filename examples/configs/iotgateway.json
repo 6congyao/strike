@@ -253,7 +253,8 @@
                 "type": "controller",
                 "config": {
                   "name": "pushController",
-                  "source_protocol": "Http1"
+                  "source_protocol": "Http1",
+                  "scope": ["mqttListener", "mqttsListener"]
                 }
               }]
           }],

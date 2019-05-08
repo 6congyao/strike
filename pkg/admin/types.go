@@ -23,7 +23,7 @@ type Store interface {
 }
 
 type Emitter interface {
-	Emit(topic string, args ...interface{})
+	Emit(topic string, args ...interface{}) error
 }
 
 type EmitterManager interface {

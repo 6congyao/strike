@@ -18,15 +18,14 @@ package controller
 import (
 	"container/list"
 	"context"
-	"fmt"
 	"log"
 	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
-	"strike/pkg/server"
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/utils"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -70,7 +69,7 @@ type sourceStream struct {
 	// sourceStream request received done
 	sourceStreamRecvDone bool
 	// upstream req sent
-	upstreamRequestSent bool
+	controlRequestSent bool
 	// 1. at the end of upstream response 2. by a upstream reset due to exceptions, such as no healthy upstream, connection close, etc.
 	controlProcessDone bool
 
@@ -125,19 +124,37 @@ func (s *sourceStream) OnReceiveHeaders(context context.Context, headers protoco
 	s.sourceStreamRecvDone = endStream
 	s.sourceStreamReqHeaders = headers
 
-	ch := context.Value(types.ContextKeyConnHandlerRef).(server.ConnectionHandler)
-
-	if ch != nil {
-		fmt.Println(ch.NumConnections())
+	if endStream {
+		s.endStream()
 	}
-
-	s.sendHijackReply(200, headers, false)
 }
 
 func (s *sourceStream) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
-	s.sourceStreamReqDataBuf = data.Clone()
-	s.sourceStreamReqDataBuf.Count(1)
-	data.Drain(data.Len())
+	if s.processDone() {
+		return
+	}
+
+	s.sourceStreamRecvDone = endStream
+
+	var err error
+
+	if path, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderPathKey); ok {
+		topic := strings.TrimLeft(path, "/")
+		if action, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderMethod); ok {
+			err = s.controller.EmitControlEvent(topic, action, data.Bytes())
+		}
+	}
+
+	if err != nil {
+		s.sendHijackReply(404, s.sourceStreamRespHeaders, false)
+	} else {
+		s.sendHijackReply(200, s.sourceStreamRespHeaders, false)
+	}
+
+	if endStream {
+		data.Drain(data.Len())
+		s.cleanStream()
+	}
 }
 
 func (s *sourceStream) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
@@ -164,7 +181,6 @@ func (s *sourceStream) sendHijackReply(code int, headers protocol.HeaderMap, doC
 		raw := make(map[string]string, 5)
 		headers = protocol.CommonHeader(raw)
 	}
-
 
 	headers.Set(types.HeaderStatus, strconv.Itoa(code))
 
@@ -207,15 +223,6 @@ func (s *sourceStream) cleanStream() {
 	// clean up timers
 	s.cleanUp()
 
-	// todo:
-	// tell filters it's time to destroy
-	//for _, ef := range s.senderFilters {
-	//	ef.filter.OnDestroy()
-	//}
-
-
-
-	// recycle if no reset events
 	s.giveStream()
 }
 
@@ -248,4 +255,8 @@ func (s *sourceStream) giveStream() {
 	if ctx := buffer.PoolContext(s.context); ctx != nil {
 		ctx.Give()
 	}
+}
+
+func (s *sourceStream) processDone() bool {
+	return s.controlProcessDone || atomic.LoadUint32(&s.sourceStreamReset) == 1
 }

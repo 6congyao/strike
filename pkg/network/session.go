@@ -246,10 +246,14 @@ func (s *Session) SetReadTimeout(duration int64) {
 	s.readTimeout = duration
 }
 
-func (s *Session) Emit(topic string, args ...interface{}) {
-	for _, cb := range s.emitters {
-		cb.Emit(topic, args)
+func (s *Session) Emit(topic string, args ...interface{}) error {
+	for i, _ := range s.emitters {
+		err := s.emitters[i].Emit(topic, args)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (s *Session) AddEmitter(e admin.Emitter) {

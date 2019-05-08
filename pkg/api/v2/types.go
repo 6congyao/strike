@@ -427,6 +427,7 @@ type Delegation struct {
 
 // Controller
 type Controller struct {
-	Name           string `json:"name"`
-	SourceProtocol string `json:"source_protocol"`
+	Name           string   `json:"name"`
+	SourceProtocol string   `json:"source_protocol"`
+	Scope          []string `json:"scope"`
 }

@@ -17,10 +17,13 @@ package controller
 
 import (
 	"context"
+	"errors"
+	"strike/pkg/admin"
 	"strike/pkg/api/v2"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
+	"strike/pkg/server"
 	"strike/pkg/stream"
 	"strike/pkg/types"
 )
@@ -94,6 +97,25 @@ func (c *controller) NewStreamDetect(ctx context.Context, responseSender stream.
 	return s
 }
 
+func (c *controller) EmitControlEvent(topic string, args ...interface{}) error {
+	ch := c.context.Value(types.ContextKeyConnHandlerRef).(server.ConnectionHandler)
+
+	if ch != nil {
+		scope := c.config.Scope
+
+		for i, _ := range scope {
+			l := ch.FindListenerByName(scope[i])
+			if l != nil {
+				v, _ := l.Load(topic)
+				if e, ok := v.(admin.Emitter); ok {
+					return e.Emit(topic, args)
+				}
+			}
+		}
+	}
+	return errors.New("emit error")
+}
+
 // ConnectionEventListener
 type downstreamCallbacks struct {
 	controller *controller
@@ -102,4 +124,3 @@ type downstreamCallbacks struct {
 func (dc *downstreamCallbacks) OnEvent(event network.ConnectionEvent) {
 	dc.controller.onDownstreamEvent(event)
 }
-

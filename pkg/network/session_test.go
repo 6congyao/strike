@@ -24,6 +24,12 @@ type MyEventListener struct{}
 
 func (el *MyEventListener) OnEvent(event ConnectionEvent) {}
 
+type MyEmitter struct{}
+
+func (me *MyEmitter) Emit(topic string, args ...interface{}) error {
+	return nil
+}
+
 func TestAddConnectionEventListener(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("AddConnectionEventListener(%d)", i)
@@ -43,5 +49,17 @@ func testAddConnectionEventListener(n int, t *testing.T) {
 
 	if len(s.connCallbacks) != n {
 		t.Errorf("Expect %d, but got %d after AddConnectionEventListener(el0)", n, len(s.connCallbacks))
+	}
+}
+
+func TestAddEmitter(t *testing.T) {
+	s := &Session{}
+	for i := 0; i < 10; i++ {
+		e := &MyEmitter{}
+		s.AddEmitter(e)
+	}
+
+	if len(s.emitters) != 10 {
+		t.Errorf("Expect %d, but got %d after AddEmitter", 10, len(s.emitters))
 	}
 }

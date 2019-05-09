@@ -108,7 +108,7 @@ func (c *controller) EmitControlEvent(topic string, args ...interface{}) error {
 			if l != nil {
 				v, _ := l.Load(topic)
 				if e, ok := v.(admin.Emitter); ok {
-					return e.Emit(topic, args)
+					return e.Emit(topic, args...)
 				}
 			}
 		}

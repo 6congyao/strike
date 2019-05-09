@@ -28,5 +28,4 @@ type Emitter interface {
 
 type EmitterManager interface {
 	AddEmitter(e Emitter)
-	RemoveEmitter(e Emitter)
 }

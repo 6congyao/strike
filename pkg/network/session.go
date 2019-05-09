@@ -39,6 +39,9 @@ var PipelineReaderPool sync.Pool
 
 const DefaultBufferReadCapacity = 1 << 0
 
+// network.Connection
+// admin.Emitter
+// admin.EmitterManager
 type Session struct {
 	id         uint64
 	remoteAddr net.Addr
@@ -144,6 +147,8 @@ func (s *Session) Close(ccType ConnectionCloseType, eventType ConnectionEvent) e
 		cb.OnEvent(eventType)
 	}
 
+	s.emitters = s.emitters[0:0]
+
 	return nil
 }
 
@@ -248,7 +253,7 @@ func (s *Session) SetReadTimeout(duration int64) {
 
 func (s *Session) Emit(topic string, args ...interface{}) error {
 	for i, _ := range s.emitters {
-		err := s.emitters[i].Emit(topic, args)
+		err := s.emitters[i].Emit(topic, args...)
 		if err != nil {
 			return err
 		}
@@ -258,10 +263,6 @@ func (s *Session) Emit(topic string, args ...interface{}) error {
 
 func (s *Session) AddEmitter(e admin.Emitter) {
 	s.emitters = append(s.emitters, e)
-}
-
-func (s *Session) RemoveEmitter(e admin.Emitter) {
-
 }
 
 func (s *Session) doReadConn() (err error) {

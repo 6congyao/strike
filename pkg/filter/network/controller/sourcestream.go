@@ -16,7 +16,6 @@
 package controller
 
 import (
-	"container/list"
 	"context"
 	"log"
 	"strconv"
@@ -42,7 +41,6 @@ type Timeout struct {
 type sourceStream struct {
 	ID         uint32
 	controller *controller
-	element    *list.Element
 
 	// flow control
 	bufferLimit uint32
@@ -210,9 +208,6 @@ func (s *sourceStream) endStream() {
 		atomic.StoreUint32(&s.reuseBuffer, 0)
 	}
 	s.cleanStream()
-
-	// note: if proxy logic resets the stream, there maybe some underlying data in the conn.
-	// we ignore this for now, fix as a todo
 }
 
 func (s *sourceStream) cleanStream() {

@@ -248,7 +248,7 @@ func (s *Session) SetReadTimeout(duration int64) {
 
 func (s *Session) Emit(topic string, args ...interface{}) error {
 	for i, _ := range s.emitters {
-		err := s.emitters[i].Emit(topic, args)
+		err := s.emitters[i].Emit(topic, args...)
 		if err != nil {
 			return err
 		}

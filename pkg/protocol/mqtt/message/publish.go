@@ -10,17 +10,17 @@ import (
 )
 
 type Publish struct {
-	Header
-	Dup    bool
-	Qos    Qos
-	Retain bool
+	Header `json:"_"`
+	Dup    bool `json:"dup"`
+	Qos    Qos  `json:"qos"`
+	Retain bool `json:"retain"`
 
 	// Variable header
-	TopicName        string
-	PacketIdentifier uint16
+	TopicName        string `json:"topic_name"`
+	PacketIdentifier uint16 `json:"packet_identifier"`
 
 	// Payload
-	Payload []byte
+	Payload []byte `json:"payload"`
 }
 
 func NewPublish() *Publish {

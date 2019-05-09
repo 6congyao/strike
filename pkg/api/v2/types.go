@@ -395,7 +395,9 @@ type HeaderMatcher struct {
 
 // XProxyExtendConfig
 type XProxyExtendConfig struct {
-	SubProtocol string `json:"sub_protocol"`
+	SubProtocol        string `json:"sub_protocol"`
+	UpstreamAddress    string `json:"upstream_address"`
+	PushControlAddress string `json:"push_control_address"`
 }
 
 // ServiceRegistryInfo

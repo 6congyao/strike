@@ -33,11 +33,11 @@ var (
 )
 
 type controller struct {
-	config             *v2.Controller
-	readCallbacks      network.ReadFilterCallbacks
-	serverStreamConn   stream.ServerStreamConnection
-	downstreamListener network.ConnectionEventListener
-	context            context.Context
+	config               *v2.Controller
+	readCallbacks        network.ReadFilterCallbacks
+	serverStreamConn     stream.ServerStreamConnection
+	sourceStreamListener network.ConnectionEventListener
+	context              context.Context
 }
 
 // NewProxy create proxy instance for given v2.Proxy config
@@ -47,7 +47,7 @@ func NewController(ctx context.Context, config *v2.Controller) network.ReadFilte
 		context: ctx,
 	}
 
-	controller.downstreamListener = &downstreamCallbacks{
+	controller.sourceStreamListener = &sourceStreamCallbacks{
 		controller: controller,
 	}
 
@@ -55,14 +55,14 @@ func NewController(ctx context.Context, config *v2.Controller) network.ReadFilte
 }
 
 //rpc realize upstream on event
-func (c *controller) onDownstreamEvent(event network.ConnectionEvent) {
+func (c *controller) onsourceStreamEvent(event network.ConnectionEvent) {
 	if event.IsClose() {
 	}
 }
 
 func (c *controller) InitializeReadFilterCallbacks(cb network.ReadFilterCallbacks) {
 	c.readCallbacks = cb
-	c.readCallbacks.Connection().AddConnectionEventListener(c.downstreamListener)
+	c.readCallbacks.Connection().AddConnectionEventListener(c.sourceStreamListener)
 
 	if c.config.SourceProtocol != string(protocol.Auto) {
 		c.serverStreamConn = stream.CreateServerStreamConnection(c.context, protocol.Protocol(c.config.SourceProtocol), c.readCallbacks.Connection(), c)
@@ -117,10 +117,10 @@ func (c *controller) EmitControlEvent(topic string, args ...interface{}) error {
 }
 
 // ConnectionEventListener
-type downstreamCallbacks struct {
+type sourceStreamCallbacks struct {
 	controller *controller
 }
 
-func (dc *downstreamCallbacks) OnEvent(event network.ConnectionEvent) {
-	dc.controller.onDownstreamEvent(event)
+func (dc *sourceStreamCallbacks) OnEvent(event network.ConnectionEvent) {
+	dc.controller.onsourceStreamEvent(event)
 }

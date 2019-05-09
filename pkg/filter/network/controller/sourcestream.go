@@ -194,7 +194,7 @@ func (s *sourceStream) appendHeaders(headers protocol.HeaderMap, endStream bool)
 func (s *sourceStream) doAppendHeaders(filter interface{}, headers protocol.HeaderMap, endStream bool) {
 	//Currently, just log the error
 	if err := s.responseSender.AppendHeaders(s.context, headers, endStream); err != nil {
-		log.Println("downstream append headers error:", err)
+		log.Println("sourceStream append headers error:", err)
 	}
 
 	if endStream {
@@ -239,7 +239,7 @@ func (s *sourceStream) giveStream() {
 	if atomic.LoadUint32(&s.reuseBuffer) != 1 {
 		return
 	}
-	// reset downstreamReqBuf
+	// reset sourceStreamReqBuf
 	if s.sourceStreamReqDataBuf != nil {
 		if e := buffer.PutIoBuffer(s.sourceStreamReqDataBuf); e != nil {
 			log.Println("PutIoBuffer error:", e)

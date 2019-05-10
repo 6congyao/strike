@@ -88,6 +88,8 @@ func NewProxy(ctx context.Context, config *v2.Proxy, clusterManager interface{})
 		var xProxyExtendConfig v2.XProxyExtendConfig
 		json.Unmarshal([]byte(extJSON), &xProxyExtendConfig)
 		proxy.context = context.WithValue(proxy.context, types.ContextSubProtocol, xProxyExtendConfig.SubProtocol)
+		proxy.context = context.WithValue(proxy.context, types.ContextKeyUpstreamAddress, xProxyExtendConfig.UpstreamAddress)
+		proxy.context = context.WithValue(proxy.context, types.ContextKeyPushControlAddress, xProxyExtendConfig.PushControlAddress)
 	} else {
 		log.Println("get proxy extend config fail:", err)
 	}

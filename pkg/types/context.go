@@ -39,6 +39,9 @@ const (
 	ContextKeyTraceSpanKey                ContextKey = "TraceSpanKey"
 	ContextKeyConnHandlerRef              ContextKey = "ConnHandlerRef"
 	ContextKeyListenerRef                 ContextKey = "ListenerRef"
+	ContextKeyConnectionToClose           ContextKey = "ConnectionToClose"
+	ContextKeyUpstreamAddress             ContextKey = "UpstreamAddress"
+	ContextKeyPushControlAddress          ContextKey = "PushControlAddress"
 )
 
 // GlobalProxyName represents proxy name for metrics

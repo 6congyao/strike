@@ -23,3 +23,6 @@
 ## 0.4.0
 + Refactoring
 + Session read timeout
+
+## 0.4.1
++ Controller network filter to control other listeners via APIs(Http restful)

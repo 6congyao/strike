@@ -454,3 +454,7 @@ func (ac *activeConnection) OnEvent(event network.ConnectionEvent) {
 		ac.listener.removeConnection(ac)
 	}
 }
+
+func sendInheritListeners() (net.Conn, error) {
+	panic("unsupported")
+}

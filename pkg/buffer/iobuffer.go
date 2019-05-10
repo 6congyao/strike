@@ -19,13 +19,9 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strike/pkg/types"
 	"sync/atomic"
 	"time"
-)
-
-const (
-	FirstConnReadTimeout = 5 * time.Second
-	ConnReadTimeout      = 10 * time.Millisecond
 )
 
 const (
@@ -112,11 +108,11 @@ func (b *ioBuffer) ReadOnce(r io.Reader, d int64) (n int64, err error) {
 		if conn != nil {
 			if first {
 				if d == 0 {
-					d = FirstConnReadTimeout.Nanoseconds()
+					d = types.DefaultConnReadTimeout.Nanoseconds()
 				}
 				conn.SetReadDeadline(time.Now().Add(time.Duration(d)))
 			} else {
-				conn.SetReadDeadline(time.Now().Add(ConnReadTimeout))
+				conn.SetReadDeadline(time.Now().Add(types.FollowingConnReadTimeout))
 			}
 
 			m, e = r.Read(b.buf[len(b.buf):cap(b.buf)])

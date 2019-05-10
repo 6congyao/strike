@@ -27,14 +27,11 @@ import (
 )
 
 const (
-	BasePath = string(os.PathSeparator) + "home" + string(os.PathSeparator) +
+	StrikeBasePath = string(os.PathSeparator) + "home" + string(os.PathSeparator) +
 		"admin" + string(os.PathSeparator) + "strike"
-
-	LogBasePath = BasePath + string(os.PathSeparator) + "logs"
-
-	LogDefaultPath = LogBasePath + string(os.PathSeparator) + "strike.log"
-
-	PidFileName = "strike.pid"
+	StrikeLogBasePath    = StrikeBasePath + string(os.PathSeparator) + "logs"
+	StrikeLogDefaultPath = StrikeLogBasePath + string(os.PathSeparator) + "strike.log"
+	StrikePidFileName    = "strike.pid"
 )
 
 type Config struct {

@@ -67,6 +67,7 @@ Stream:
 ## Network Filters
 * Delegation (net.Conn)
 * Proxy
+* Controller
 
 ## Stream Filters
 * QPS

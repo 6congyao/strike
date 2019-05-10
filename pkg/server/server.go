@@ -23,7 +23,9 @@ import (
 	"strike/pkg/config"
 	"strike/pkg/network"
 	"strike/pkg/stream"
+	"strike/pkg/types"
 	"strike/pkg/upstream"
+	"time"
 )
 
 var servers []*server
@@ -58,12 +60,10 @@ func GetServer() Server {
 }
 
 func NewServer(config *Config, cm upstream.ClusterManager) Server {
-	procNum := runtime.NumCPU()
-
 	if config != nil {
 		//processor num setting
-		if config.Processor > 0 {
-			procNum = config.Processor
+		if config.GracefulTimeout != 0 {
+			GracefulTimeout = config.GracefulTimeout
 		}
 
 		network.UseEdgeMode = config.UseEdgeMode
@@ -73,7 +73,7 @@ func NewServer(config *Config, cm upstream.ClusterManager) Server {
 		}
 	}
 
-	runtime.GOMAXPROCS(procNum)
+	runtime.GOMAXPROCS(config.Processor)
 
 	server := &server{
 		serverName: config.ServerName,
@@ -117,4 +117,43 @@ func (srv *server) Close() {
 
 func (srv *server) Handler() ConnectionHandler {
 	return srv.handler
+}
+
+func Stop() {
+	for _, server := range servers {
+		server.Close()
+	}
+}
+
+func StopAccept() {
+	for _, server := range servers {
+		server.handler.StopListeners(nil, false)
+	}
+}
+
+func StopConnection() {
+	for _, server := range servers {
+		server.handler.StopConnection()
+	}
+}
+
+func ListListenersFile() []*os.File {
+	var files []*os.File
+	for _, server := range servers {
+		files = append(files, server.handler.ListListenersFile(nil)...)
+	}
+	return files
+}
+
+func WaitConnectionsDone(duration time.Duration) error {
+	// one duration wait for connection to active close
+	// two duration wait for connection to transfer
+	// DefaultConnReadTimeout wait for read timeout
+	timeout := time.NewTimer(2*duration + types.DefaultConnReadTimeout)
+	StopConnection()
+	log.Println("Stop connection...")
+	select {
+	case <-timeout.C:
+		return nil
+	}
 }

@@ -86,8 +86,7 @@ type streamConnection struct {
 	sscCallbacks stream.ServerStreamConnectionEventListener
 }
 
-// topic should be the instance id
-// args[0] should be the action
+// topic should be the action
 // args[1] should be the message
 func (sc *streamConnection) Emit(topic string, args ...interface{}) error {
 	fmt.Println(topic, args)

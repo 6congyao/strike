@@ -26,3 +26,6 @@
 
 ## 0.4.1
 + Controller network filter to control other listeners via APIs(Http restful)
+
+## 0.4.2
++ Controller stream filter to avoid unsupported method

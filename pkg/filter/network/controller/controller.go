@@ -97,7 +97,7 @@ func (c *controller) NewStreamDetect(ctx context.Context, responseSender stream.
 	return s
 }
 
-func (c *controller) EmitControlEvent(topic string, args ...interface{}) error {
+func (c *controller) GetTargetEmitter(topic string) (admin.Emitter, error) {
 	ch := c.context.Value(types.ContextKeyConnHandlerRef).(server.ConnectionHandler)
 
 	if ch != nil {
@@ -108,12 +108,12 @@ func (c *controller) EmitControlEvent(topic string, args ...interface{}) error {
 			if l != nil {
 				v, _ := l.Load(topic)
 				if e, ok := v.(admin.Emitter); ok {
-					return e.Emit(topic, args...)
+					return e, nil
 				}
 			}
 		}
 	}
-	return errors.New("emit error")
+	return nil, errors.New("emitter not found")
 }
 
 // ConnectionEventListener

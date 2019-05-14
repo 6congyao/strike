@@ -173,7 +173,7 @@ func (f *activeStreamSenderFilter) handleTrailerStatus(status stream.StreamTrail
 	return false
 }
 
-// stream.StreamReceiverFilterCallbacks
+// stream.StreamReceiverFilterHandler
 type activeStreamReceiverFilter struct {
 	activeStreamFilter
 

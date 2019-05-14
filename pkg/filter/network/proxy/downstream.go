@@ -358,9 +358,15 @@ func (s *downStream) doAppendHeaders(filter interface{}, headers protocol.Header
 }
 
 func (s *downStream) doAppendData(filter interface{}, data buffer.IoBuffer, endStream bool) {
+	s.responseSender.AppendData(s.context, data, endStream)
+	if endStream {
+		s.endStream()
+	}
 }
 
 func (s *downStream) doAppendTrailers(filter interface{}, trailers protocol.HeaderMap) {
+	s.responseSender.AppendTrailers(s.context, trailers)
+	s.endStream()
 }
 
 func (s *downStream) convertHeader(headers protocol.HeaderMap) protocol.HeaderMap {
@@ -803,5 +809,5 @@ func (s *downStream) giveStream() {
 }
 
 func (s *downStream) processDone() bool {
-	return s.upstreamProcessDone || atomic.LoadUint32(&s.downstreamReset) == 1
+	return s.upstreamProcessDone || atomic.LoadUint32(&s.downstreamReset) == 1 || atomic.LoadUint32(&s.downstreamCleaned) == 1
 }

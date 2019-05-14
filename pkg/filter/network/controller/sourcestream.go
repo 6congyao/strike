@@ -17,8 +17,10 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strconv"
+	"strike/pkg/admin"
 	"strike/pkg/buffer"
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
@@ -70,6 +72,11 @@ type sourceStream struct {
 	controlRequestSent bool
 	// 1. at the end of upstream response 2. by a upstream reset due to exceptions, such as no healthy upstream, connection close, etc.
 	controlProcessDone bool
+	emitter            admin.Emitter
+
+	// filter
+	filterStage     int
+	receiverFilters []*activeStreamReceiverFilter
 
 	sourceStreamReset   uint32
 	sourceStreamCleaned uint32
@@ -97,6 +104,27 @@ func newActiveStream(ctx context.Context, controller *controller, responseSender
 	return s
 }
 
+func (s *sourceStream) doEmit(args ...interface{}) (err error) {
+	if s.emitter == nil {
+		s.sendHijackReply(404, s.sourceStreamRespHeaders, false)
+		return
+	}
+
+	if action, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderMethod); ok {
+		err = s.emitter.Emit(action, args...)
+	} else {
+		err = errors.New("no method found ")
+	}
+
+	if err != nil {
+		s.sendHijackReply(404, s.sourceStreamRespHeaders, false)
+	} else {
+		s.sendHijackReply(200, s.sourceStreamRespHeaders, false)
+	}
+
+	return
+}
+
 func (s *sourceStream) OnDestroyStream() {}
 
 // stream.StreamEventListener
@@ -114,7 +142,8 @@ func (s *sourceStream) AddStreamSenderFilter(filter stream.StreamSenderFilter) {
 }
 
 func (s *sourceStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilter) {
-
+	sf := newActiveStreamReceiverFilter(len(s.receiverFilters), s, filter)
+	s.receiverFilters = append(s.receiverFilters, sf)
 }
 
 // stream.StreamReceiver
@@ -122,8 +151,23 @@ func (s *sourceStream) OnReceiveHeaders(context context.Context, headers protoco
 	s.sourceStreamRecvDone = endStream
 	s.sourceStreamReqHeaders = headers
 
+	s.doReceiveHeaders(nil, headers, endStream)
+}
+
+func (s *sourceStream) doReceiveHeaders(filter *activeStreamReceiverFilter, headers protocol.HeaderMap, endStream bool) {
+	// run stream filters
+	if s.runReceiveHeadersFilters(filter, headers, endStream) {
+		return
+	}
+
+	var topic string
+	if path, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderPathKey); ok {
+		topic = strings.TrimLeft(path, "/")
+		s.emitter, _ = s.controller.GetTargetEmitter(topic)
+	}
+
 	if endStream {
-		s.endStream()
+		s.doEmit()
 	}
 }
 
@@ -134,29 +178,20 @@ func (s *sourceStream) OnReceiveData(context context.Context, data buffer.IoBuff
 
 	s.sourceStreamRecvDone = endStream
 
-	var err error
+	s.doReceiveData(nil, data, endStream)
+}
 
-	if path, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderPathKey); ok {
-		topic := strings.TrimLeft(path, "/")
-		if action, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderMethod); ok {
-			err = s.controller.EmitControlEvent(topic, action, data.Bytes())
-		}
-	}
-
-	if err != nil {
-		s.sendHijackReply(404, s.sourceStreamRespHeaders, false)
-	} else {
-		s.sendHijackReply(200, s.sourceStreamRespHeaders, false)
-	}
-
+func (s *sourceStream) doReceiveData(filter *activeStreamReceiverFilter, data buffer.IoBuffer, endStream bool) {
 	if endStream {
+		s.doEmit(data.Bytes())
 		data.Drain(data.Len())
-		s.cleanStream()
 	}
 }
 
 func (s *sourceStream) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
+}
 
+func (s *sourceStream) doReceiveTrailers(filter *activeStreamReceiverFilter, trailers protocol.HeaderMap) {
 }
 
 func (s *sourceStream) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
@@ -171,6 +206,32 @@ func (s *sourceStream) OnDecodeError(context context.Context, err error, headers
 	}
 
 	s.OnResetStream(stream.StreamLocalReset)
+}
+
+func (s *sourceStream) runReceiveHeadersFilters(filter *activeStreamReceiverFilter, headers protocol.HeaderMap, endStream bool) bool {
+	var index int
+	var f *activeStreamReceiverFilter
+
+	if filter != nil {
+		index = filter.index + 1
+	}
+
+	for ; index < len(s.receiverFilters); index++ {
+		f = s.receiverFilters[index]
+
+		s.filterStage |= DecodeHeaders
+		status := f.filter.OnReceiveHeaders(s.context, headers, endStream)
+		s.filterStage &= ^DecodeHeaders
+		if f.handleHeaderStatus(status) {
+			// TODO: If it is the last filter, continue with
+			// processing since we need to handle the case where a terminal filter wants to buffer, but
+			// a previous filter has added body.
+			return true
+		}
+		// TODO: Handle the case where we have a header only request, but a filter adds a body to it.
+	}
+
+	return false
 }
 
 func (s *sourceStream) sendHijackReply(code int, headers protocol.HeaderMap, doConv bool) {
@@ -202,6 +263,28 @@ func (s *sourceStream) doAppendHeaders(filter interface{}, headers protocol.Head
 	}
 }
 
+func (s *sourceStream) appendData(data buffer.IoBuffer, endStream bool) {
+	s.controlProcessDone = endStream
+	s.doAppendData(nil, data, endStream)
+}
+
+func (s *sourceStream) doAppendData(filter interface{}, data buffer.IoBuffer, endStream bool) {
+	s.responseSender.AppendData(s.context, data, endStream)
+	if endStream {
+		s.endStream()
+	}
+}
+
+func (s *sourceStream) appendTrailers(trailers protocol.HeaderMap) {
+	s.controlProcessDone = true
+	s.doAppendTrailers(nil, trailers)
+}
+
+func (s *sourceStream) doAppendTrailers(filter interface{}, trailers protocol.HeaderMap) {
+	s.responseSender.AppendTrailers(s.context, trailers)
+	s.endStream()
+}
+
 func (s *sourceStream) endStream() {
 	if s.responseSender != nil && !s.sourceStreamRecvDone {
 		// not reuse buffer
@@ -217,6 +300,10 @@ func (s *sourceStream) cleanStream() {
 
 	// clean up timers
 	s.cleanUp()
+
+	for _, ef := range s.receiverFilters {
+		ef.filter.OnDestroy()
+	}
 
 	s.giveStream()
 }
@@ -253,5 +340,5 @@ func (s *sourceStream) giveStream() {
 }
 
 func (s *sourceStream) processDone() bool {
-	return s.controlProcessDone || atomic.LoadUint32(&s.sourceStreamReset) == 1
+	return s.controlProcessDone || atomic.LoadUint32(&s.sourceStreamReset) == 1 || atomic.LoadUint32(&s.sourceStreamCleaned) == 1
 }

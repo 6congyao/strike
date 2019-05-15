@@ -22,6 +22,7 @@ import (
 	"io"
 	"mime/multipart"
 	"strike/pkg/buffer"
+	"strike/pkg/network"
 	"strike/pkg/protocol"
 	"sync"
 )
@@ -80,7 +81,9 @@ func (c *codec) Decode(ctx context.Context, data buffer.IoBuffer, filter protoco
 		}
 		streamID := protocol.GenerateID()
 		// notify
-		filter.OnDecodeDone(streamID, req)
+		if filter.OnDecodeDone(streamID, req) == network.Stop {
+			data.Drain(data.Len())
+		}
 	}
 }
 

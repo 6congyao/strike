@@ -124,7 +124,7 @@ func (sc *streamConnection) OnDecodeDone(streamID uint64, result interface{}) ne
 		<-srvStream.responseDoneChan
 	}
 
-	return network.Continue
+	return network.Stop
 }
 
 func (sc *streamConnection) OnDecodeError(err error, headers protocol.HeaderMap) {

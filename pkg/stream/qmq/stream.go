@@ -17,7 +17,6 @@ package qmq
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
@@ -26,6 +25,7 @@ import (
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strings"
+	"time"
 )
 
 func init() {
@@ -187,7 +187,8 @@ func (cs *clientStream) GetStream() stream.Stream {
 func (cs *clientStream) endStream() {
 	//if cs.msg != nil {
 	// todo: handle MDMP process here
-	fmt.Println("client stream handled:", cs.id)
+	//fmt.Println("client stream handled:", cs.id)
+	time.Sleep(time.Millisecond * 10)
 	cs.handleSuccess()
 	//}
 }

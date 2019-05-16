@@ -43,8 +43,15 @@ type event struct {
 	handle func()
 }
 
-func (e *event) Source() uint32 {
-	return e.id
+func (e *event) Source(sourceShards uint32) (source, targetShards uint32) {
+	if e.dir == diDownstream {
+		source = e.id
+		targetShards = sourceShards - 1
+	} else {
+		source = sourceShards - 1
+		targetShards = sourceShards
+	}
+	return
 }
 
 func eventDispatch(shard int, jobChan <-chan interface{}) {

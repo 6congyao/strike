@@ -26,8 +26,82 @@ type TestJob struct {
 	i uint32
 }
 
-func (t *TestJob) Source() uint32 {
-	return t.i
+func (t *TestJob) Source(sourceShards uint32) (uint32, uint32) {
+	return t.i, 0
+}
+
+type TestJob2 struct {
+	i uint32
+	dir uint32
+}
+
+func (t2 *TestJob2) Source2(sourceShards uint32) (source, targetShards uint32) {
+	if t2.dir == 1 {
+		source = t2.i
+		targetShards = sourceShards - 1
+	} else {
+		source = sourceShards - 1
+		targetShards = sourceShards
+	}
+	return
+}
+
+func TestSource2(t *testing.T) {
+	shardsNum := 7
+	shardEvents := 512
+	//wg := sync.WaitGroup{}
+
+	consumer := func(shard int, jobChan <-chan interface{}) {
+		//prev := 0
+		//count := 0
+		//
+		//for job := range jobChan {
+		//	if testJob, ok := job.(*TestJob); ok {
+		//		if int(testJob.i) <= prev {
+		//			t.Errorf("unexpected event order, shard %d, prev %d, curr %d", shard, prev, testJob.i)
+		//			wg.Done()
+		//			return
+		//		}
+		//
+		//		prev = int(testJob.i)
+		//		count++
+		//
+		//		if count >= shardEvents {
+		//			wg.Done()
+		//			return
+		//		}
+		//	}
+		//}
+
+	}
+	pool, _ := NewShardWorkerPool(shardsNum*64, shardsNum, consumer)
+	pool.Init()
+
+	for i := 0; i < shardsNum; i++ {
+			for j := 0; j < shardEvents; j++ {
+				tj1 := &TestJob2{
+					i: uint32(j),
+					dir: 1,
+				}
+				index1 := pool.Shard(tj1.Source2(uint32(shardsNum)))
+				if index1 >= uint32(shardsNum - 1) {
+					t.Errorf("unexpected shard index, shard %d, shardNum %d", index1, shardsNum - 1)
+				}
+
+				tj2 := &TestJob2{
+					i: uint32(j),
+					dir: 2,
+				}
+				index2 := pool.Shard(tj2.Source2(uint32(shardsNum)))
+				if index2 != uint32(shardsNum - 1) {
+					t.Errorf("unexpected shard index, shard %d, shardNum %d", index2, shardsNum - 1)
+				}
+			}
+
+	}
+
+	for i := 0; i < shardEvents; i++ {
+	}
 }
 
 // TestJobOrder test worker pool's event dispatch functionality, which should ensure the FIFO order

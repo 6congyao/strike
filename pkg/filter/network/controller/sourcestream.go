@@ -106,20 +106,20 @@ func newActiveStream(ctx context.Context, controller *controller, responseSender
 
 func (s *sourceStream) doEmit(args ...interface{}) (err error) {
 	if s.emitter == nil {
-		s.sendHijackReply(404, s.sourceStreamRespHeaders, false)
+		s.sendHijackReply(types.RouterUnavailableCode, s.sourceStreamRespHeaders, false)
 		return
 	}
 
 	if action, ok := s.sourceStreamReqHeaders.Get(protocol.StrikeHeaderMethod); ok {
 		err = s.emitter.Emit(action, args...)
 	} else {
-		err = errors.New("no method found ")
+		err = errors.New("no method found in request header")
 	}
 
 	if err != nil {
-		s.sendHijackReply(404, s.sourceStreamRespHeaders, false)
+		s.sendHijackReply(types.RouterUnavailableCode, s.sourceStreamRespHeaders, false)
 	} else {
-		s.sendHijackReply(200, s.sourceStreamRespHeaders, false)
+		s.sendHijackReply(types.SuccessCode, s.sourceStreamRespHeaders, false)
 	}
 
 	return

@@ -356,6 +356,13 @@ func (s *Session) startRWLoop(ctx context.Context) {
 
 func (s *Session) startReadLoop() {
 	for {
+		// exit loop asap. one receive & one default block will be optimized by go compiler
+		select {
+		case <-s.internalStopChan:
+			return
+		default:
+		}
+
 		select {
 		case <-s.internalStopChan:
 			return
@@ -441,14 +448,15 @@ func (s *Session) startWriteLoop() {
 				continue
 			}
 
-			if err == io.EOF {
+			if err == buffer.EOF {
+				s.Close(NoFlush, LocalClose)
+			} else if err == io.EOF {
 				// remote conn closed
 				s.Close(NoFlush, RemoteClose)
 			} else {
 				// on non-timeout error
 				s.Close(NoFlush, OnWriteErrClose)
 			}
-
 			fmt.Println("Error on write:", s.id, err)
 
 			return

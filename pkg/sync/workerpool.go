@@ -67,20 +67,21 @@ func (pool *shardWorkerPool) Init() {
 	}
 }
 
-func (pool *shardWorkerPool) Shard(source uint32) uint32 {
-	return source % uint32(pool.numShards)
+func (pool *shardWorkerPool) Shard(source, numShards uint32) uint32 {
+	return source % numShards
 }
 
 func (pool *shardWorkerPool) Offer(job ShardJob, block bool) {
 	// use shard to avoid excessive synchronization
-	i := pool.Shard(job.Source())
+	i := pool.Shard(job.Source(uint32(pool.numShards)))
+
 	if block {
 		pool.shards[i].jobChan <- job
 	} else {
 		select {
 		case pool.shards[i].jobChan <- job:
 		default:
-			log.Fatalln("jobChan over full")
+			log.Println("jobChan over full")
 		}
 	}
 }
@@ -89,7 +90,7 @@ func (pool *shardWorkerPool) spawnWorker(shard *shard) {
 	go func() {
 		defer func() {
 			if p := recover(); p != nil {
-				log.Println("worker panic %v", p)
+				log.Println("worker panic", p)
 				debug.PrintStack()
 				//try respawn worker
 				if shard.respawnTimes < maxRespawnTimes {

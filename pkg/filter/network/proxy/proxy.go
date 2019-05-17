@@ -33,28 +33,36 @@ import (
 	"sync"
 )
 
+const minimumShardsNum = 2
+
 var (
 	currProxyID uint32
 	workerPool  strikesync.ShardWorkerPool
 )
 
 func init() {
-	config.RegisterConfigParsedListener(config.ParseCallbackKeyProcessor, initWorkePpool)
+	config.RegisterConfigParsedListener(config.ParseCallbackKeyProcessor, initWorkerPool)
 }
 
-func initWorkePpool(data interface{}, endParsing bool) error {
+func initWorkerPool(data interface{}, endParsing bool) error {
 	// default shardsNum is equal to the cpu num
 	shardsNum := runtime.NumCPU()
 	// use 4096 as chan buffer length
-	poolSize := shardsNum * 4096
+	poolSize := shardsNum * 40
 
 	// set shardsNum equal to processor if it was specified
 	if pNum, ok := data.(int); ok && pNum > 0 {
 		shardsNum = pNum
 	}
 
+	// set the minimum shards num to keep two way communication
+	if shardsNum < minimumShardsNum {
+		shardsNum = minimumShardsNum
+	}
+
 	workerPool, _ = strikesync.NewShardWorkerPool(poolSize, shardsNum, eventDispatch)
 	workerPool.Init()
+
 	return nil
 }
 

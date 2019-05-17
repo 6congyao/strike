@@ -44,6 +44,8 @@ type event struct {
 }
 
 func (e *event) Source(sourceShards uint32) (source, targetShards uint32) {
+	// upstream direction will take only 1 shard so far
+	// downstream direction will take the rest
 	if e.dir == diDownstream {
 		source = e.id
 		targetShards = sourceShards - 1
@@ -62,7 +64,7 @@ func eventDispatch(shard int, jobChan <-chan interface{}) {
 
 func eventProcess(shard int, job interface{}) {
 	if ev, ok := job.(*event); ok {
-		log.Println("enter event process with proxyID/dir/type", ev.id, ev.dir, ev.evt)
+		log.Println("enter event process with dir/type/shard/proxyID", ev.dir, ev.evt, shard, "#", ev.id)
 
 		ev.handle()
 	}

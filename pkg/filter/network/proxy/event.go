@@ -38,9 +38,8 @@ const (
 
 var (
 	// ratio MUST < 1
-	ratio  = 3.0 / 10.0
-	gap    uint32
-	offset uint32
+	ratio = 3.0 / 10.0
+	gap   uint32
 )
 
 func initEvent(shardsNum int) {

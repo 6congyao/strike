@@ -16,6 +16,9 @@
 package sync
 
 import (
+	"fmt"
+	"log"
+	"math"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -26,78 +29,75 @@ type TestJob struct {
 	i uint32
 }
 
-func (t *TestJob) Source(sourceShards uint32) (uint32, uint32) {
-	return t.i, 0
+func (t *TestJob) Source(sourceShards uint32) (uint32, uint32, uint32) {
+	return t.i, 0, 0
 }
 
 type TestJob2 struct {
-	i uint32
+	i   uint32
 	dir uint32
 }
 
-func (t2 *TestJob2) Source2(sourceShards uint32) (source, targetShards uint32) {
-	if t2.dir == 1 {
+func (t2 *TestJob2) Source2(sourceShards uint32) (source, targetShards, offset uint32) {
+	switch t2.dir {
+	case 1:
 		source = t2.i
-		targetShards = sourceShards - 1
-	} else {
-		source = sourceShards - 1
-		targetShards = sourceShards
+		targetShards = sourceShards - uint32(gap)
+	case 2:
+		source = t2.i
+		targetShards = uint32(gap)
+		offset = sourceShards - uint32(gap)
+	default:
+		log.Println("unsupported type")
 	}
 	return
 }
 
+var ratio float64
+var gap int
+
 func TestSource2(t *testing.T) {
-	shardsNum := 7
-	shardEvents := 512
+	ratio = 9.0 / 10.0
+	shardsNum := 4
+	shardEvents := 4
 	//wg := sync.WaitGroup{}
+	gap = int(math.Round(float64(shardsNum) * ratio))
+	if gap == 0 {
+		gap = 1
+	}
+	if gap >= shardsNum {
+		gap = shardsNum - 1
+	}
+
+	fmt.Println(shardsNum, gap)
 
 	consumer := func(shard int, jobChan <-chan interface{}) {
-		//prev := 0
-		//count := 0
-		//
-		//for job := range jobChan {
-		//	if testJob, ok := job.(*TestJob); ok {
-		//		if int(testJob.i) <= prev {
-		//			t.Errorf("unexpected event order, shard %d, prev %d, curr %d", shard, prev, testJob.i)
-		//			wg.Done()
-		//			return
-		//		}
-		//
-		//		prev = int(testJob.i)
-		//		count++
-		//
-		//		if count >= shardEvents {
-		//			wg.Done()
-		//			return
-		//		}
-		//	}
-		//}
-
 	}
+
 	pool, _ := NewShardWorkerPool(shardsNum*64, shardsNum, consumer)
 	pool.Init()
 
 	for i := 0; i < shardsNum; i++ {
-			for j := 0; j < shardEvents; j++ {
-				tj1 := &TestJob2{
-					i: uint32(j),
-					dir: 1,
-				}
-				index1 := pool.Shard(tj1.Source2(uint32(shardsNum)))
-				if index1 >= uint32(shardsNum - 1) {
-					t.Errorf("unexpected shard index, shard %d, shardNum %d", index1, shardsNum - 1)
-				}
+		for j := 0; j < shardEvents; j++ {
+			tj1 := &TestJob2{
+				i:   uint32(j),
+				dir: 1,
+			}
+			index1 := pool.Shard(tj1.Source2(uint32(shardsNum)))
 
-				tj2 := &TestJob2{
-					i: uint32(j),
-					dir: 2,
-				}
-				index2 := pool.Shard(tj2.Source2(uint32(shardsNum)))
-				if index2 != uint32(shardsNum - 1) {
-					t.Errorf("unexpected shard index, shard %d, shardNum %d", index2, shardsNum - 1)
-				}
+			if index1 >= uint32(shardsNum-gap) {
+				t.Errorf("unexpected shard index, shard %d, shardNum %d", index1, shardsNum-1)
 			}
 
+			tj2 := &TestJob2{
+				i:   uint32(j),
+				dir: 2,
+			}
+			index2 := pool.Shard(tj2.Source2(uint32(shardsNum)))
+			if index2 >= uint32(shardsNum) || index2 < uint32(shardsNum-gap) {
+				t.Errorf("unexpected shard index, shard %d, shardNum %d", index2, shardsNum-1)
+			}
+		}
 	}
 
 	for i := 0; i < shardEvents; i++ {

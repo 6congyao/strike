@@ -76,7 +76,7 @@ func (r *upstreamRequest) ResetStream(reason stream.StreamResetReason) {
 func (r *upstreamRequest) OnResetStream(reason stream.StreamResetReason) {
 	workerPool.Offer(&event{
 		id:  r.downStream.ID,
-		dir: diUpstream,
+		dir: diFromUpstream,
 		evt: reset,
 		handle: func() {
 			r.ResetStream(reason)
@@ -168,7 +168,7 @@ func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers prot
 
 	workerPool.Offer(&event{
 		id:  r.downStream.ID,
-		dir: diUpstream,
+		dir: diFromUpstream,
 		evt: recvHeader,
 		handle: func() {
 			r.ReceiveHeaders(headers, endStream)
@@ -186,7 +186,7 @@ func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoB
 
 	workerPool.Offer(&event{
 		id:  r.downStream.ID,
-		dir: diUpstream,
+		dir: diFromUpstream,
 		evt: recvData,
 		handle: func() {
 			r.ReceiveData(r.downStream.downstreamRespDataBuf, endStream)
@@ -199,7 +199,7 @@ func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers pr
 
 	workerPool.Offer(&event{
 		id:  r.downStream.ID,
-		dir: diUpstream,
+		dir: diFromUpstream,
 		evt: recvTrailer,
 		handle: func() {
 			r.ReceiveTrailers(trailers)

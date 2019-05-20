@@ -17,6 +17,7 @@ package proxy
 
 import (
 	"log"
+	"math"
 )
 
 type direction uint8
@@ -25,8 +26,8 @@ type eventType uint8
 // stream direction
 const (
 	// direction
-	diDownstream direction = 1
-	diUpstream   direction = 2
+	diFromDownstream direction = 1
+	diFromUpstream   direction = 2
 
 	// event type
 	recvHeader  eventType = 1
@@ -34,6 +35,25 @@ const (
 	recvTrailer eventType = 3
 	reset       eventType = 4
 )
+
+var (
+	// ratio MUST < 1
+	ratio  = 3.0 / 10.0
+	gap    uint32
+	offset uint32
+)
+
+func initEvent(shardsNum int) {
+	// gap should be never changed after init
+	gap = uint32(math.Round(float64(shardsNum) * ratio))
+
+	if gap == 0 {
+		gap = 1
+	}
+	if gap >= uint32(shardsNum) {
+		gap = uint32(shardsNum - 1)
+	}
+}
 
 type event struct {
 	id  uint32
@@ -43,15 +63,17 @@ type event struct {
 	handle func()
 }
 
-func (e *event) Source(sourceShards uint32) (source, targetShards uint32) {
-	// upstream direction will take only 1 shard so far
-	// downstream direction will take the rest
-	if e.dir == diDownstream {
+func (e *event) Source(sourceShards uint32) (source, targetShards, offset uint32) {
+	switch e.dir {
+	case diFromDownstream:
 		source = e.id
-		targetShards = sourceShards - 1
-	} else {
-		source = sourceShards - 1
-		targetShards = sourceShards
+		targetShards = sourceShards - gap
+	case diFromUpstream:
+		source = e.id
+		targetShards = gap
+		offset = sourceShards - gap
+	default:
+		log.Println("unsupported event direction")
 	}
 	return
 }

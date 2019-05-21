@@ -148,7 +148,7 @@ func continueReadBody(r buffer.IoBuffer, req *Request, maxBodySize int) (err err
 		// This way we limit memory usage for large file uploads, since their contents
 		// is streamed into temporary files if file size exceeds defaultMaxInMemoryFileSize.
 		req.multipartFormBoundary = string(req.Header.MultipartFormBoundary())
-		if len(req.multipartFormBoundary) > 0 && len(req.Header.peek(strContentEncoding)) == 0 {
+		if len(req.multipartFormBoundary) > 0 && len(req.Header.peek(StrContentEncoding)) == 0 {
 			req.multipartForm, err = readMultipartForm(r, req.multipartFormBoundary, contentLength, defaultMaxInMemoryFileSize)
 			if err != nil {
 				req.Reset()

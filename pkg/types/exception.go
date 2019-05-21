@@ -51,6 +51,7 @@ const (
 	DeserialExceptionCode = 3
 	SuccessCode           = 200
 	Unauthorized          = 401
+	PermissionDeniedCode  = 403
 	RouterUnavailableCode = 404
 	NoHealthUpstreamCode  = 502
 	UpstreamOverFlowCode  = 503

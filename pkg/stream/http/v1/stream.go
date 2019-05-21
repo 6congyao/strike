@@ -227,6 +227,12 @@ func (ss *serverStream) AppendHeaders(context context.Context, headerIn protocol
 		statusCode, _ := strconv.Atoi(status)
 		ss.res.SetStatusCode(statusCode)
 	}
+	if ss.req != nil {
+		if ss.req.ConnectionClose() {
+			ss.res.SetConnectionClose()
+		}
+	}
+
 	if endStream {
 		ss.endStream()
 	}
@@ -295,10 +301,17 @@ func (ss *serverStream) endStream() {
 
 	if ss.req != nil {
 		v1.ReleaseRequest(ss.req)
+		ss.req = nil
 	}
 	if ss.res != nil {
 		v1.ReleaseResponse(ss.res)
+		ss.res = nil
 	}
+
+	// clean up & recycle
+	ss.connection.mutex.Lock()
+	ss.connection.stream = nil
+	ss.connection.mutex.Unlock()
 }
 
 func (ss *serverStream) doSend() {

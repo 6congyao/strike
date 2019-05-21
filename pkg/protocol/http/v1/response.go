@@ -171,8 +171,35 @@ func (resp *Response) Write(w *bufio.Writer) error {
 	return nil
 }
 
+func (resp *Response) StatusCode() int {
+	return resp.Header.StatusCode()
+}
+
 func (resp *Response) SetStatusCode(statusCode int) {
 	resp.Header.SetStatusCode(statusCode)
+}
+
+func (resp *Response) ConnectionClose() bool {
+	return resp.Header.ConnectionClose()
+}
+
+func (resp *Response) SetConnectionClose() {
+	resp.Header.SetConnectionClose()
+}
+
+func (resp *Response) SetBodyStream(bodyStream io.Reader, bodySize int) {
+	resp.ResetBody()
+	resp.bodyStream = bodyStream
+	resp.Header.SetContentLength(bodySize)
+}
+
+func (resp *Response) IsBodyStream() bool {
+	return resp.bodyStream != nil
+}
+
+func (resp *Response) BodyWriter() io.Writer {
+	resp.w.r = resp
+	return &resp.w
 }
 
 func (resp *Response) WriteTo(w io.Writer) (int64, error) {
@@ -319,9 +346,9 @@ func writeBodyFixedSize(w *bufio.Writer, r io.Reader, size int64) error {
 func writeChunk(w *bufio.Writer, b []byte) error {
 	n := len(b)
 	utils.WriteHexInt(w, n)
-	w.Write(strCRLF)
+	w.Write(StrCRLF)
 	w.Write(b)
-	_, err := w.Write(strCRLF)
+	_, err := w.Write(StrCRLF)
 	err1 := w.Flush()
 	if err == nil {
 		err = err1

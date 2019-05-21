@@ -91,7 +91,7 @@ func (req *Request) parsePostArgs() {
 	}
 	req.parsedPostArgs = true
 
-	if !bytes.HasPrefix(req.Header.ContentType(), strPostArgsContentType) {
+	if !bytes.HasPrefix(req.Header.ContentType(), StrPostArgsContentType) {
 		return
 	}
 	req.postArgs.ParseBytes(req.bodyBytes())
@@ -357,7 +357,7 @@ func (req *Request) SwapBody(body []byte) []byte {
 }
 
 func (req *Request) MayContinue() bool {
-	return bytes.Equal(req.Header.peek(strExpect), str100Continue)
+	return bytes.Equal(req.Header.peek(StrExpect), Str100Continue)
 }
 //func (req *Request) Body() []byte {
 //	if req.bodyStream != nil {

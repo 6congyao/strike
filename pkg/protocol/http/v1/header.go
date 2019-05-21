@@ -88,7 +88,7 @@ type RequestHeader struct {
 // header.
 func (h *ResponseHeader) SetContentRange(startPos, endPos, contentLength int) {
 	b := h.bufKV.Value[:0]
-	b = append(b, strBytes...)
+	b = append(b, StrBytes...)
 	b = append(b, ' ')
 	b = utils.AppendUint(b, startPos)
 	b = append(b, '-')
@@ -97,7 +97,7 @@ func (h *ResponseHeader) SetContentRange(startPos, endPos, contentLength int) {
 	b = utils.AppendUint(b, contentLength)
 	h.bufKV.Value = b
 
-	h.SetCanonical(strContentRange, h.bufKV.Value)
+	h.SetCanonical(StrContentRange, h.bufKV.Value)
 }
 
 // SetByteRange sets 'Range: bytes=startPos-endPos' header.
@@ -108,7 +108,7 @@ func (h *RequestHeader) SetByteRange(startPos, endPos int) {
 	h.parseRawHeaders()
 
 	b := h.bufKV.Value[:0]
-	b = append(b, strBytes...)
+	b = append(b, StrBytes...)
 	b = append(b, '=')
 	if startPos >= 0 {
 		b = utils.AppendUint(b, startPos)
@@ -121,7 +121,7 @@ func (h *RequestHeader) SetByteRange(startPos, endPos int) {
 	}
 	h.bufKV.Value = b
 
-	h.SetCanonical(strRange, h.bufKV.Value)
+	h.SetCanonical(StrRange, h.bufKV.Value)
 }
 
 // StatusCode returns response status code.
@@ -140,7 +140,7 @@ func (h *ResponseHeader) SetStatusCode(statusCode int) {
 // SetLastModified sets 'Last-Modified' header to the given value.
 func (h *ResponseHeader) SetLastModified(t time.Time) {
 	h.bufKV.Value = utils.AppendHTTPDate(h.bufKV.Value[:0], t)
-	h.SetCanonical(strLastModified, h.bufKV.Value)
+	h.SetCanonical(StrLastModified, h.bufKV.Value)
 }
 
 // ConnectionClose returns true if 'Connection: close' header is set.
@@ -157,7 +157,7 @@ func (h *ResponseHeader) SetConnectionClose() {
 func (h *ResponseHeader) ResetConnectionClose() {
 	if h.connectionClose {
 		h.connectionClose = false
-		h.h = utils.DelAllArgsBytes(h.h, strConnection)
+		h.h = utils.DelAllArgsBytes(h.h, StrConnection)
 	}
 }
 
@@ -184,19 +184,19 @@ func (h *RequestHeader) ResetConnectionClose() {
 	h.parseRawHeaders()
 	if h.connectionClose {
 		h.connectionClose = false
-		h.h = utils.DelAllArgsBytes(h.h, strConnection)
+		h.h = utils.DelAllArgsBytes(h.h, StrConnection)
 	}
 }
 
 // ConnectionUpgrade returns true if 'Connection: Upgrade' header is set.
 func (h *ResponseHeader) ConnectionUpgrade() bool {
-	return hasHeaderValue(h.Peek("Connection"), strUpgrade)
+	return hasHeaderValue(h.Peek("Connection"), StrUpgrade)
 }
 
 // ConnectionUpgrade returns true if 'Connection: Upgrade' header is set.
 func (h *RequestHeader) ConnectionUpgrade() bool {
 	h.parseRawHeaders()
-	return hasHeaderValue(h.Peek("Connection"), strUpgrade)
+	return hasHeaderValue(h.Peek("Connection"), StrUpgrade)
 }
 
 // ContentLength returns Content-Length header value.
@@ -220,15 +220,15 @@ func (h *ResponseHeader) SetContentLength(contentLength int) {
 	h.contentLength = contentLength
 	if contentLength >= 0 {
 		h.contentLengthBytes = utils.AppendUint(h.contentLengthBytes[:0], contentLength)
-		h.h = utils.DelAllArgsBytes(h.h, strTransferEncoding)
+		h.h = utils.DelAllArgsBytes(h.h, StrTransferEncoding)
 	} else {
 		h.contentLengthBytes = h.contentLengthBytes[:0]
-		value := strChunked
+		value := StrChunked
 		if contentLength == -2 {
 			h.SetConnectionClose()
-			value = strIdentity
+			value = StrIdentity
 		}
-		h.h = utils.SetArgBytes(h.h, strTransferEncoding, value)
+		h.h = utils.SetArgBytes(h.h, StrTransferEncoding, value)
 	}
 }
 
@@ -266,17 +266,17 @@ func (h *RequestHeader) SetContentLength(contentLength int) {
 	h.contentLength = contentLength
 	if contentLength >= 0 {
 		h.contentLengthBytes = utils.AppendUint(h.contentLengthBytes[:0], contentLength)
-		h.h = utils.DelAllArgsBytes(h.h, strTransferEncoding)
+		h.h = utils.DelAllArgsBytes(h.h, StrTransferEncoding)
 	} else {
 		h.contentLengthBytes = h.contentLengthBytes[:0]
-		h.h = utils.SetArgBytes(h.h, strTransferEncoding, strChunked)
+		h.h = utils.SetArgBytes(h.h, StrTransferEncoding, StrChunked)
 	}
 }
 
 func (h *ResponseHeader) isCompressibleContentType() bool {
 	contentType := h.ContentType()
-	return bytes.HasPrefix(contentType, strTextSlash) ||
-		bytes.HasPrefix(contentType, strApplicationSlash)
+	return bytes.HasPrefix(contentType, StrTextSlash) ||
+		bytes.HasPrefix(contentType, StrApplicationSlash)
 }
 
 // ContentType returns Content-Type header value.
@@ -338,9 +338,9 @@ func (h *RequestHeader) SetMultipartFormBoundary(boundary string) {
 	h.parseRawHeaders()
 
 	b := h.bufKV.Value[:0]
-	b = append(b, strMultipartFormData...)
+	b = append(b, StrMultipartFormData...)
 	b = append(b, ';', ' ')
-	b = append(b, strBoundary...)
+	b = append(b, StrBoundary...)
 	b = append(b, '=')
 	b = append(b, boundary...)
 	h.bufKV.Value = b
@@ -355,9 +355,9 @@ func (h *RequestHeader) SetMultipartFormBoundaryBytes(boundary []byte) {
 	h.parseRawHeaders()
 
 	b := h.bufKV.Value[:0]
-	b = append(b, strMultipartFormData...)
+	b = append(b, StrMultipartFormData...)
 	b = append(b, ';', ' ')
-	b = append(b, strBoundary...)
+	b = append(b, StrBoundary...)
 	b = append(b, '=')
 	b = append(b, boundary...)
 	h.bufKV.Value = b
@@ -369,10 +369,10 @@ func (h *RequestHeader) SetMultipartFormBoundaryBytes(boundary []byte) {
 // from 'multipart/form-data; boundary=...' Content-Type.
 func (h *RequestHeader) MultipartFormBoundary() []byte {
 	b := h.ContentType()
-	if !bytes.HasPrefix(b, strMultipartFormData) {
+	if !bytes.HasPrefix(b, StrMultipartFormData) {
 		return nil
 	}
-	b = b[len(strMultipartFormData):]
+	b = b[len(StrMultipartFormData):]
 	if len(b) == 0 || b[0] != ';' {
 		return nil
 	}
@@ -384,14 +384,14 @@ func (h *RequestHeader) MultipartFormBoundary() []byte {
 			n++
 		}
 		b = b[n:]
-		if !bytes.HasPrefix(b, strBoundary) {
+		if !bytes.HasPrefix(b, StrBoundary) {
 			if n = bytes.IndexByte(b, ';'); n < 0 {
 				return nil
 			}
 			continue
 		}
 
-		b = b[len(strBoundary):]
+		b = b[len(StrBoundary):]
 		if len(b) == 0 || b[0] != '=' {
 			return nil
 		}
@@ -414,7 +414,7 @@ func (h *RequestHeader) Host() []byte {
 	}
 	if !h.rawHeadersParsed {
 		// fast path without employing full headers parsing.
-		host := peekRawHeader(h.rawHeaders, strHost)
+		host := peekRawHeader(h.rawHeaders, StrHost)
 		if len(host) > 0 {
 			h.host = append(h.host[:0], host...)
 			return h.host
@@ -458,23 +458,23 @@ func (h *RequestHeader) SetUserAgentBytes(userAgent []byte) {
 
 // Referer returns Referer header value.
 func (h *RequestHeader) Referer() []byte {
-	return h.PeekBytes(strReferer)
+	return h.PeekBytes(StrReferer)
 }
 
 // SetReferer sets Referer header value.
 func (h *RequestHeader) SetReferer(referer string) {
-	h.SetBytesK(strReferer, referer)
+	h.SetBytesK(StrReferer, referer)
 }
 
 // SetRefererBytes sets Referer header value.
 func (h *RequestHeader) SetRefererBytes(referer []byte) {
-	h.SetCanonical(strReferer, referer)
+	h.SetCanonical(StrReferer, referer)
 }
 
 // Method returns HTTP request method.
 func (h *RequestHeader) Method() []byte {
 	if len(h.method) == 0 {
-		return strGet
+		return StrGet
 	}
 	return h.method
 }
@@ -493,7 +493,7 @@ func (h *RequestHeader) SetMethodBytes(method []byte) {
 func (h *RequestHeader) RequestURI() []byte {
 	requestURI := h.requestURI
 	if len(requestURI) == 0 {
-		requestURI = strSlash
+		requestURI = StrSlash
 	}
 	return requestURI
 }
@@ -516,19 +516,19 @@ func (h *RequestHeader) SetRequestURIBytes(requestURI []byte) {
 func (h *RequestHeader) IsGet() bool {
 	// Optimize fast path for GET requests.
 	if !h.isGet {
-		h.isGet = bytes.Equal(h.Method(), strGet)
+		h.isGet = bytes.Equal(h.Method(), StrGet)
 	}
 	return h.isGet
 }
 
 // IsPost returns true if request methos is POST.
 func (h *RequestHeader) IsPost() bool {
-	return bytes.Equal(h.Method(), strPost)
+	return bytes.Equal(h.Method(), StrPost)
 }
 
 // IsPut returns true if request method is PUT.
 func (h *RequestHeader) IsPut() bool {
-	return bytes.Equal(h.Method(), strPut)
+	return bytes.Equal(h.Method(), StrPut)
 }
 
 // IsHead returns true if request method is HEAD.
@@ -537,12 +537,12 @@ func (h *RequestHeader) IsHead() bool {
 	if h.isGet {
 		return false
 	}
-	return bytes.Equal(h.Method(), strHead)
+	return bytes.Equal(h.Method(), StrHead)
 }
 
 // IsDelete returns true if request method is DELETE.
 func (h *RequestHeader) IsDelete() bool {
-	return bytes.Equal(h.Method(), strDelete)
+	return bytes.Equal(h.Method(), StrDelete)
 }
 
 // IsHTTP11 returns true if the request is HTTP/1.1.
@@ -565,7 +565,7 @@ func (h *RequestHeader) HasAcceptEncoding(acceptEncoding string) bool {
 // HasAcceptEncodingBytes returns true if the header contains
 // the given Accept-Encoding value.
 func (h *RequestHeader) HasAcceptEncodingBytes(acceptEncoding []byte) bool {
-	ae := h.peek(strAcceptEncoding)
+	ae := h.peek(StrAcceptEncoding)
 	n := bytes.Index(ae, acceptEncoding)
 	if n < 0 {
 		return false
@@ -723,24 +723,24 @@ func (h *RequestHeader) CopyTo(dst *RequestHeader) {
 // Copy key and/or value contents before returning if you need retaining them.
 func (h *ResponseHeader) VisitAll(f func(key, value []byte)) {
 	if len(h.contentLengthBytes) > 0 {
-		f(strContentLength, h.contentLengthBytes)
+		f(StrContentLength, h.contentLengthBytes)
 	}
 	contentType := h.ContentType()
 	if len(contentType) > 0 {
-		f(strContentType, contentType)
+		f(StrContentType, contentType)
 	}
 	server := h.Server()
 	if len(server) > 0 {
-		f(strServer, server)
+		f(StrServer, server)
 	}
 	if len(h.cookies) > 0 {
 		utils.VisitArgs(h.cookies, func(k, v []byte) {
-			f(strSetCookie, v)
+			f(StrSetCookie, v)
 		})
 	}
 	utils.VisitArgs(h.h, f)
 	if h.ConnectionClose() {
-		f(strConnection, strClose)
+		f(StrConnection, StrClose)
 	}
 }
 
@@ -772,28 +772,28 @@ func (h *RequestHeader) VisitAll(f func(key, value []byte)) {
 	h.parseRawHeaders()
 	host := h.Host()
 	if len(host) > 0 {
-		f(strHost, host)
+		f(StrHost, host)
 	}
 	if len(h.contentLengthBytes) > 0 {
-		f(strContentLength, h.contentLengthBytes)
+		f(StrContentLength, h.contentLengthBytes)
 	}
 	contentType := h.ContentType()
 	if len(contentType) > 0 {
-		f(strContentType, contentType)
+		f(StrContentType, contentType)
 	}
 	userAgent := h.UserAgent()
 	if len(userAgent) > 0 {
-		f(strUserAgent, userAgent)
+		f(StrUserAgent, userAgent)
 	}
 
 	h.collectCookies()
 	if len(h.cookies) > 0 {
 		h.bufKV.Value = appendRequestCookieBytes(h.bufKV.Value[:0], h.cookies)
-		f(strCookie, h.bufKV.Value)
+		f(StrCookie, h.bufKV.Value)
 	}
 	utils.VisitArgs(h.h, f)
 	if h.ConnectionClose() {
-		f(strConnection, strClose)
+		f(StrConnection, StrClose)
 	}
 }
 
@@ -946,7 +946,7 @@ func (h *ResponseHeader) SetCanonical(key, value []byte) {
 			h.contentLengthBytes = append(h.contentLengthBytes[:0], value...)
 		}
 	case "Connection":
-		if bytes.Equal(strClose, value) {
+		if bytes.Equal(StrClose, value) {
 			h.SetConnectionClose()
 		} else {
 			h.ResetConnectionClose()
@@ -1131,7 +1131,7 @@ func (h *RequestHeader) SetCanonical(key, value []byte) {
 			h.contentLengthBytes = append(h.contentLengthBytes[:0], value...)
 		}
 	case "Connection":
-		if bytes.Equal(strClose, value) {
+		if bytes.Equal(StrClose, value) {
 			h.SetConnectionClose()
 		} else {
 			h.ResetConnectionClose()
@@ -1190,7 +1190,7 @@ func (h *ResponseHeader) peek(key []byte) []byte {
 		return h.Server()
 	case "Connection":
 		if h.ConnectionClose() {
-			return strClose
+			return StrClose
 		}
 		return utils.PeekArgBytes(h.h, key)
 	case "Content-Length":
@@ -1211,7 +1211,7 @@ func (h *RequestHeader) peek(key []byte) []byte {
 		return h.UserAgent()
 	case "Connection":
 		if h.ConnectionClose() {
-			return strClose
+			return StrClose
 		}
 		return utils.PeekArgBytes(h.h, key)
 	case "Content-Length":
@@ -1471,22 +1471,22 @@ func (h *ResponseHeader) AppendBytes(dst []byte) []byte {
 	if len(server) == 0 {
 		server = defaultServerName
 	}
-	dst = appendHeaderLine(dst, strServer, server)
-	dst = appendHeaderLine(dst, strDate, serverDate.Load().([]byte))
+	dst = appendHeaderLine(dst, StrServer, server)
+	dst = appendHeaderLine(dst, StrDate, serverDate.Load().([]byte))
 
 	// Append Content-Type only for non-zero responses
 	// or if it is explicitly set.
 	if h.ContentLength() != 0 || len(h.contentType) > 0 {
-		dst = appendHeaderLine(dst, strContentType, h.ContentType())
+		dst = appendHeaderLine(dst, StrContentType, h.ContentType())
 	}
 
 	if len(h.contentLengthBytes) > 0 {
-		dst = appendHeaderLine(dst, strContentLength, h.contentLengthBytes)
+		dst = appendHeaderLine(dst, StrContentLength, h.contentLengthBytes)
 	}
 
 	for i, n := 0, len(h.h); i < n; i++ {
 		kv := &h.h[i]
-		if !bytes.Equal(kv.Key, strDate) {
+		if !bytes.Equal(kv.Key, StrDate) {
 			dst = appendHeaderLine(dst, kv.Key, kv.Value)
 		}
 	}
@@ -1495,15 +1495,15 @@ func (h *ResponseHeader) AppendBytes(dst []byte) []byte {
 	if n > 0 {
 		for i := 0; i < n; i++ {
 			kv := &h.cookies[i]
-			dst = appendHeaderLine(dst, strSetCookie, kv.Value)
+			dst = appendHeaderLine(dst, StrSetCookie, kv.Value)
 		}
 	}
 
 	if h.ConnectionClose() {
-		dst = appendHeaderLine(dst, strConnection, strClose)
+		dst = appendHeaderLine(dst, StrConnection, StrClose)
 	}
 
-	return append(dst, strCRLF...)
+	return append(dst, StrCRLF...)
 }
 
 // Write writes request header to w.
@@ -1541,8 +1541,8 @@ func (h *RequestHeader) AppendBytes(dst []byte) []byte {
 	dst = append(dst, ' ')
 	dst = append(dst, h.RequestURI()...)
 	dst = append(dst, ' ')
-	dst = append(dst, strHTTP11...)
-	dst = append(dst, strCRLF...)
+	dst = append(dst, StrHTTP11...)
+	dst = append(dst, StrCRLF...)
 
 	if !h.rawHeadersParsed && len(h.rawHeaders) > 0 {
 		return append(dst, h.rawHeaders...)
@@ -1552,25 +1552,25 @@ func (h *RequestHeader) AppendBytes(dst []byte) []byte {
 	if len(userAgent) == 0 {
 		userAgent = defaultUserAgent
 	}
-	dst = appendHeaderLine(dst, strUserAgent, userAgent)
+	dst = appendHeaderLine(dst, StrUserAgent, userAgent)
 
 	host := h.Host()
 	if len(host) > 0 {
-		dst = appendHeaderLine(dst, strHost, host)
+		dst = appendHeaderLine(dst, StrHost, host)
 	}
 
 	contentType := h.ContentType()
 	if !h.NoBody() {
 		if len(contentType) == 0 {
-			contentType = strPostArgsContentType
+			contentType = StrPostArgsContentType
 		}
-		dst = appendHeaderLine(dst, strContentType, contentType)
+		dst = appendHeaderLine(dst, StrContentType, contentType)
 
 		if len(h.contentLengthBytes) > 0 {
-			dst = appendHeaderLine(dst, strContentLength, h.contentLengthBytes)
+			dst = appendHeaderLine(dst, StrContentLength, h.contentLengthBytes)
 		}
 	} else if len(contentType) > 0 {
-		dst = appendHeaderLine(dst, strContentType, contentType)
+		dst = appendHeaderLine(dst, StrContentType, contentType)
 	}
 
 	for i, n := 0, len(h.h); i < n; i++ {
@@ -1582,24 +1582,24 @@ func (h *RequestHeader) AppendBytes(dst []byte) []byte {
 	// they all are located in h.h.
 	n := len(h.cookies)
 	if n > 0 {
-		dst = append(dst, strCookie...)
-		dst = append(dst, strColonSpace...)
+		dst = append(dst, StrCookie...)
+		dst = append(dst, StrColonSpace...)
 		dst = appendRequestCookieBytes(dst, h.cookies)
-		dst = append(dst, strCRLF...)
+		dst = append(dst, StrCRLF...)
 	}
 
 	if h.ConnectionClose() {
-		dst = appendHeaderLine(dst, strConnection, strClose)
+		dst = appendHeaderLine(dst, StrConnection, StrClose)
 	}
 
-	return append(dst, strCRLF...)
+	return append(dst, StrCRLF...)
 }
 
 func appendHeaderLine(dst, key, value []byte) []byte {
 	dst = append(dst, key...)
-	dst = append(dst, strColonSpace...)
+	dst = append(dst, StrColonSpace...)
 	dst = append(dst, value...)
-	return append(dst, strCRLF...)
+	return append(dst, StrCRLF...)
 }
 
 func (h *ResponseHeader) parse(buf []byte) (int, error) {
@@ -1657,7 +1657,7 @@ func (h *ResponseHeader) parseFirstLine(buf []byte) (int, error) {
 	if n < 0 {
 		return 0, fmt.Errorf("cannot find whitespace in the first line of response %q", buf)
 	}
-	h.noHTTP11 = !bytes.Equal(b[:n], strHTTP11)
+	h.noHTTP11 = !bytes.Equal(b[:n], StrHTTP11)
 	b = b[n+1:]
 
 	// parse status code
@@ -1697,7 +1697,7 @@ func (h *RequestHeader) parseFirstLine(buf []byte) (int, error) {
 		n = len(b)
 	} else if n == 0 {
 		return 0, fmt.Errorf("requestURI cannot be empty in %q", buf)
-	} else if !bytes.Equal(b[n+1:], strHTTP11) {
+	} else if !bytes.Equal(b[n+1:], StrHTTP11) {
 		h.noHTTP11 = true
 	}
 	h.requestURI = append(h.requestURI[:0], b[:n]...)
@@ -1788,16 +1788,16 @@ func (h *ResponseHeader) parseHeaders(buf []byte) (int, error) {
 				}
 			}
 		case "Transfer-Encoding":
-			if !bytes.Equal(s.value, strIdentity) {
+			if !bytes.Equal(s.value, StrIdentity) {
 				h.contentLength = -1
-				h.h = utils.SetArgBytes(h.h, strTransferEncoding, strChunked)
+				h.h = utils.SetArgBytes(h.h, StrTransferEncoding, StrChunked)
 			}
 		case "Set-Cookie":
 			h.cookies, kv = utils.AllocArg(h.cookies)
 			kv.Key = getCookieKey(kv.Key, s.value)
 			kv.Value = append(kv.Value[:0], s.value...)
 		case "Connection":
-			if bytes.Equal(s.value, strClose) {
+			if bytes.Equal(s.value, StrClose) {
 				h.connectionClose = true
 			} else {
 				h.connectionClose = false
@@ -1816,13 +1816,13 @@ func (h *ResponseHeader) parseHeaders(buf []byte) (int, error) {
 		h.contentLengthBytes = h.contentLengthBytes[:0]
 	}
 	if h.contentLength == -2 && !h.ConnectionUpgrade() && !h.mustSkipContentLength() {
-		h.h = utils.SetArgBytes(h.h, strTransferEncoding, strIdentity)
+		h.h = utils.SetArgBytes(h.h, StrTransferEncoding, StrIdentity)
 		h.connectionClose = true
 	}
 	if h.noHTTP11 && !h.connectionClose {
 		// close connection for non-http/1.1 response unless 'Connection: keep-alive' is set.
-		v := utils.PeekArgBytes(h.h, strConnection)
-		h.connectionClose = !hasHeaderValue(v, strKeepAlive) && !hasHeaderValue(v, strKeepAliveCamelCase)
+		v := utils.PeekArgBytes(h.h, StrConnection)
+		h.connectionClose = !hasHeaderValue(v, StrKeepAlive) && !hasHeaderValue(v, StrKeepAliveCamelCase)
 	}
 
 	return len(buf) - len(s.b), nil
@@ -1852,12 +1852,12 @@ func (h *RequestHeader) parseHeaders(buf []byte) (int, error) {
 				}
 			}
 		case "Transfer-Encoding":
-			if !bytes.Equal(s.value, strIdentity) {
+			if !bytes.Equal(s.value, StrIdentity) {
 				h.contentLength = -1
-				h.h = utils.SetArgBytes(h.h, strTransferEncoding, strChunked)
+				h.h = utils.SetArgBytes(h.h, StrTransferEncoding, StrChunked)
 			}
 		case "Connection":
-			if bytes.Equal(s.value, strClose) {
+			if bytes.Equal(s.value, StrClose) {
 				h.connectionClose = true
 			} else {
 				h.connectionClose = false
@@ -1881,8 +1881,8 @@ func (h *RequestHeader) parseHeaders(buf []byte) (int, error) {
 	}
 	if h.noHTTP11 && !h.connectionClose {
 		// close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
-		v := utils.PeekArgBytes(h.h, strConnection)
-		h.connectionClose = !hasHeaderValue(v, strKeepAlive) && !hasHeaderValue(v, strKeepAliveCamelCase)
+		v := utils.PeekArgBytes(h.h, StrConnection)
+		h.connectionClose = !hasHeaderValue(v, StrKeepAlive) && !hasHeaderValue(v, StrKeepAliveCamelCase)
 	}
 
 	return len(buf) - len(s.b), nil
@@ -1906,7 +1906,7 @@ func (h *RequestHeader) collectCookies() {
 
 	for i, n := 0, len(h.h); i < n; i++ {
 		kv := &h.h[i]
-		if bytes.Equal(kv.Key, strCookie) {
+		if bytes.Equal(kv.Key, StrCookie) {
 			h.cookies = parseRequestCookies(h.cookies, kv.Value)
 			tmp := *kv
 			copy(h.h[i:], h.h[i+1:])

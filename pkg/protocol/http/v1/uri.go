@@ -134,7 +134,7 @@ func (u *URI) SetQueryStringBytes(queryString []byte) {
 func (u *URI) Path() []byte {
 	path := u.path
 	if len(path) == 0 {
-		path = strSlash
+		path = StrSlash
 	}
 	return path
 }
@@ -166,7 +166,7 @@ func (u *URI) PathOriginal() []byte {
 func (u *URI) Scheme() []byte {
 	scheme := u.scheme
 	if len(scheme) == 0 {
-		scheme = strHTTP
+		scheme = StrHTTP
 	}
 	return scheme
 }
@@ -241,7 +241,7 @@ func (u *URI) Parse(host, uri []byte) {
 func (u *URI) parseQuick(uri []byte, h *RequestHeader, isTLS bool) {
 	u.parse(nil, uri, h)
 	if isTLS {
-		u.scheme = append(u.scheme[:0], strHTTPS...)
+		u.scheme = append(u.scheme[:0], StrHTTPS...)
 	}
 }
 
@@ -299,7 +299,7 @@ func normalizePath(dst, src []byte) []byte {
 	b := dst
 	bSize := len(b)
 	for {
-		n := bytes.Index(b, strSlashSlash)
+		n := bytes.Index(b, StrSlashSlash)
 		if n < 0 {
 			break
 		}
@@ -313,18 +313,18 @@ func normalizePath(dst, src []byte) []byte {
 	// remove /./ parts
 	b = dst
 	for {
-		n := bytes.Index(b, strSlashDotSlash)
+		n := bytes.Index(b, StrSlashDotSlash)
 		if n < 0 {
 			break
 		}
-		nn := n + len(strSlashDotSlash) - 1
+		nn := n + len(StrSlashDotSlash) - 1
 		copy(b[n:], b[nn:])
 		b = b[:len(b)-nn+n]
 	}
 
 	// remove /foo/../ parts
 	for {
-		n := bytes.Index(b, strSlashDotDotSlash)
+		n := bytes.Index(b, StrSlashDotDotSlash)
 		if n < 0 {
 			break
 		}
@@ -332,17 +332,17 @@ func normalizePath(dst, src []byte) []byte {
 		if nn < 0 {
 			nn = 0
 		}
-		n += len(strSlashDotDotSlash) - 1
+		n += len(StrSlashDotDotSlash) - 1
 		copy(b[nn:], b[n:])
 		b = b[:len(b)-n+nn]
 	}
 
 	// remove trailing /foo/..
-	n := bytes.LastIndex(b, strSlashDotDot)
-	if n >= 0 && n+len(strSlashDotDot) == len(b) {
+	n := bytes.LastIndex(b, StrSlashDotDot)
+	if n >= 0 && n+len(StrSlashDotDot) == len(b) {
 		nn := bytes.LastIndexByte(b[:n], '/')
 		if nn < 0 {
-			return strSlash
+			return StrSlash
 		}
 		b = b[:nn+1]
 	}
@@ -421,7 +421,7 @@ func (u *URI) updateBytes(newURI, buf []byte) []byte {
 		return buf
 	}
 
-	n := bytes.Index(newURI, strSlashSlash)
+	n := bytes.Index(newURI, StrSlashSlash)
 	if n >= 0 {
 		// absolute uri
 		var b [32]byte
@@ -483,7 +483,7 @@ func (u *URI) AppendBytes(dst []byte) []byte {
 
 func (u *URI) appendSchemeHost(dst []byte) []byte {
 	dst = append(dst, u.Scheme()...)
-	dst = append(dst, strColonSlashSlash...)
+	dst = append(dst, StrColonSlashSlash...)
 	return append(dst, u.Host()...)
 }
 
@@ -501,18 +501,18 @@ func (u *URI) String() string {
 }
 
 func splitHostURI(host, uri []byte) ([]byte, []byte, []byte) {
-	n := bytes.Index(uri, strSlashSlash)
+	n := bytes.Index(uri, StrSlashSlash)
 	if n < 0 {
-		return strHTTP, host, uri
+		return StrHTTP, host, uri
 	}
 	scheme := uri[:n]
 	if bytes.IndexByte(scheme, '/') >= 0 {
-		return strHTTP, host, uri
+		return StrHTTP, host, uri
 	}
 	if len(scheme) > 0 && scheme[len(scheme)-1] == ':' {
 		scheme = scheme[:len(scheme)-1]
 	}
-	n += len(strSlashSlash)
+	n += len(StrSlashSlash)
 	uri = uri[n:]
 	n = bytes.IndexByte(uri, '/')
 	if n < 0 {
@@ -521,7 +521,7 @@ func splitHostURI(host, uri []byte) ([]byte, []byte, []byte) {
 		if n = bytes.IndexByte(uri, '?'); n >= 0 {
 			return scheme, uri[:n], uri[n:]
 		}
-		return scheme, uri, strSlash
+		return scheme, uri, StrSlash
 	}
 	return scheme, uri[:n], uri[n:]
 }

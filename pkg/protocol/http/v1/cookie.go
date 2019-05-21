@@ -222,23 +222,23 @@ func (c *Cookie) AppendBytes(dst []byte) []byte {
 	if !c.expire.IsZero() {
 		c.bufKV.Value = utils.AppendHTTPDate(c.bufKV.Value[:0], c.expire)
 		dst = append(dst, ';', ' ')
-		dst = append(dst, strCookieExpires...)
+		dst = append(dst, StrCookieExpires...)
 		dst = append(dst, '=')
 		dst = append(dst, c.bufKV.Value...)
 	}
 	if len(c.domain) > 0 {
-		dst = appendCookiePart(dst, strCookieDomain, c.domain)
+		dst = appendCookiePart(dst, StrCookieDomain, c.domain)
 	}
 	if len(c.path) > 0 {
-		dst = appendCookiePart(dst, strCookiePath, c.path)
+		dst = appendCookiePart(dst, StrCookiePath, c.path)
 	}
 	if c.httpOnly {
 		dst = append(dst, ';', ' ')
-		dst = append(dst, strCookieHTTPOnly...)
+		dst = append(dst, StrCookieHTTPOnly...)
 	}
 	if c.secure {
 		dst = append(dst, ';', ' ')
-		dst = append(dst, strCookieSecure...)
+		dst = append(dst, StrCookieSecure...)
 	}
 	return dst
 }

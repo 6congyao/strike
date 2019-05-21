@@ -158,6 +158,8 @@ func (sc *streamConnection) Reset(reason stream.StreamResetReason) {
 func (sc *streamConnection) OnEvent(event network.ConnectionEvent) {
 	if event.IsClose() || event.ConnectFailure() {
 		// clear
+		store := sc.context.Value(types.ContextKeyListenerRef).(admin.Store)
+		store.Delete("a")
 	}
 }
 

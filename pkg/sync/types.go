@@ -46,12 +46,18 @@ type ShardWorkerPool interface {
 
 // WorkerPool provides a pool for goroutines
 type WorkerPool interface {
+	// Serve Serves a task.
+	Serve(task func()) error
 
-	// Schedule try to acquire pooled worker goroutine to execute the specified task,
-	// this method would block if no worker goroutine is available
-	Schedule(task func())
+	// Release Closes the pool.
+	Release() error
 
-	// Schedule try to acquire pooled worker goroutine to execute the specified task first,
-	// but would not block if no worker goroutine is available. A temp goroutine will be created for task execution.
-	ScheduleAlways(task func())
+	// Running returns the number of the currently running goroutines.
+	Running() int
+
+	// Cap returns the capacity of the pool.
+	Cap() int
+
+	// Free returns the available goroutines to work.
+	Free() int
 }

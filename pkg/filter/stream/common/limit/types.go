@@ -15,13 +15,18 @@
 
 package limit
 
+import "time"
+
 // Limiter limit
 type Limiter interface {
-	TryAcquire() bool
+	TryAcquire(interface{}) bool
 }
 
 // limit strategy
 const (
-	QPSStrategy         = "QPS"
-	RateLimiterStrategy = "RateLimiter"
+	QPSStrategy                = "QPS"
+	RateLimiterStrategy        = "RateLimiter"
+	UserQPSStrategy            = "UserQPS"
+	DefaultTokenBucketTTL      = 4 * time.Hour
+	CleanupTokenBucketInterval = 10 * time.Minute
 )

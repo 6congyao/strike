@@ -37,13 +37,13 @@ func TestNewLimitEngine(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		ret := limitEngine.OverLimit()
+		ret := limitEngine.OverLimit(nil)
 		if ret {
 			t.Errorf("false")
 		}
 	}
 	for i := 0; i < 10; i++ {
-		ret := limitEngine.OverLimit()
+		ret := limitEngine.OverLimit(nil)
 		if !ret {
 			t.Errorf("false")
 		}
@@ -54,7 +54,7 @@ func TestNewLimitEngine(t *testing.T) {
 		LimitConfig: limitConfig,
 	}
 	limitEngine, err = NewLimitEngine(ruleConfig)
-	ret := limitEngine.OverLimit()
+	ret := limitEngine.OverLimit(nil)
 	if !ret {
 		t.Errorf("false")
 	}

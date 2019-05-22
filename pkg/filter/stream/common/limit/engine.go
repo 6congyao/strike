@@ -49,11 +49,20 @@ func NewLimitEngine(ruleConfig *model.RuleConfig) (*LimitEngine, error) {
 		}
 		l.limiter = limiter
 		return l, nil
+	} else if config.LimitStrategy == UserQPSStrategy {
+		limiter, err := NewUserQPSLimiter(int64(config.MaxAllows), int64(config.PeriodMs))
+		if err != nil {
+			log.Println("create NewUserQPSLimiter error, err:", err)
+			return nil, err
+		}
+		l.limiter = limiter
+		return l, nil
+
 	}
 	return nil, errors.New("Unknown LimitStrategy type:" + config.LimitStrategy)
 }
 
 // OverLimit check limit
-func (engine *LimitEngine) OverLimit() bool {
-	return !engine.limiter.TryAcquire()
+func (engine *LimitEngine) OverLimit(key interface{}) bool {
+	return !engine.limiter.TryAcquire(key)
 }

@@ -24,7 +24,7 @@ func TestQpsLimiter_TryAcquire(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	res := limiter.TryAcquire()
+	res := limiter.TryAcquire(nil)
 	if res {
 		t.Errorf("false")
 	} else {

@@ -29,6 +29,8 @@ import (
 	"strike/pkg/admin"
 	"strike/pkg/buffer"
 	"strike/pkg/evio"
+	strikesync "strike/pkg/sync"
+	"strike/pkg/types"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -321,11 +323,18 @@ func (s *Session) onRead(bytesRead int64) {
 	s.filterManager.OnRead()
 }
 
-// async
 func (s *Session) startRWLoop(ctx context.Context) {
 	s.internalLoopStarted = true
 
-	go func() {
+	// async
+	// worker pool serves the read loop and the write loop
+	wp := ctx.Value(types.ContextKeyWorkerPoolRef).(strikesync.WorkerPool)
+	if wp == nil {
+		log.Fatalln("Bug: null WorkerPool")
+		return
+	}
+
+	wp.Serve(func() {
 		defer func() {
 			if p := recover(); p != nil {
 				log.Println("panic:", p)
@@ -337,21 +346,19 @@ func (s *Session) startRWLoop(ctx context.Context) {
 		}()
 
 		s.startReadLoop()
+	})
+
+	defer func() {
+		if p := recover(); p != nil {
+			log.Println("panic:", p)
+
+			debug.PrintStack()
+
+			s.startWriteLoop()
+		}
 	}()
 
-	go func() {
-		defer func() {
-			if p := recover(); p != nil {
-				log.Println("panic:", p)
-
-				debug.PrintStack()
-
-				s.startWriteLoop()
-			}
-		}()
-
-		s.startWriteLoop()
-	}()
+	s.startWriteLoop()
 }
 
 func (s *Session) startReadLoop() {

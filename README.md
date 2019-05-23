@@ -73,6 +73,7 @@ Stream:
 * QPS
 * Rate
 * Auth (jwt)
+* User QPS (TokenBucket)
 
 ## Supported protocols
 * HTTP v1.1

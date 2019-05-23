@@ -109,8 +109,11 @@ func (srv *server) Restart() {
 }
 
 func (srv *server) Close() {
-	// stop listener and connections
+	// stop listeners
 	srv.handler.StopListeners(nil, true)
+
+	// release worker pool
+	srv.handler.Pool().Release()
 
 	close(srv.stopChan)
 }
@@ -131,9 +134,9 @@ func StopAccept() {
 	}
 }
 
-func StopConnection() {
+func StopConnections() {
 	for _, server := range servers {
-		server.handler.StopConnection()
+		server.handler.StopConnections()
 	}
 }
 
@@ -150,7 +153,7 @@ func WaitConnectionsDone(duration time.Duration) error {
 	// two duration wait for connection to transfer
 	// DefaultConnReadTimeout wait for read timeout
 	timeout := time.NewTimer(2*duration + types.DefaultConnReadTimeout)
-	StopConnection()
+	StopConnections()
 	log.Println("Stop connection...")
 	select {
 	case <-timeout.C:

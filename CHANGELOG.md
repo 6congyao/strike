@@ -35,3 +35,6 @@
 
 ## 0.5.0
 + New worker pool for handling connections
+
+## 0.5.1
++ Move to go module

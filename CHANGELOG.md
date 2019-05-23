@@ -31,4 +31,7 @@
 + Controller stream filter to avoid unsupported method
 
 ## 0.4.3
-+ Worker pool supports for ratio sharding
++ Shard worker pool supports for ratio sharding
+
+## 0.5.0
++ New worker pool for handling connections

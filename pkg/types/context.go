@@ -39,6 +39,7 @@ const (
 	ContextKeyTraceSpanKey                ContextKey = "TraceSpanKey"
 	ContextKeyConnHandlerRef              ContextKey = "ConnHandlerRef"
 	ContextKeyListenerRef                 ContextKey = "ListenerRef"
+	ContextKeyWorkerPoolRef               ContextKey = "WorkerPoolRef"
 	ContextKeyConnectionToClose           ContextKey = "ConnectionToClose"
 	ContextKeyUpstreamAddress             ContextKey = "UpstreamAddress"
 	ContextKeyPushControlAddress          ContextKey = "PushControlAddress"

@@ -26,7 +26,7 @@ import (
 
 const (
 	DEFAULT_CONCURRENCY         = 256 * 1024
-	DEFAULT_PURGE_INTERVAL_TIME = 1
+	DEFAULT_PURGE_INTERVAL_TIME = 5
 	CLOSED                      = 1
 )
 

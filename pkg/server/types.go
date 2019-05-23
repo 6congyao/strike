@@ -23,6 +23,7 @@ import (
 	"strike/pkg/log"
 	"strike/pkg/network"
 	"strike/pkg/stream"
+	strikesync "strike/pkg/sync"
 	"time"
 )
 
@@ -91,6 +92,9 @@ type ConnectionHandler interface {
 	// ListListenersFile reports all listeners' fd
 	ListListenersFile(lctx context.Context) []*os.File
 
-	// StopConnection Stop Connection
-	StopConnection()
+	// StopConnection Stop Connections
+	StopConnections()
+
+	// Get the poor ref
+	Pool() strikesync.WorkerPool
 }

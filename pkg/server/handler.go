@@ -23,12 +23,14 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strike/pkg/api/v2"
 	"strike/pkg/evio"
 	"strike/pkg/network"
 	"strike/pkg/stls"
 	"strike/pkg/stream"
+	strikesync "strike/pkg/sync"
 	"strike/pkg/types"
 	"strike/pkg/upstream"
 	"strike/utils"
@@ -40,6 +42,7 @@ type connHandler struct {
 	numConnections int64
 	listeners      []*activeListener
 	cm             upstream.ClusterManager
+	workerPool     strikesync.WorkerPool
 }
 
 // NewHandler
@@ -49,6 +52,7 @@ func NewHandler(cm upstream.ClusterManager) ConnectionHandler {
 		numConnections: 0,
 		listeners:      make([]*activeListener, 0),
 		cm:             cm,
+		workerPool:     strikesync.NewWorkerPool(0, 0),
 	}
 
 	return ch
@@ -186,7 +190,6 @@ func (ch *connHandler) StopListener(lctx context.Context, name string, close boo
 func (ch *connHandler) StopListeners(lctx context.Context, close bool) error {
 	var errGlobal error
 	for _, l := range ch.listeners {
-		// stop goroutine
 		if close {
 			if err := l.listener.Close(lctx); err != nil {
 				errGlobal = err
@@ -215,8 +218,10 @@ func (ch *connHandler) ListListenersFile(lctx context.Context) []*os.File {
 	return files
 }
 
-func (ch *connHandler) StopConnection() {
-	return
+func (ch *connHandler) StopConnections() {
+	for _, l := range ch.listeners {
+		close(l.stopChan)
+	}
 }
 
 func (ch *connHandler) findActiveListenerByName(name string) *activeListener {
@@ -261,6 +266,10 @@ func (ch *connHandler) UpdateClusterConfig(clusters []v2.Cluster) error {
 // ClusterHostFactoryCb
 func (ch *connHandler) UpdateClusterHost(cluster string, priority uint32, hosts []v2.Host) error {
 	return ch.cm.UpdateClusterHosts(cluster, priority, hosts)
+}
+
+func (ch *connHandler) Pool() strikesync.WorkerPool {
+	return ch.workerPool
 }
 
 // ListenerEventListener
@@ -314,22 +323,36 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, networkFilter
 }
 
 func (al *activeListener) OnAccept(rawc interface{}) {
-	if al.tlsMgr != nil && al.tlsMgr.Enabled() {
-		if c, ok := rawc.(net.Conn); ok {
-			rawc = al.tlsMgr.Conn(c)
+	// async
+	// worker pool serve the connection
+	wp := al.handler.Pool()
+	wp.Serve(func() {
+		defer func() {
+			if p := recover(); p != nil {
+				log.Println("panic: ", p)
+
+				debug.PrintStack()
+			}
+		}()
+
+		if al.tlsMgr != nil && al.tlsMgr.Enabled() {
+			if c, ok := rawc.(net.Conn); ok {
+				rawc = al.tlsMgr.Conn(c)
+			}
 		}
-	}
 
-	arc := newActiveRawConn(rawc, al)
+		arc := newActiveRawConn(rawc, al)
 
-	ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
-	ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
-	ctx = context.WithValue(ctx, types.ContextKeyNetworkFilterChainFactories, al.networkFiltersFactories)
-	ctx = context.WithValue(ctx, types.ContextKeyStreamFilterChainFactories, al.streamFiltersFactories)
-	ctx = context.WithValue(ctx, types.ContextKeyConnHandlerRef, al.handler)
-	ctx = context.WithValue(ctx, types.ContextKeyListenerRef, al.listener)
+		ctx := context.WithValue(context.Background(), types.ContextKeyListenerPort, al.listenPort)
+		ctx = context.WithValue(ctx, types.ContextKeyListenerName, al.listener.Name())
+		ctx = context.WithValue(ctx, types.ContextKeyNetworkFilterChainFactories, al.networkFiltersFactories)
+		ctx = context.WithValue(ctx, types.ContextKeyStreamFilterChainFactories, al.streamFiltersFactories)
+		ctx = context.WithValue(ctx, types.ContextKeyConnHandlerRef, al.handler)
+		ctx = context.WithValue(ctx, types.ContextKeyListenerRef, al.listener)
+		ctx = context.WithValue(ctx, types.ContextKeyWorkerPoolRef, al.handler.Pool())
 
-	arc.ContinueFilterChain(ctx, true)
+		arc.ContinueFilterChain(ctx, true)
+	})
 }
 
 func (al *activeListener) OnNewConnection(ctx context.Context, conn network.Connection) {

@@ -202,7 +202,6 @@ func eventProcess(b *testing.B) {
 }
 
 func BenchmarkShardWorkerPool(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		eventProcess(b)
 	}
@@ -297,7 +296,6 @@ func eventProcessWithUnboundedChannel(b *testing.B) {
 }
 
 func BenchmarkUnboundChannel(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		eventProcessWithUnboundedChannel(b)
 	}

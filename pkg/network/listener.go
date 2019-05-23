@@ -21,7 +21,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"runtime/debug"
 	"strconv"
 	"strike/pkg/api/v2"
 	"strike/pkg/evio"
@@ -185,20 +184,8 @@ func (l *listener) accept(lctx context.Context) error {
 		return err
 	}
 
-	// async
-	// TODO: use thread pool
-	go func() {
-		defer func() {
-			if p := recover(); p != nil {
-				log.Println("panic: ", p)
-
-				debug.PrintStack()
-			}
-		}()
-
-		fmt.Println("Connection opened:", rawc.RemoteAddr())
-		l.cb.OnAccept(rawc)
-	}()
+	fmt.Println("Connection opened:", rawc.RemoteAddr())
+	l.cb.OnAccept(rawc)
 
 	return nil
 }

@@ -49,7 +49,8 @@ func NewRuleEngine(config *model.RuleConfig) *RuleEngine {
 func (e *RuleEngine) invoke(headers protocol.HeaderMap) bool {
 	if e.match(headers) {
 		//e.stat.Counter(metrix.INVOKE).Inc(1)
-		if e.limitEngine.OverLimit() {
+		key, _ := headers.Get(e.ruleConfig.LimitConfig.Key)
+		if e.limitEngine.OverLimit(key) {
 			//e.stat.Counter(metrix.BLOCK).Inc(1)
 			if e.ruleConfig.RunMode == model.RunModeControl {
 				return false

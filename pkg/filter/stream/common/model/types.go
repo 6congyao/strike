@@ -60,4 +60,5 @@ type LimitConfig struct {
 	MaxBurstRatio float64 `json:"max_burst_ratio"`
 	PeriodMs      int     `json:"period_ms"`
 	MaxAllows     int     `json:"max_allows"`
+	Key           string  `json:"key"`
 }

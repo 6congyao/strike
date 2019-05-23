@@ -57,7 +57,7 @@ func NewRateLimiter(maxAllows int64, periodMs int64, MaxBurstRatio float64) (*Ra
 }
 
 // TryAcquire limit
-func (l *RateLimiter) TryAcquire() bool {
+func (l *RateLimiter) TryAcquire(key interface{}) bool {
 	if l.maxAllows <= 0 {
 		return false
 	}

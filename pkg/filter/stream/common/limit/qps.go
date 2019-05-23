@@ -48,7 +48,7 @@ func NewQPSLimiter(maxAllows int64, periodMs int64) (*QPSLimiter, error) {
 }
 
 // TryAcquire limit
-func (l *QPSLimiter) TryAcquire() bool {
+func (l *QPSLimiter) TryAcquire(key interface{}) bool {
 	if l.maxAllows <= 0 {
 		return false
 	}
@@ -57,7 +57,7 @@ func (l *QPSLimiter) TryAcquire() bool {
 	defer l.mutex.Unlock()
 	var nowMicros = int64(time.Since(l.start))
 	if nowMicros >= l.nextPeriodMicros {
-		l.nextPeriodMicros = ((nowMicros-l.nextPeriodMicros)/l.periodMicros+1)*l.periodMicros + l.nextPeriodMicros
+		l.nextPeriodMicros = nowMicros + l.periodMicros
 		l.currentPermits = 0
 	}
 	l.currentPermits++

@@ -15,17 +15,58 @@
 
 package limit
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-func TestRateLimiter_TryAcquire(t *testing.T) {
-	limiter, err := NewRateLimiter(0, 1000, 1.0)
+func TestUserQpsLimiter_TryAcquire(t *testing.T) {
+	limiter, err := NewUserQPSLimiter(0, 1000)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	res := limiter.TryAcquire(nil)
+	key := "test"
+	res := limiter.TryAcquire(key)
 	if res {
 		t.Errorf("false")
 	} else {
 		t.Log("ok")
+	}
+}
+
+func TestUserQpsLimiter_TryAcquire1(t *testing.T) {
+	limiter, err := NewUserQPSLimiter(1, 1000)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	key := "test"
+	res := limiter.TryAcquire(key)
+	if res {
+		t.Log("ok")
+	} else {
+		t.Errorf("false")
+	}
+
+	key2 := "test2"
+	res = limiter.TryAcquire(key2)
+	if res {
+		t.Log("ok")
+	} else {
+		t.Errorf("false")
+	}
+
+	res = limiter.TryAcquire(key)
+	if res {
+		t.Errorf("false")
+	} else {
+		t.Log("ok")
+	}
+
+	time.Sleep(time.Second)
+	res = limiter.TryAcquire(key)
+	if res {
+		t.Log("ok")
+	} else {
+		t.Errorf("false")
 	}
 }

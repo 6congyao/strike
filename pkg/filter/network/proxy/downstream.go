@@ -26,7 +26,7 @@ import (
 	"strike/pkg/stream"
 	"strike/pkg/types"
 	"strike/pkg/upstream"
-	"strike/utils"
+	striketime "strike/utils/time"
 	"sync/atomic"
 	"time"
 )
@@ -47,8 +47,8 @@ type downStream struct {
 	timeout         *Timeout
 	responseSender  stream.StreamSender
 	upstreamRequest *upstreamRequest
-	perRetryTimer   *utils.Timer
-	responseTimer   *utils.Timer
+	perRetryTimer   *striketime.Timer
+	responseTimer   *striketime.Timer
 
 	// downstream request buf
 	downstreamReqHeaders  protocol.HeaderMap
@@ -553,7 +553,7 @@ func (s *downStream) onUpstreamRequestSent() {
 			}
 
 			id := s.ID
-			s.responseTimer = utils.NewTimer(s.timeout.GlobalTimeout,
+			s.responseTimer = striketime.NewTimer(s.timeout.GlobalTimeout,
 				func() {
 					if atomic.LoadUint32(&s.downstreamCleaned) == 1 {
 						return
@@ -576,7 +576,7 @@ func (s *downStream) setupPerReqTimeout() {
 		}
 
 		ID := s.ID
-		s.perRetryTimer = utils.NewTimer(timeout.TryTimeout*time.Second,
+		s.perRetryTimer = striketime.NewTimer(timeout.TryTimeout*time.Second,
 			func() {
 				if atomic.LoadUint32(&s.downstreamCleaned) == 1 {
 					return

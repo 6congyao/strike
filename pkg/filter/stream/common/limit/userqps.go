@@ -18,7 +18,7 @@ package limit
 import (
 	"errors"
 	gocache "github.com/patrickmn/go-cache"
-	"golang.org/x/time/rate"
+	"strike/utils/time/rate"
 	"sync"
 	"time"
 )

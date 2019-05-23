@@ -25,7 +25,7 @@ import (
 	"strike/pkg/protocol"
 	"strike/pkg/stream"
 	"strike/pkg/types"
-	"strike/utils"
+	striketime "strike/utils/time"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -50,8 +50,8 @@ type sourceStream struct {
 	// control args
 	timeout        *Timeout
 	responseSender stream.StreamSender
-	perRetryTimer  *utils.Timer
-	responseTimer  *utils.Timer
+	perRetryTimer  *striketime.Timer
+	responseTimer  *striketime.Timer
 
 	// sourceStream request buf
 	sourceStreamReqHeaders  protocol.HeaderMap

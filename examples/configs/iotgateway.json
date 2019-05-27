@@ -5,6 +5,78 @@
       "use_edge_mode": false,
       "listeners":[
         {
+          "name":"mqttTest",
+          "address": ":8061",
+          "bind_port": true,
+          "log_path": "stdout",
+          "filter_chains": [{
+            "tls_context":{},
+            "filters": [
+              {
+                "type": "proxy",
+                "config": {
+                  "downstream_protocol": "Mqtt",
+                  "upstream_protocol": "MQ",
+                  "router_config_name":"client_router",
+                  "extend_config": {
+                    "upstream_address": "127.0.0.1:2379",
+                    "push_control_address": "http://127.0.0.1:8080"
+                  }
+                }
+              },
+              {
+                "type":"connection_manager",
+                "config":{
+                  "router_config_name":"client_router",
+                  "virtual_hosts":[{
+                    "name":"clientHost",
+                    "domains": ["*"],
+                    "routers": [
+                      {
+                        "match":{"headers":[{"name":"service","value":".*"}]},
+                        "route":{"cluster_name":"clientCluster"}
+                      }
+                    ]
+                  }]
+                }
+              }]
+          }],
+          "stream_filters": [
+            {
+              "type": "common",
+              "config": {
+                "rule_configs": [
+                  {
+                    "enable": false,
+                    "id": 2,
+                    "index": 2,
+                    "limit": {
+                      "limit_strategy": "UserQPS",
+                      "max_burst_ratio": 1.0,
+                      "period_ms": 10000,
+                      "key": "x-strike-username",
+                      "max_allows": 3
+                    },
+                    "name": "IoTAuth",
+                    "resources": [
+                      {
+                        "headers": [
+                          {
+                            "compare_type": "EQUALS",
+                            "key": "x-strike-method",
+                            "value": "Publish"
+                          }
+                        ]
+                      }
+                    ],
+                    "run_mode": "CONTROL"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name":"httpListener",
           "address": ":8045",
           "bind_port": true,
@@ -144,7 +216,7 @@
               "config": {
                 "rule_configs": [
                   {
-                    "enable": true,
+                    "enable": false,
                     "id": 2,
                     "index": 2,
                     "limit": {

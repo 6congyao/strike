@@ -186,26 +186,17 @@ func (s *Session) Write(bufs ...buffer.IoBuffer) error {
 		return nil
 	}
 
-	if s.internalLoopStarted {
-		s.writeBufferChan <- &bufs
-	} else {
-		// Start schedule if not started
-		//select {
-		//case s.writeSchedChan <- true:
-		//	s.scheduleWrite()
-		//default:
-	wait:
-		// we use for-loop with select:c.writeSchedChan to avoid chan-send blocking
-		// 'c.writeBufferChan <- &buffers' might block if write goroutine costs much time on 'doWriteIo'
-		for {
-			select {
-			case s.writeBufferChan <- &bufs:
-				break wait
-				//case s.writeSchedChan <- true:
-				//	s.scheduleWrite()
-				//}
-			}
-		}
+	select {
+	case s.writeBufferChan <- &bufs:
+	default:
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("Write panic:", r)
+				}
+			}()
+			s.writeBufferChan <- &bufs
+		}()
 	}
 
 	return nil
@@ -346,6 +337,7 @@ func (s *Session) startRWLoop(ctx context.Context) {
 		}()
 
 		s.startReadLoop()
+		fmt.Println("^^ read loop exit")
 	})
 
 	defer func() {
@@ -359,6 +351,7 @@ func (s *Session) startRWLoop(ctx context.Context) {
 	}()
 
 	s.startWriteLoop()
+	fmt.Println("^^ write loop exit")
 }
 
 func (s *Session) startReadLoop() {

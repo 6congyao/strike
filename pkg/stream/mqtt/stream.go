@@ -218,15 +218,15 @@ func (ss *serverStream) AppendHeaders(ctx context.Context, headerIn protocol.Hea
 	case message.StrMsgTypeConnectAck:
 		break
 	case message.StrMsgTypePublish:
-		ack := message.NewPubAck()
-		if strPacketId, ok = headerIn.Get(types.HeaderPacketID); ok {
-			headerIn.Del(types.HeaderPacketID)
-		}
-		if packetId, err := strconv.Atoi(strPacketId); err == nil {
-			ack.PacketIdentifier = uint16(packetId)
-		}
-
-		ss.res = ack
+		//ack := message.NewPubAck()
+		//if strPacketId, ok = headerIn.Get(types.HeaderPacketID); ok {
+		//	headerIn.Del(types.HeaderPacketID)
+		//}
+		//if packetId, err := strconv.Atoi(strPacketId); err == nil {
+		//	ack.PacketIdentifier = uint16(packetId)
+		//}
+		//
+		//ss.res = ack
 		break
 	case message.StrMsgTypePubAck:
 		break
@@ -301,8 +301,8 @@ func (ss *serverStream) handleMessage() {
 	header := protocol.CommonHeader(ss.req.GetHeader())
 	payload = ss.req.GetPayload()
 
-	if method, ok := header.Get(protocol.StrikeHeaderMethod); ok {
-		fmt.Println("got mqtt msg:", method, ss.connection.context.Value(types.ContextKeyConnectionID))
+	if _, ok := header.Get(protocol.StrikeHeaderMethod); ok {
+		//fmt.Println("got mqtt msg:", method, ss.connection.context.Value(types.ContextKeyConnectionID))
 	}
 
 	ss.receiver.OnReceiveHeaders(ss.context, header, payload == nil)
@@ -317,6 +317,9 @@ func (ss *serverStream) endStream() {
 }
 
 func (ss *serverStream) doSend() {
+	if ss.res == nil {
+		return
+	}
 	buf, err := ss.res.Encode()
 
 	if err != nil {
@@ -324,5 +327,8 @@ func (ss *serverStream) doSend() {
 		return
 	}
 
-	ss.connection.connection.Write(buf)
+	closed := ss.connection.connection.IsClosed()
+	if !closed {
+		ss.connection.connection.Write(buf)
+	}
 }

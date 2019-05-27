@@ -4,6 +4,6 @@ OUTPUT=${1:-bin/strike}
 echo "Building strike ..."
 mkdir -p bin
 
-go get -u github.com/dgrijalva/jwt-go github.com/kavu/go_reuseport
+go get -u github.com/dgrijalva/jwt-go github.com/kavu/go_reuseport github.com/patrickmn/go-cache
 go build -o $OUTPUT/strike cmd/strike/strike.go
 cp -r examples $OUTPUT

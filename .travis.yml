@@ -3,7 +3,7 @@ language: go
 services:
 - docker
 go:
-- 1.11
+- 1.12
 go_import_path: strike
 before_install:
 - chmod +x release

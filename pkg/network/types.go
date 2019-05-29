@@ -92,7 +92,7 @@ type NetWorkFilterChainFactoryCallbacks interface {
 // ListenerEventListener is a Callback invoked by a listener.
 type ListenerEventListener interface {
 	// OnAccept is called on listener accepted new connection
-	OnAccept(rawc interface{})
+	OnAccept(rawc net.Conn)
 
 	// OnNewConnection is called on new connection created
 	OnNewConnection(ctx context.Context, conn Connection)
@@ -210,7 +210,7 @@ type Connection interface {
 	SetNoDelay(enable bool)
 
 	// RawConn returns the original connections
-	RawConn() interface{}
+	RawConn() net.Conn
 
 	// Set conn read timeout
 	SetReadTimeout(duration int64)
@@ -302,7 +302,7 @@ type ListenerFilter interface {
 // ListenerFilterCallbacks is a callback handler called by listener filter to talk to listener
 type ListenerFilterCallbacks interface {
 	// Conn returns the Connection reference used in callback handler
-	Conn() interface{}
+	Conn() net.Conn
 
 	ContinueFilterChain(ctx context.Context, success bool)
 

@@ -26,7 +26,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strike/pkg/api/v2"
-	"strike/pkg/evio"
 	"strike/pkg/network"
 	"strike/pkg/stls"
 	"strike/pkg/stream"
@@ -322,7 +321,7 @@ func newActiveListener(listener network.Listener, lc *v2.Listener, networkFilter
 	return al, nil
 }
 
-func (al *activeListener) OnAccept(rawc interface{}) {
+func (al *activeListener) OnAccept(rawc net.Conn) {
 	// async
 	// worker pool serve the connection
 	wp := al.handler.Pool()
@@ -336,9 +335,7 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 		}()
 
 		if al.tlsMgr != nil && al.tlsMgr.Enabled() {
-			if c, ok := rawc.(net.Conn); ok {
-				rawc = al.tlsMgr.Conn(c)
-			}
+			rawc = al.tlsMgr.Conn(rawc)
 		}
 
 		arc := newActiveRawConn(rawc, al)
@@ -350,6 +347,7 @@ func (al *activeListener) OnAccept(rawc interface{}) {
 		ctx = context.WithValue(ctx, types.ContextKeyConnHandlerRef, al.handler)
 		ctx = context.WithValue(ctx, types.ContextKeyListenerRef, al.listener)
 		ctx = context.WithValue(ctx, types.ContextKeyWorkerPoolRef, al.handler.Pool())
+		ctx = context.WithValue(ctx, types.ContextOriRemoteAddr, rawc.RemoteAddr())
 
 		arc.ContinueFilterChain(ctx, true)
 	})
@@ -387,29 +385,17 @@ func (al *activeListener) removeConnection(ac *activeConnection) {
 	atomic.AddInt64(&al.handler.numConnections, -1)
 }
 
-func (al *activeListener) newConnection(ctx context.Context, rawc interface{}) {
-	var session *network.Session
-	if conn, ok := rawc.(net.Conn); ok {
-		session = network.NewSession(conn, conn.RemoteAddr())
+func (al *activeListener) newConnection(ctx context.Context, rawc net.Conn) {
+	conn := network.NewSession(ctx, rawc)
 
-		//sc := network.NewServerSimpleConn(ctx, conn, al.stopChan)
-		//newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, sc.ID())
-		//
-	} else if conn, ok := rawc.(evio.Conn); ok {
-		// create the session
-		session = network.NewSession(conn, conn.RemoteAddr())
-
-		// keep track of the session
-		conn.SetContext(session)
-	}
-	newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, session.ID())
+	newCtx := context.WithValue(ctx, types.ContextKeyConnectionID, conn.ID())
 
 	// notify
-	al.OnNewConnection(newCtx, session)
+	al.OnNewConnection(newCtx, conn)
 }
 
 type activeRawConn struct {
-	rawc                interface{}
+	rawc                net.Conn
 	rawf                *os.File
 	originalDstIP       string
 	originalDstPort     int
@@ -420,7 +406,7 @@ type activeRawConn struct {
 	acceptedFilterIndex int
 }
 
-func newActiveRawConn(rawc interface{}, activeListener *activeListener) *activeRawConn {
+func newActiveRawConn(rawc net.Conn, activeListener *activeListener) *activeRawConn {
 	return &activeRawConn{
 		rawc:           rawc,
 		activeListener: activeListener,
@@ -442,7 +428,7 @@ func (arc *activeRawConn) ContinueFilterChain(ctx context.Context, success bool)
 	arc.activeListener.newConnection(ctx, arc.rawc)
 }
 
-func (arc *activeRawConn) Conn() interface{} {
+func (arc *activeRawConn) Conn() net.Conn {
 	return arc.rawc
 }
 

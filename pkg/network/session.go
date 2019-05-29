@@ -18,7 +18,6 @@ package network
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,10 +27,8 @@ import (
 	"runtime/debug"
 	"strike/pkg/admin"
 	"strike/pkg/buffer"
-	"strike/pkg/evio"
 	strikesync "strike/pkg/sync"
 	"strike/pkg/types"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -50,19 +47,15 @@ type Session struct {
 	closeFlag  int32
 
 	closeWithFlush bool
-	In             evio.InputStream
-	Out            []byte
-	Pr             *PipelineReader
-	Mu             sync.Mutex
-	filterManager  FilterManager
-	rawc           interface{}
-	connCallbacks  []ConnectionEventListener
-	emitters       []admin.Emitter
+	filterManager FilterManager
+	rawc          net.Conn
+	connCallbacks []ConnectionEventListener
+	emitters      []admin.Emitter
 
 	readBuffer      buffer.IoBuffer
 	readTimeout     int64
 	bufferLimit     uint32
-	stopChan        chan struct{}
+	//stopChan        chan struct{}
 	writeBuffers    net.Buffers
 	ioBuffers       []buffer.IoBuffer
 	writeBufferChan chan *[]buffer.IoBuffer
@@ -74,10 +67,10 @@ type Session struct {
 	startOnce sync.Once
 }
 
-func NewSession(rawc interface{}, radd net.Addr) *Session {
+func NewSession(ctx context.Context, rawc net.Conn) Connection {
 	s := &Session{
 		id:               atomic.AddUint64(&globalSessionId, 1),
-		remoteAddr:       radd,
+		remoteAddr:       rawc.RemoteAddr(),
 		rawc:             rawc,
 		internalStopChan: make(chan struct{}),
 		writeBufferChan:  make(chan *[]buffer.IoBuffer, 32),
@@ -236,7 +229,7 @@ func (s *Session) SetNoDelay(enable bool) {
 	}
 }
 
-func (s *Session) RawConn() interface{} {
+func (s *Session) RawConn() net.Conn {
 	return s.rawc
 }
 
@@ -510,154 +503,4 @@ func (s *Session) doWriteIo() (bytesSent int64, err error) {
 		}
 	}
 	return
-}
-
-// PipelineReader ...
-type PipelineReader struct {
-	Rd     io.Reader
-	Wr     io.Writer
-	Packet [0xFFFF]byte
-	Buf    []byte
-}
-
-// Type is resp type
-type Type byte
-
-// Protocol Types
-const (
-	Null Type = iota
-	RESP
-	Telnet
-	Native
-	HTTP
-	WebSocket
-	JSON
-)
-
-type Message struct {
-	_command   string
-	Args       []string
-	ConnType   Type
-	OutputType Type
-	Auth       string
-}
-
-// Command returns the first argument as a lowercase string
-func (msg *Message) Command() string {
-	if msg._command == "" {
-		msg._command = strings.ToLower(msg.Args[0])
-	}
-	return msg._command
-}
-
-// ReadMessages ...
-func (rd *PipelineReader) ReadMessages() ([]*Message, error) {
-	var msgs []*Message
-moreData:
-	n, err := rd.Rd.Read(rd.Packet[:])
-	if err != nil {
-		return nil, err
-	}
-	if n == 0 {
-		// need more data
-		goto moreData
-	}
-	data := rd.Packet[:n]
-	if len(rd.Buf) > 0 {
-		data = append(rd.Buf, data...)
-	}
-	for len(data) > 0 {
-		msg := &Message{}
-		complete, args, kind, leftover, err := readNextCommand(data, nil, msg, rd.Wr)
-		if err != nil {
-			break
-		}
-		if !complete {
-			break
-		}
-		if kind == KindHttp {
-			if len(msg.Args) == 0 {
-				return nil, errors.New("invalid HTTP request")
-			}
-			msgs = append(msgs, msg)
-		} else if len(args) > 0 {
-			for i := 0; i < len(args); i++ {
-				msg.Args = append(msg.Args, string(args[i]))
-			}
-			switch kind {
-			case KindTelnet:
-				msg.ConnType = RESP
-				msg.OutputType = RESP
-			}
-			msgs = append(msgs, msg)
-		}
-		data = leftover
-	}
-	if len(data) > 0 {
-		rd.Buf = append(rd.Buf[:0], data...)
-	} else if len(rd.Buf) > 0 {
-		rd.Buf = rd.Buf[:0]
-	}
-	if err != nil && len(msgs) == 0 {
-		return nil, err
-	}
-	return msgs, nil
-}
-
-// Kind is the kind of command
-type Kind int
-
-const (
-	KindHttp Kind = iota
-	KindTelnet
-)
-
-func readNextCommand(packet []byte, argsIn [][]byte, msg *Message, wr io.Writer) (
-	complete bool, args [][]byte, kind Kind, leftover []byte, err error,
-) {
-	if packet[0] == 'G' || packet[0] == 'P' {
-		// could be an HTTP request
-		var line []byte
-		for i := 1; i < len(packet); i++ {
-			if packet[i] == '\n' {
-				if packet[i-1] == '\r' {
-					line = packet[:i+1]
-					break
-				}
-			}
-		}
-
-		if len(line) > 11 && string(line[len(line)-11:len(line)-5]) == " HTTP/" {
-			//fmt.Println("http packet")
-		}
-	}
-	return false, argsIn[:0], KindHttp, packet, nil
-}
-
-func AcquirePipelineReader(s *Session) *PipelineReader {
-	if s.Pr != nil {
-		return s.Pr
-	}
-
-	v := PipelineReaderPool.Get()
-	var pr *PipelineReader
-	if v == nil {
-		pr = &PipelineReader{}
-	} else {
-		pr = v.(*PipelineReader)
-	}
-
-	return pr
-}
-
-func ReleasePipelineReader(s *Session) {
-	if s == nil || s.Pr == nil {
-		return
-	}
-
-	s.Pr.Buf = nil
-	s.Pr.Rd = nil
-	s.Pr.Wr = nil
-	PipelineReaderPool.Put(s.Pr)
-	s.Pr = nil
 }

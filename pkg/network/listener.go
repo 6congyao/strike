@@ -23,7 +23,6 @@ import (
 	"os"
 	"strconv"
 	"strike/pkg/api/v2"
-	"strike/pkg/evio"
 	"sync"
 	"time"
 )
@@ -218,52 +217,53 @@ func (el *edgeListener) LoadOrStore(k, v interface{}) (interface{}, bool) {
 }
 
 func (el *edgeListener) serve(lctx context.Context) error {
-	var events evio.Events
-	events.NumLoops = -1
-	events.LoadBalance = evio.LeastConnections
-
-	events.Serving = func(eserver evio.Server) (action evio.Action) {
-		if eserver.NumLoops == 1 {
-			fmt.Println("Running single-threaded")
-		} else {
-			fmt.Println("Running on threads: ", eserver.NumLoops)
-		}
-		for _, addr := range eserver.Addrs {
-			fmt.Println("Ready to accept connections at", addr)
-		}
-		return
-	}
-
-	events.Opened = func(econn evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
-		fmt.Println("Connection opened:", econn.RemoteAddr())
-		opts.ReuseInputBuffer = true
-		// notify
-		el.cb.OnAccept(econn)
-
-		return
-	}
-
-	events.Closed = func(econn evio.Conn, err error) (action evio.Action) {
-		el.cb.OnClose()
-		session := econn.Context().(*Session)
-		ReleasePipelineReader(session)
-
-		fmt.Println("Connection closed:", session.remoteAddr.String())
-		return
-	}
-
-	events.Data = func(econn evio.Conn, in []byte) (out []byte, action evio.Action) {
-		session := econn.Context().(*Session)
-
-		// todo: workerpool
-		session.doRead(in)
-
-		out = session.Out
-		session.Out = nil
-		return
-	}
-
-	return evio.Serve(events, el.localAddress.String())
+	//var events evio.Events
+	//events.NumLoops = -1
+	//events.LoadBalance = evio.LeastConnections
+	//
+	//events.Serving = func(eserver evio.Server) (action evio.Action) {
+	//	if eserver.NumLoops == 1 {
+	//		fmt.Println("Running single-threaded")
+	//	} else {
+	//		fmt.Println("Running on threads: ", eserver.NumLoops)
+	//	}
+	//	for _, addr := range eserver.Addrs {
+	//		fmt.Println("Ready to accept connections at", addr)
+	//	}
+	//	return
+	//}
+	//
+	//events.Opened = func(econn evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
+	//	fmt.Println("Connection opened:", econn.RemoteAddr())
+	//	opts.ReuseInputBuffer = true
+	//	// notify
+	//	el.cb.OnAccept(econn)
+	//
+	//	return
+	//}
+	//
+	//events.Closed = func(econn evio.Conn, err error) (action evio.Action) {
+	//	el.cb.OnClose()
+	//	session := econn.Context().(*Session)
+	//	ReleasePipelineReader(session)
+	//
+	//	fmt.Println("Connection closed:", session.remoteAddr.String())
+	//	return
+	//}
+	//
+	//events.Data = func(econn evio.Conn, in []byte) (out []byte, action evio.Action) {
+	//	session := econn.Context().(*Session)
+	//
+	//	// todo: workerpool
+	//	session.doRead(in)
+	//
+	//	out = session.Out
+	//	session.Out = nil
+	//	return
+	//}
+	//
+	//return evio.Serve(events, el.localAddress.String())
+	return nil
 }
 
 func AppendResp(b []byte, status, head, body string) []byte {

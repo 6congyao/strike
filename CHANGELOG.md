@@ -38,3 +38,6 @@
 
 ## 0.5.1
 + Move to go module
+
+## 0.5.3
++ ShardWorkerPool: Use connection id instead of proxy id for sharding in order to keep the sequence of session's messages

@@ -454,6 +454,7 @@ func (s *Session) startWriteLoop() {
 
 			return
 		}
+		runtime.Gosched()
 	}
 }
 

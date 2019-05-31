@@ -67,7 +67,7 @@ func (pool *shardWorkerPool) Init() {
 	}
 }
 
-func (pool *shardWorkerPool) Shard(source, numShards, offset uint32) uint32 {
+func (pool *shardWorkerPool) Shard(source, numShards, offset uint64) uint64 {
 	if numShards == 0 {
 		return 0
 	}
@@ -76,7 +76,7 @@ func (pool *shardWorkerPool) Shard(source, numShards, offset uint32) uint32 {
 
 func (pool *shardWorkerPool) Offer(job ShardJob, block bool) {
 	// use shard to avoid excessive synchronization
-	i := pool.Shard(job.Source(uint32(pool.numShards)))
+	i := pool.Shard(job.Source(uint64(pool.numShards)))
 
 	if block {
 		pool.shards[i].jobChan <- job

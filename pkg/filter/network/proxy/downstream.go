@@ -107,6 +107,7 @@ func newActiveStream(ctx context.Context, proxy *proxy, responseSender stream.St
 func (s *downStream) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
 	workerPool.Offer(&event{
 		id:  s.ID,
+		sid: context.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: recvHeader,
 		handle: func() {
@@ -122,6 +123,7 @@ func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer
 
 	workerPool.Offer(&event{
 		id:  s.ID,
+		sid: context.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: recvData,
 		handle: func() {
@@ -133,6 +135,7 @@ func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer
 func (s *downStream) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
 	workerPool.Offer(&event{
 		id:  s.ID,
+		sid: context.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: recvTrailer,
 		handle: func() {
@@ -422,6 +425,7 @@ func (s *downStream) OnResetStream(reason stream.StreamResetReason) {
 
 	workerPool.Offer(&event{
 		id:  s.ID,
+		sid: s.context.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: reset,
 		handle: func() {

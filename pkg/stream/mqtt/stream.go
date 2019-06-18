@@ -301,8 +301,8 @@ func (ss *serverStream) handleMessage() {
 	header := protocol.CommonHeader(ss.req.GetHeader())
 	payload = ss.req.GetPayload()
 
-	if _, ok := header.Get(protocol.StrikeHeaderMethod); ok {
-		//fmt.Println("got mqtt msg:", method, ss.connection.context.Value(types.ContextKeyConnectionID))
+	if method, ok := header.Get(protocol.StrikeHeaderMethod); ok {
+		fmt.Println("got mqtt msg:", method, ss.connection.context.Value(types.ContextKeyConnectionID))
 	}
 
 	ss.receiver.OnReceiveHeaders(ss.context, header, payload == nil)

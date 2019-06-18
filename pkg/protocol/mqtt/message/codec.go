@@ -39,7 +39,7 @@ func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 			buf.Restore()
 			if re, ok := err.(error); ok {
 				e = re
-				fmt.Printf("Error:%v", err)
+				fmt.Printf("Error:%v \n", err)
 				//debug.PrintStack()
 			} else {
 				fmt.Printf("Unknown error ")

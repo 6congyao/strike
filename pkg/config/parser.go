@@ -17,6 +17,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	stdlog "log"
 	"net"
 	"os"
@@ -287,6 +288,17 @@ func transHostWeight(weight uint32) uint32 {
 		return MinHostWeight
 	}
 	return weight
+}
+
+// ParseTCPProxy
+func ParseTCPProxy(cfg map[string]interface{}) (*v2.TCPProxy, error) {
+	proxy := &v2.TCPProxy{}
+	if data, err := json.Marshal(cfg); err == nil {
+		json.Unmarshal(data, proxy)
+	} else {
+		return nil, fmt.Errorf("[config] config is not a tcp proxy config: %v", err)
+	}
+	return proxy, nil
 }
 
 // ParseControllerFilter

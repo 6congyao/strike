@@ -15,8 +15,8 @@ type Message interface {
 	DecodeVariableHeader(buf buffer.IoBuffer) bool
 	DecodePayload(buf buffer.IoBuffer) bool
 	Encode() (buffer.IoBuffer, error)
-	GetHeader() (map[string]string)
-	GetPayload() (buffer.IoBuffer)
+	GetHeader() map[string]string
+	GetPayload() buffer.IoBuffer
 	//Equal(message Message) bool
 }
 
@@ -181,18 +181,21 @@ func NewMessage(header Header) (msg Message) {
 }
 
 func decodeLength(buf buffer.IoBuffer) (v RemainingLength) {
-	var shift uint
-	for i := 0; i < 4; i++ {
-		if b, err := buf.ReadByte(); err == nil {
-			v |= RemainingLength(b&0x7f) << shift
-			if b&0x80 == 0 {
-				return
+	if buf.Len() > 0 {
+		var shift uint
+		for i := 0; i < 4; i++ {
+			if b, err := buf.ReadByte(); err == nil {
+				v |= RemainingLength(b&0x7f) << shift
+				if b&0x80 == 0 {
+					return
+				}
+				shift += 7
+			} else {
+				panic(err)
 			}
-			shift += 7
-		} else {
-			panic(err)
 		}
 	}
+
 	panic(errors.New(ErrorInvalidRemainingLength))
 }
 

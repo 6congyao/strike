@@ -31,6 +31,7 @@ const (
 	DEFAULT_NETWORK_FILTER    = "proxy"
 	CONTROLLER_NETWORK_FILTER = "controller"
 	DELEGATION                = "delegation"
+	TCP_PROXY                 = "tcp_proxy"
 )
 
 // Stream Filter's Type

@@ -26,27 +26,27 @@ import (
 )
 
 type TestJob struct {
-	i uint32
+	i uint64
 }
 
-func (t *TestJob) Source(sourceShards uint32) (uint32, uint32, uint32) {
+func (t *TestJob) Source(sourceShards uint64) (uint64, uint64, uint64) {
 	return t.i, 0, 0
 }
 
 type TestJob2 struct {
-	i   uint32
+	i   uint64
 	dir uint32
 }
 
-func (t2 *TestJob2) Source2(sourceShards uint32) (source, targetShards, offset uint32) {
+func (t2 *TestJob2) Source2(sourceShards uint64) (source, targetShards, offset uint64) {
 	switch t2.dir {
 	case 1:
 		source = t2.i
-		targetShards = sourceShards - uint32(gap)
+		targetShards = sourceShards - uint64(gap)
 	case 2:
 		source = t2.i
-		targetShards = uint32(gap)
-		offset = sourceShards - uint32(gap)
+		targetShards = uint64(gap)
+		offset = sourceShards - uint64(gap)
 	default:
 		log.Println("unsupported type")
 	}
@@ -80,21 +80,21 @@ func TestSource2(t *testing.T) {
 	for i := 0; i < shardsNum; i++ {
 		for j := 0; j < shardEvents; j++ {
 			tj1 := &TestJob2{
-				i:   uint32(j),
+				i:   uint64(j),
 				dir: 1,
 			}
-			index1 := pool.Shard(tj1.Source2(uint32(shardsNum)))
+			index1 := pool.Shard(tj1.Source2(uint64(shardsNum)))
 
-			if index1 >= uint32(shardsNum-gap) {
+			if index1 >= uint64(shardsNum-gap) {
 				t.Errorf("unexpected shard index, shard %d, shardNum %d", index1, shardsNum-1)
 			}
 
 			tj2 := &TestJob2{
-				i:   uint32(j),
+				i:   uint64(j),
 				dir: 2,
 			}
-			index2 := pool.Shard(tj2.Source2(uint32(shardsNum)))
-			if index2 >= uint32(shardsNum) || index2 < uint32(shardsNum-gap) {
+			index2 := pool.Shard(tj2.Source2(uint64(shardsNum)))
+			if index2 >= uint64(shardsNum) || index2 < uint64(shardsNum-gap) {
 				t.Errorf("unexpected shard index, shard %d, shardNum %d", index2, shardsNum-1)
 			}
 		}
@@ -142,10 +142,10 @@ func TestJobOrder(t *testing.T) {
 	// so we let the producer and consumer to be one-to-one relation.
 	for i := 0; i < shardsNum; i++ {
 		wg.Add(1)
-		counter := uint32(i)
+		counter := uint64(i)
 		go func() {
 			for j := 0; j < shardEvents; j++ {
-				pool.Offer(&TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))}, true)
+				pool.Offer(&TestJob{i: atomic.AddUint64(&counter, uint64(shardsNum))}, true)
 			}
 		}()
 	}
@@ -190,10 +190,10 @@ func eventProcess(b *testing.B) {
 	// so we let the producer and consumer to be one-to-one relation.
 	for i := 0; i < shardsNum; i++ {
 		wg.Add(1)
-		counter := uint32(i)
+		counter := uint64(i)
 		go func() {
 			for j := 0; j < shardEvents; j++ {
-				pool.Offer(&TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))}, true)
+				pool.Offer(&TestJob{i: atomic.AddUint64(&counter, uint64(shardsNum))}, true)
 			}
 		}()
 	}
@@ -279,12 +279,12 @@ func eventProcessWithUnboundedChannel(b *testing.B) {
 	// so we let the producer and consumer to be one-to-one relation.
 	for i := 0; i < shardsNum; i++ {
 		wg.Add(1)
-		counter := uint32(i)
+		counter := uint64(i)
 		in, out := MakeInfinite()
 
 		go func() {
 			for j := 0; j < shardEvents; j++ {
-				in <- &TestJob{i: atomic.AddUint32(&counter, uint32(shardsNum))}
+				in <- &TestJob{i: atomic.AddUint64(&counter, uint64(shardsNum))}
 			}
 		}()
 		go func(shard int) {

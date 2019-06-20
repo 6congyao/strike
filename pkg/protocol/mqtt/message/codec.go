@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"runtime/debug"
 	"strike/pkg/buffer"
 	"strike/pkg/network"
 	"strike/pkg/protocol"
@@ -40,7 +42,10 @@ func (this *Codec) doDecode(buf buffer.IoBuffer) (msgs []Message, e error) {
 			if re, ok := err.(error); ok {
 				e = re
 				fmt.Printf("Error:%v \n", err)
-				//debug.PrintStack()
+				// unexpected EOF
+				if re == io.EOF {
+					debug.PrintStack()
+				}
 			} else {
 				fmt.Printf("Unknown error ")
 			}

@@ -84,7 +84,7 @@ func (pool *shardWorkerPool) Offer(job ShardJob, block bool) {
 		select {
 		case pool.shards[i].jobChan <- job:
 		default:
-			log.Println("jobChan over full")
+			log.Println("jobChan over full:", i)
 		}
 	}
 }

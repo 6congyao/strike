@@ -146,7 +146,11 @@ func (s *sourceStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilte
 	s.receiverFilters = append(s.receiverFilters, sf)
 }
 
-// stream.StreamReceiver
+// stream.StreamReceiveListener
+func (s *sourceStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+
+}
+
 func (s *sourceStream) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
 	s.sourceStreamRecvDone = endStream
 	s.sourceStreamReqHeaders = headers

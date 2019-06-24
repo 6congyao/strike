@@ -103,11 +103,48 @@ func newActiveStream(ctx context.Context, proxy *proxy, responseSender stream.St
 	return s
 }
 
-// stream.StreamReceiver
-func (s *downStream) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
+// stream.StreamReceiveListener
+func (s *downStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+	s.downstreamReqHeaders = headers
+	if data != nil {
+		s.downstreamReqDataBuf = data.Clone()
+		s.downstreamReqDataBuf.Count(1)
+		data.Drain(data.Len())
+	}
+	s.downstreamReqTrailers = trailers
+
 	workerPool.Offer(&event{
 		id:  s.ID,
-		sid: context.Value(types.ContextKeyConnectionID).(uint64),
+		sid: ctx.Value(types.ContextKeyConnectionID).(uint64),
+		dir: diFromDownstream,
+		evt: recv,
+		handle: func() {
+			s.Receive()
+		},
+	}, false)
+}
+
+func (s *downStream) Receive() {
+	hasBody := s.downstreamReqDataBuf != nil
+	hasTrailer := s.downstreamReqTrailers != nil
+
+	s.ReceiveHeaders(s.downstreamReqHeaders, !hasBody)
+
+	if hasBody {
+		s.ReceiveData(s.downstreamReqDataBuf, !hasTrailer)
+	}
+
+	if hasTrailer {
+		s.ReceiveTrailers(s.downstreamReqTrailers)
+	}
+}
+
+func (s *downStream) OnReceiveHeaders(ctx context.Context, headers protocol.HeaderMap, endStream bool) {
+	s.downstreamReqHeaders = headers
+
+	workerPool.Offer(&event{
+		id:  s.ID,
+		sid: ctx.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: recvHeader,
 		handle: func() {
@@ -116,14 +153,14 @@ func (s *downStream) OnReceiveHeaders(context context.Context, headers protocol.
 	}, true)
 }
 
-func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
+func (s *downStream) OnReceiveData(ctx context.Context, data buffer.IoBuffer, endStream bool) {
 	s.downstreamReqDataBuf = data.Clone()
 	s.downstreamReqDataBuf.Count(1)
 	data.Drain(data.Len())
 
 	workerPool.Offer(&event{
 		id:  s.ID,
-		sid: context.Value(types.ContextKeyConnectionID).(uint64),
+		sid: ctx.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: recvData,
 		handle: func() {
@@ -132,10 +169,10 @@ func (s *downStream) OnReceiveData(context context.Context, data buffer.IoBuffer
 	}, true)
 }
 
-func (s *downStream) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
+func (s *downStream) OnReceiveTrailers(ctx context.Context, trailers protocol.HeaderMap) {
 	workerPool.Offer(&event{
 		id:  s.ID,
-		sid: context.Value(types.ContextKeyConnectionID).(uint64),
+		sid: ctx.Value(types.ContextKeyConnectionID).(uint64),
 		dir: diFromDownstream,
 		evt: recvTrailer,
 		handle: func() {
@@ -144,7 +181,7 @@ func (s *downStream) OnReceiveTrailers(context context.Context, trailers protoco
 	}, true)
 }
 
-func (s *downStream) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {
+func (s *downStream) OnDecodeError(ctx context.Context, err error, headers protocol.HeaderMap) {
 	// if active stream finished the lifecycle, just ignore further data
 	if s.upstreamProcessDone {
 		return
@@ -172,7 +209,6 @@ func (s *downStream) OnDestroyStream() {}
 
 func (s *downStream) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) {
 	s.downstreamRecvDone = endStream
-	s.downstreamReqHeaders = headers
 
 	s.doReceiveHeaders(nil, headers, endStream)
 }

@@ -276,13 +276,13 @@ func (ss *serverStream) handleRequest() {
 	header[protocol.StrikeHeaderPathKey] = string(ss.req.RequestURI())
 
 	noBody := ss.req.Header.NoBody()
-
-	ss.receiver.OnReceiveHeaders(ss.context, protocol.CommonHeader(header), noBody)
+	var buf buffer.IoBuffer
 
 	if !noBody {
-		buf := buffer.NewIoBufferBytes(ss.req.Body())
-		ss.receiver.OnReceiveData(ss.context, buf, true)
+		buf = buffer.NewIoBufferBytes(ss.req.Body())
 	}
+
+	ss.receiver.OnReceive(ss.context, protocol.CommonHeader(header), buf, nil)
 }
 
 func decodeReqHeader(in v1.RequestHeader) (out map[string]string) {

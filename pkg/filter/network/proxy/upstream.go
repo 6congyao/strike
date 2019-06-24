@@ -152,7 +152,11 @@ func (r *upstreamRequest) appendTrailers(trailers protocol.HeaderMap) {
 	r.requestSender.AppendTrailers(r.downStream.context, trailers)
 }
 
-// stream.StreamReceiver
+// stream.StreamReceiveListener
+func (r *upstreamRequest) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+
+}
+
 // Method to decode upstream's response message
 func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {
 	// save response code

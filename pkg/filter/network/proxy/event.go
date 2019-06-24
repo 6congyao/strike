@@ -33,7 +33,8 @@ const (
 	recvHeader  eventType = 1
 	recvData    eventType = 2
 	recvTrailer eventType = 3
-	reset       eventType = 4
+	recv        eventType = 4
+	reset       eventType = 5
 )
 
 var (

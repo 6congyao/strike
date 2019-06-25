@@ -16,9 +16,9 @@
 package sync
 
 import (
-	"fmt"
 	"log"
 	"runtime/debug"
+	"strike/utils/container/squeue"
 )
 
 const (
@@ -28,7 +28,8 @@ const (
 type shard struct {
 	index        int
 	respawnTimes uint32
-	jobChan      chan interface{}
+	//jobChan      chan interface{}
+	queue *squeue.Queue
 }
 
 type shardWorkerPool struct {
@@ -39,19 +40,13 @@ type shardWorkerPool struct {
 }
 
 // NewShardWorkerPool creates a new shard worker pool.
-func NewShardWorkerPool(size int, numShards int, workerFunc WorkerFunc) (ShardWorkerPool, error) {
-	if size <= 0 {
-		return nil, fmt.Errorf("worker pool size too small: %d", size)
-	}
-	if size < numShards {
-		numShards = size
-	}
-	shardCap := size / numShards
+func NewShardWorkerPool(numShards int, workerFunc WorkerFunc) (ShardWorkerPool, error) {
+	//shardCap := size / numShards
 	shards := make([]*shard, numShards)
 	for i := range shards {
 		shards[i] = &shard{
-			index:   i,
-			jobChan: make(chan interface{}, shardCap),
+			index: i,
+			queue: squeue.New(),
 		}
 	}
 	return &shardWorkerPool{
@@ -79,13 +74,14 @@ func (pool *shardWorkerPool) Offer(job ShardJob, block bool) {
 	i := pool.Shard(job.Source(uint64(pool.numShards)))
 
 	if block {
-		pool.shards[i].jobChan <- job
+		pool.shards[i].queue.C <- job
 	} else {
-		select {
-		case pool.shards[i].jobChan <- job:
-		default:
-			log.Println("jobChan over full:", i)
-		}
+		pool.shards[i].queue.Push(job)
+		//select {
+		//case pool.shards[i].jobChan <- job:
+		//default:
+		//	log.Println("jobChan over full:", i)
+		//}
 	}
 }
 
@@ -102,6 +98,6 @@ func (pool *shardWorkerPool) spawnWorker(shard *shard) {
 				}
 			}
 		}()
-		pool.workerFunc(shard.index, shard.jobChan)
+		pool.workerFunc(shard.index, shard.queue.C)
 	}()
 }

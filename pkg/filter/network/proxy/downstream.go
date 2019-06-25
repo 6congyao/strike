@@ -108,7 +108,6 @@ func (s *downStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, 
 	s.downstreamReqHeaders = headers
 	if data != nil {
 		s.downstreamReqDataBuf = data.Clone()
-		s.downstreamReqDataBuf.Count(1)
 		data.Drain(data.Len())
 	}
 	s.downstreamReqTrailers = trailers
@@ -150,7 +149,7 @@ func (s *downStream) OnReceiveHeaders(ctx context.Context, headers protocol.Head
 		handle: func() {
 			s.ReceiveHeaders(headers, endStream)
 		},
-	}, true)
+	}, false)
 }
 
 func (s *downStream) OnReceiveData(ctx context.Context, data buffer.IoBuffer, endStream bool) {
@@ -166,7 +165,7 @@ func (s *downStream) OnReceiveData(ctx context.Context, data buffer.IoBuffer, en
 		handle: func() {
 			s.ReceiveData(s.downstreamReqDataBuf, endStream)
 		},
-	}, true)
+	}, false)
 }
 
 func (s *downStream) OnReceiveTrailers(ctx context.Context, trailers protocol.HeaderMap) {
@@ -178,7 +177,7 @@ func (s *downStream) OnReceiveTrailers(ctx context.Context, trailers protocol.He
 		handle: func() {
 			s.ReceiveTrailers(trailers)
 		},
-	}, true)
+	}, false)
 }
 
 func (s *downStream) OnDecodeError(ctx context.Context, err error, headers protocol.HeaderMap) {
@@ -814,7 +813,7 @@ func (s *downStream) reset() {
 	s.upstreamRequest.downStream = nil
 	s.upstreamRequest.requestSender = nil
 	s.upstreamRequest.proxy = nil
-	s.upstreamRequest.upstreamRespHeaders = nil
+	//s.upstreamRequest.upstreamRespHeaders = nil
 	s.upstreamRequest = nil
 	s.perRetryTimer = nil
 	s.responseTimer = nil

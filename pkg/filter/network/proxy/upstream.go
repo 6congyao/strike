@@ -37,7 +37,7 @@ type upstreamRequest struct {
 	connPool      stream.ConnectionPool
 
 	// ~~~ upstream response buf
-	upstreamRespHeaders protocol.HeaderMap
+	//upstreamRespHeaders protocol.HeaderMap
 
 	//~~~ state
 	sendComplete bool
@@ -91,8 +91,28 @@ func (r *upstreamRequest) endStream() {
 	// todo: record upstream process time in request info
 }
 
+func (r *upstreamRequest) Receive() {
+	if r.downStream.processDone() || r.setupRetry {
+		return
+	}
+
+	r.endStream()
+
+	hasBody := r.downStream.downstreamRespDataBuf != nil
+	hasTrailer := r.downStream.downstreamRespTrailers != nil
+
+	r.ReceiveHeaders(r.downStream.downstreamRespHeaders, !hasBody)
+
+	if hasBody {
+		r.ReceiveData(r.downStream.downstreamRespDataBuf, !hasTrailer)
+	}
+
+	if hasTrailer {
+		r.ReceiveTrailers(r.downStream.downstreamRespTrailers)
+	}
+}
+
 func (r *upstreamRequest) ReceiveHeaders(headers protocol.HeaderMap, endStream bool) {
-	r.upstreamRespHeaders = headers
 	r.downStream.onUpstreamHeaders(headers, endStream)
 }
 
@@ -154,7 +174,24 @@ func (r *upstreamRequest) appendTrailers(trailers protocol.HeaderMap) {
 
 // stream.StreamReceiveListener
 func (r *upstreamRequest) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+	r.downStream.downstreamRespHeaders = headers
 
+	if data != nil {
+		r.downStream.downstreamRespDataBuf = data.Clone()
+		data.Drain(data.Len())
+	}
+
+	r.downStream.downstreamRespTrailers = trailers
+
+	workerPool.Offer(&event{
+		id:  r.downStream.ID,
+		sid: r.downStream.context.Value(types.ContextKeyConnectionID).(uint64),
+		dir: diFromUpstream,
+		evt: recv,
+		handle: func() {
+			r.Receive()
+		},
+	}, false)
 }
 
 // Method to decode upstream's response message
@@ -179,7 +216,7 @@ func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers prot
 		handle: func() {
 			r.ReceiveHeaders(headers, endStream)
 		},
-	}, true)
+	}, false)
 }
 
 func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
@@ -198,7 +235,7 @@ func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoB
 		handle: func() {
 			r.ReceiveData(r.downStream.downstreamRespDataBuf, endStream)
 		},
-	}, true)
+	}, false)
 }
 
 func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
@@ -212,7 +249,7 @@ func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers pr
 		handle: func() {
 			r.ReceiveTrailers(trailers)
 		},
-	}, true)
+	}, false)
 }
 
 func (r *upstreamRequest) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {

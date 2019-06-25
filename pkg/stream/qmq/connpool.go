@@ -80,7 +80,7 @@ type activeClient struct {
 
 func newActiveClient(ctx context.Context, pool *connPool) *activeClient {
 	ac := &activeClient{
-		pool: pool,
+		//pool: pool,
 	}
 
 	codecClient := pool.createCodecClient(ctx)

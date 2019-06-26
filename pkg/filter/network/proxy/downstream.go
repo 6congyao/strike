@@ -120,7 +120,7 @@ func (s *downStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, 
 		handle: func() {
 			s.Receive()
 		},
-	}, false, false)
+	}, prioritized, false)
 }
 
 func (s *downStream) Receive() {

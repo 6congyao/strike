@@ -191,7 +191,7 @@ func (r *upstreamRequest) OnReceive(ctx context.Context, headers protocol.Header
 		handle: func() {
 			r.Receive()
 		},
-	}, false, false)
+	}, prioritized, false)
 }
 
 // Method to decode upstream's response message

@@ -69,14 +69,18 @@ func (pool *shardWorkerPool) Shard(source, numShards, offset uint64) uint64 {
 	return source%numShards + offset
 }
 
-func (pool *shardWorkerPool) Offer(job ShardJob, block bool) {
+func (pool *shardWorkerPool) Offer(job ShardJob, prioritized, block bool) {
 	// use shard to avoid excessive synchronization
 	i := pool.Shard(job.Source(uint64(pool.numShards)))
 
 	if block {
 		pool.shards[i].queue.C <- job
 	} else {
-		pool.shards[i].queue.Push(job)
+		if prioritized {
+			pool.shards[i].queue.PushFront(job)
+		} else {
+			pool.shards[i].queue.Push(job)
+		}
 		//select {
 		//case pool.shards[i].jobChan <- job:
 		//default:

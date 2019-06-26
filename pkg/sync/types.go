@@ -41,7 +41,7 @@ type ShardWorkerPool interface {
 	Shard(source, numShards, offset uint64) uint64
 
 	// Offer puts the job into the corresponding shard and execute it.
-	Offer(job ShardJob, block bool)
+	Offer(job ShardJob, prioritized, block bool)
 }
 
 // WorkerPool provides a pool for goroutines

@@ -88,16 +88,35 @@ func (q *Queue) startAsyncLoop() {
 	close(q.C)
 }
 
-// Push pushes the data <v> into the queue.
+// Push pushes the data <v> into the back of the queue.
 // Note that it would panics if Push is called after the queue is closed.
 func (q *Queue) Push(v interface{}) {
 	if q.limit > 0 {
 		q.C <- v
 	} else {
+		q.push(v, false)
+	}
+}
+
+// PushFront pushes the data <v> into the header of the queue.
+// Note that it would panics if Push is called after the queue is closed.
+func (q *Queue) PushFront(v interface{}) {
+	if q.limit > 0 {
+		q.C <- v
+	} else {
+		q.push(v, true)
+	}
+}
+
+// push pushes the data <v> into the list.
+func (q *Queue) push(v interface{}, front bool) {
+	if front {
+		q.list.PushFront(v)
+	} else {
 		q.list.PushBack(v)
-		if len(q.events) < DEFAULT_QUEUE_SIZE {
-			q.events <- struct{}{}
-		}
+	}
+	if len(q.events) < DEFAULT_QUEUE_SIZE {
+		q.events <- struct{}{}
 	}
 }
 

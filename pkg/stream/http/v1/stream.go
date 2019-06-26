@@ -282,7 +282,7 @@ func (ss *serverStream) handleRequest() {
 		buf = buffer.NewIoBufferBytes(ss.req.Body())
 	}
 
-	ss.receiver.OnReceive(ss.context, protocol.CommonHeader(header), buf, nil)
+	ss.receiver.OnReceive(ss.context, protocol.CommonHeader(header), buf, nil, false)
 }
 
 func decodeReqHeader(in v1.RequestHeader) (out map[string]string) {

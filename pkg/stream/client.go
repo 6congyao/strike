@@ -139,8 +139,8 @@ type clientStreamReceiverWrapper struct {
 }
 
 // stream.StreamReceiveListener
-func (w *clientStreamReceiverWrapper) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
-	w.streamReceiver.OnReceive(ctx, headers, data, trailers)
+func (w *clientStreamReceiverWrapper) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap, prioritized bool) {
+	w.streamReceiver.OnReceive(ctx, headers, data, trailers, prioritized)
 }
 
 func (w *clientStreamReceiverWrapper) OnReceiveHeaders(ctx context.Context, headers protocol.HeaderMap, endOfStream bool) {

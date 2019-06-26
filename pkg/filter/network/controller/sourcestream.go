@@ -147,7 +147,7 @@ func (s *sourceStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilte
 }
 
 // stream.StreamReceiveListener
-func (s *sourceStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+func (s *sourceStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap, prioritized bool) {
 
 }
 

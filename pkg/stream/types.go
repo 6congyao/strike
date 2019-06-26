@@ -112,8 +112,7 @@ type StreamReceiveListener interface {
 	OnDecodeError(ctx context.Context, err error, headers protocol.HeaderMap)
 
 	// OnReceive is called with decoded request/response
-	OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap)
-
+	OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap, prioritized bool)
 }
 
 // StreamSender encodes protocol stream

@@ -82,7 +82,7 @@ func (r *upstreamRequest) OnResetStream(reason stream.StreamResetReason) {
 		handle: func() {
 			r.ResetStream(reason)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (r *upstreamRequest) OnDestroyStream() {}
@@ -173,7 +173,7 @@ func (r *upstreamRequest) appendTrailers(trailers protocol.HeaderMap) {
 }
 
 // stream.StreamReceiveListener
-func (r *upstreamRequest) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+func (r *upstreamRequest) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap, prioritized bool) {
 	r.downStream.downstreamRespHeaders = headers
 
 	if data != nil {
@@ -191,7 +191,7 @@ func (r *upstreamRequest) OnReceive(ctx context.Context, headers protocol.Header
 		handle: func() {
 			r.Receive()
 		},
-	}, false)
+	}, false, false)
 }
 
 // Method to decode upstream's response message
@@ -216,7 +216,7 @@ func (r *upstreamRequest) OnReceiveHeaders(context context.Context, headers prot
 		handle: func() {
 			r.ReceiveHeaders(headers, endStream)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoBuffer, endStream bool) {
@@ -235,7 +235,7 @@ func (r *upstreamRequest) OnReceiveData(context context.Context, data buffer.IoB
 		handle: func() {
 			r.ReceiveData(r.downStream.downstreamRespDataBuf, endStream)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers protocol.HeaderMap) {
@@ -249,7 +249,7 @@ func (r *upstreamRequest) OnReceiveTrailers(context context.Context, trailers pr
 		handle: func() {
 			r.ReceiveTrailers(trailers)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (r *upstreamRequest) OnDecodeError(context context.Context, err error, headers protocol.HeaderMap) {

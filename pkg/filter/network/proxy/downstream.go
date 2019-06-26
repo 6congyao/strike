@@ -104,7 +104,7 @@ func newActiveStream(ctx context.Context, proxy *proxy, responseSender stream.St
 }
 
 // stream.StreamReceiveListener
-func (s *downStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap) {
+func (s *downStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap, prioritized bool) {
 	s.downstreamReqHeaders = headers
 	if data != nil {
 		s.downstreamReqDataBuf = data.Clone()
@@ -120,7 +120,7 @@ func (s *downStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, 
 		handle: func() {
 			s.Receive()
 		},
-	}, false)
+	}, false, false)
 }
 
 func (s *downStream) Receive() {
@@ -149,7 +149,7 @@ func (s *downStream) OnReceiveHeaders(ctx context.Context, headers protocol.Head
 		handle: func() {
 			s.ReceiveHeaders(headers, endStream)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (s *downStream) OnReceiveData(ctx context.Context, data buffer.IoBuffer, endStream bool) {
@@ -165,7 +165,7 @@ func (s *downStream) OnReceiveData(ctx context.Context, data buffer.IoBuffer, en
 		handle: func() {
 			s.ReceiveData(s.downstreamReqDataBuf, endStream)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (s *downStream) OnReceiveTrailers(ctx context.Context, trailers protocol.HeaderMap) {
@@ -177,7 +177,7 @@ func (s *downStream) OnReceiveTrailers(ctx context.Context, trailers protocol.He
 		handle: func() {
 			s.ReceiveTrailers(trailers)
 		},
-	}, false)
+	}, false, false)
 }
 
 func (s *downStream) OnDecodeError(ctx context.Context, err error, headers protocol.HeaderMap) {
@@ -466,7 +466,7 @@ func (s *downStream) OnResetStream(reason stream.StreamResetReason) {
 		handle: func() {
 			s.ResetStream(reason)
 		},
-	}, false)
+	}, false, false)
 }
 
 // Clean up on the very end of the stream: end stream or reset stream

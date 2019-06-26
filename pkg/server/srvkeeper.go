@@ -39,8 +39,8 @@ var (
 )
 
 func catchSignals() {
-	catchSignalsCrossPlatform()
-	catchSignalsPosix()
+	//catchSignalsCrossPlatform()
+	//catchSignalsPosix()
 }
 
 func catchSignalsCrossPlatform() {

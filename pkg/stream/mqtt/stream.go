@@ -305,7 +305,7 @@ func (ss *serverStream) handleMessage() {
 		fmt.Println("got mqtt msg:", method, ss.connection.context.Value(types.ContextKeyConnectionID))
 	}
 
-	ss.receiver.OnReceive(ss.context, header, payload, nil)
+	ss.receiver.OnReceive(ss.context, header, payload, nil, false)
 
 	//ss.receiver.OnReceiveHeaders(ss.context, header, payload == nil)
 	//

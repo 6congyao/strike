@@ -146,20 +146,19 @@ func (p *proxy) NewStreamDetect(ctx context.Context, responseSender stream.Strea
 	return s
 }
 
-//rpc realize upstream on event
 func (p *proxy) onDownstreamEvent(event network.ConnectionEvent) {
 	if event.IsClose() {
-		var urEleNext *list.Element
-
-		p.asMux.RLock()
-		defer p.asMux.RUnlock()
-
-		for urEle := p.activeSteams.Front(); urEle != nil; urEle = urEleNext {
-			urEleNext = urEle.Next()
-
-			ds := urEle.Value.(*downStream)
-			ds.OnResetStream(stream.StreamConnectionTermination)
-		}
+		//var urEleNext *list.Element
+		//
+		//p.asMux.RLock()
+		//defer p.asMux.RUnlock()
+		//
+		//for urEle := p.activeSteams.Front(); urEle != nil; urEle = urEleNext {
+		//	urEleNext = urEle.Next()
+		//
+		//	ds := urEle.Value.(*downStream)
+		//	ds.OnResetStream(stream.StreamConnectionTermination)
+		//}
 	}
 }
 

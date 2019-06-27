@@ -148,7 +148,29 @@ func (s *sourceStream) AddStreamReceiverFilter(filter stream.StreamReceiverFilte
 
 // stream.StreamReceiveListener
 func (s *sourceStream) OnReceive(ctx context.Context, headers protocol.HeaderMap, data buffer.IoBuffer, trailers protocol.HeaderMap, prioritized bool) {
+	s.sourceStreamReqHeaders = headers
+	if data != nil {
+		s.sourceStreamReqDataBuf = data.Clone()
+		data.Drain(data.Len())
+	}
+	s.sourceStreamReqTrailers = trailers
 
+	s.doReceive()
+}
+
+func (s *sourceStream) doReceive() {
+	hasBody := s.sourceStreamReqDataBuf != nil
+	hasTrailer := s.sourceStreamReqTrailers != nil
+
+	s.doReceiveHeaders(nil, s.sourceStreamReqHeaders, !hasBody)
+
+	if hasBody {
+		s.doReceiveData(nil, s.sourceStreamReqDataBuf, !hasTrailer)
+	}
+
+	if hasTrailer {
+		s.doReceiveTrailers(nil, s.sourceStreamReqTrailers)
+	}
 }
 
 func (s *sourceStream) OnReceiveHeaders(context context.Context, headers protocol.HeaderMap, endStream bool) {

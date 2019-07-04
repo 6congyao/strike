@@ -87,7 +87,7 @@ func eventDispatch(shard int, jobChan <-chan interface{}) {
 
 func eventProcess(shard int, job interface{}) {
 	if ev, ok := job.(*event); ok {
-		log.Println("enter event process with dir/type/shard/proxyID", ev.dir, ev.evt, shard, "#", ev.id)
+		log.Println("enter event process with dir/type/shard/proxyID", ev.dir, ev.evt, shard, "#", ev.id, "@", ev.sid)
 
 		ev.handle()
 	}

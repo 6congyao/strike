@@ -19,6 +19,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strike/pkg/bootstrap"
@@ -30,9 +32,10 @@ import (
 
 func main() {
 	flag.Parse()
-	cfg := config.LoadJsonFile(*config.ConfigFile)
-	registerDelegationHandler()
-	bootstrap.Start(cfg)
+
+	//http.HandleFunc("/test", handler)
+	//log.Fatal(http.ListenAndServe(":9876", nil))
+	handler(nil, nil)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
@@ -57,4 +60,10 @@ func delegationHandler(content interface{}) error {
 		return errors.New("type error")
 	}
 	return nil
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	cfg := config.LoadJsonFile(*config.ConfigFile)
+	registerDelegationHandler()
+	bootstrap.Start(cfg)
 }
